@@ -7,45 +7,10 @@ fn main() {
     println!("part b: {}", part_b(DATA));
 }
 
-#[derive(derive_new::new)]
-struct Position {
-    distance: i32,
-    aim: i32,
-    depth: i32,
-}
-
-impl Position {
-    fn apply_command(mut self, c: Command) -> Self {
-        match c {
-            Command::Forward(n) => {
-                self.distance += n;
-                self.depth += self.aim * n;
-            }
-            Command::Down(n) => {
-                self.aim += n;
-            }
-            Command::Up(n) => {
-                self.aim -= n;
-            }
-        };
-        self
-    }
-}
-
 enum Command {
     Forward(i32),
     Down(i32),
     Up(i32),
-}
-
-impl Command {
-    fn simple_position(&self) -> (i32, i32) {
-        match self {
-            Self::Forward(n) => (*n, 0),
-            Self::Down(n) => (0, *n),
-            Self::Up(n) => (0, -n),
-        }
-    }
 }
 
 impl From<&str> for Command {
@@ -62,22 +27,33 @@ impl From<&str> for Command {
 }
 
 fn part_a(data: &str) -> i32 {
-    let final_position = data
-        .lines()
-        .map(Command::from)
-        .fold((0, 0), |acc, command| {
-            let position = command.simple_position();
-            (acc.0 + position.0, acc.1 + position.1)
-        });
-    final_position.0 * final_position.1
+    let mut dist = 0;
+    let mut depth = 0;
+    for command in data.lines().map(Command::from) {
+        match command {
+            Command::Forward(n) => dist += n,
+            Command::Down(n) => depth += n,
+            Command::Up(n) => depth -= n,
+        }
+    }
+    dist * depth
 }
 
 fn part_b(data: &str) -> i32 {
-    let final_position = data
-        .lines()
-        .map(Command::from)
-        .fold(Position::new(0, 0, 0), |acc, c| acc.apply_command(c));
-    final_position.distance * final_position.depth
+    let mut dist = 0;
+    let mut depth = 0;
+    let mut aim = 0;
+    for command in data.lines().map(Command::from) {
+        match command {
+            Command::Forward(n) => {
+                dist += n;
+                depth += aim * n
+            }
+            Command::Down(n) => aim += n,
+            Command::Up(n) => aim -= n,
+        }
+    }
+    dist * depth
 }
 
 #[cfg(test)]
