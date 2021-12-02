@@ -1,5 +1,7 @@
 use std::str::FromStr;
 
+use itertools::Itertools;
+
 const DATA: &str = include_str!("data.txt");
 
 fn main() {
@@ -7,6 +9,7 @@ fn main() {
     println!("part b: {}", b(DATA));
 }
 
+#[derive(derive_new::new)]
 struct Position {
     distance: i32,
     aim: i32,
@@ -14,14 +17,6 @@ struct Position {
 }
 
 impl Position {
-    fn new() -> Self {
-        Self {
-            distance: 0,
-            aim: 0,
-            depth: 0,
-        }
-    }
-
     fn apply_command(self, c: Command) -> Self {
         match c {
             Command::Forward(n) => Position {
@@ -60,18 +55,14 @@ impl Command {
 impl FromStr for Command {
     type Err = ();
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let mut tokens = s.split_whitespace();
-        let (direction, distance) = (
-            tokens.next().unwrap(),
-            tokens.next().unwrap().parse().unwrap(),
-        );
-        Ok(if direction == "forward" {
-            Self::Forward(distance)
-        } else if direction == "down" {
-            Self::Down(distance)
-        } else {
-            Self::Up(distance)
-        })
+        let (command, n) = s.split_whitespace().collect_tuple().unwrap();
+        let n = n.parse().unwrap();
+        match command {
+            "forward" => Ok(Self::Forward(n)),
+            "down" => Ok(Self::Down(n)),
+            "up" => Ok(Self::Up(n)),
+            _ => Err(()),
+        }
     }
 }
 
@@ -89,8 +80,8 @@ fn a(data: &str) -> i32 {
 fn b(data: &str) -> i32 {
     let final_position = data
         .lines()
-        .map(|line| line.parse::<Command>().unwrap())
-        .fold(Position::new(), |acc, c| acc.apply_command(c));
+        .map(|line| line.parse().unwrap())
+        .fold(Position::new(0, 0, 0), |acc, c| acc.apply_command(c));
     final_position.distance * final_position.depth
 }
 
