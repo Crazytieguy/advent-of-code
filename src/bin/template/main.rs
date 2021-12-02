@@ -1,31 +1,28 @@
-use std::str::FromStr;
-
 const DATA: &str = include_str!("data.txt");
 
 fn main() {
-    println!("part a: {}", a(DATA));
+    println!("part a: {}", part_a(DATA));
     // println!("part b: {}", b(DATA));
 }
 
-struct InputLine(usize);
+struct InputRecord(usize);
 
-impl FromStr for InputLine {
-    type Err = ();
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        Ok(Self(s.parse().unwrap()))
+impl From<&str> for InputRecord {
+    fn from(s: &str) -> Self {
+        Self(s.parse().unwrap())
     }
 }
 
-fn a(data: &str) -> usize {
+fn part_a(data: &str) -> usize {
     data.lines()
-        .map(|line| line.parse::<InputLine>().unwrap())
+        .map(InputRecord::from)
         .fold(0, |acc, line| acc + line.0)
 }
 
 #[allow(dead_code)]
-fn b(data: &str) -> usize {
+fn part_b(data: &str) -> usize {
     data.lines()
-        .map(|line| line.parse::<InputLine>().unwrap())
+        .map(InputRecord::from)
         .fold(0, |acc, line| acc + line.0)
 }
 
@@ -36,11 +33,11 @@ mod tests {
 
     #[test]
     fn test_a() {
-        assert_eq!(a(SAMPLE_DATA), 0);
+        assert_eq!(part_a(SAMPLE_DATA), 0);
     }
 
     #[test]
     fn test_b() {
-        assert_eq!(b(SAMPLE_DATA), 0);
+        assert_eq!(part_b(SAMPLE_DATA), 0);
     }
 }
