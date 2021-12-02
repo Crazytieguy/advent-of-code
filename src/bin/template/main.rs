@@ -5,25 +5,27 @@ fn main() {
     // println!("part b: {}", b(DATA));
 }
 
-struct InputRecord(usize);
+struct InputRecord;
 
 impl From<&str> for InputRecord {
     fn from(s: &str) -> Self {
-        Self(s.parse().unwrap())
+        todo!()
     }
 }
 
 fn part_a(data: &str) -> usize {
-    data.lines()
-        .map(InputRecord::from)
-        .fold(0, |acc, line| acc + line.0)
+    for record in data.lines().map(InputRecord::from) {
+        todo!()
+    }
+    0
 }
 
 #[allow(dead_code)]
 fn part_b(data: &str) -> usize {
-    data.lines()
-        .map(InputRecord::from)
-        .fold(0, |acc, line| acc + line.0)
+    for record in data.lines().map(InputRecord::from) {
+        todo!()
+    }
+    0
 }
 
 #[cfg(test)]
