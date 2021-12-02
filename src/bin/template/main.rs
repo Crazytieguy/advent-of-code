@@ -8,13 +8,13 @@ fn main() {
 struct InputRecord;
 
 impl From<&str> for InputRecord {
-    fn from(s: &str) -> Self {
+    fn from(_s: &str) -> Self {
         todo!()
     }
 }
 
 fn part_a(data: &str) -> usize {
-    for record in data.lines().map(InputRecord::from) {
+    for _record in data.lines().map(InputRecord::from) {
         todo!()
     }
     0
@@ -22,7 +22,7 @@ fn part_a(data: &str) -> usize {
 
 #[allow(dead_code)]
 fn part_b(data: &str) -> usize {
-    for record in data.lines().map(InputRecord::from) {
+    for _record in data.lines().map(InputRecord::from) {
         todo!()
     }
     0
