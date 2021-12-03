@@ -39,26 +39,22 @@ fn binary_to_number(b: &[bool]) -> usize {
 #[allow(dead_code)]
 fn part_b(data: &'static str) -> usize {
     let data = parse(data);
-    let oxygen_generator_rating = iterative_filter(&data, true);
-    let co2_scrubber_rating = iterative_filter(&data, false);
+    let oxygen_generator_rating = rating(&data, true);
+    let co2_scrubber_rating = rating(&data, false);
     oxygen_generator_rating * co2_scrubber_rating
 }
 
-fn iterative_filter(data: &[Vec<bool>], keep_most_common: bool) -> usize {
-    let mut i = 0;
+fn rating(data: &[Vec<bool>], bit_criteria: bool) -> usize {
     let mut remaining: Vec<_> = data.iter().collect();
-    loop {
+    for i in 0..data[0].len() {
         let counts = remaining.iter().counts_by(|row| row[i]);
-        let most_common = keep_most_common == (counts[&true] >= counts[&false]);
-        remaining = remaining
-            .into_iter()
-            .filter(|row| row[i] == most_common)
-            .collect();
+        let keep = bit_criteria == (counts[&true] >= counts[&false]);
+        remaining = remaining.into_iter().filter(|row| row[i] == keep).collect();
         if remaining.len() == 1 {
-            break binary_to_number(remaining[0]);
+            return binary_to_number(remaining[0]);
         }
-        i += 1;
     }
+    panic!()
 }
 
 #[cfg(test)]
