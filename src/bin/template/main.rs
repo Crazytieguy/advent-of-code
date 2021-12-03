@@ -2,7 +2,7 @@ const DATA: &str = include_str!("data.txt");
 
 fn main() {
     println!("part a: {}", part_a(DATA));
-    // println!("part b: {}", b(DATA));
+    // println!("part b: {}", part_b(DATA));
 }
 
 struct InputRecord;
@@ -13,7 +13,7 @@ impl From<&str> for InputRecord {
     }
 }
 
-fn part_a(data: &str) -> usize {
+fn part_a(data: &'static str) -> usize {
     for _record in data.lines().map(InputRecord::from) {
         todo!()
     }
@@ -21,7 +21,7 @@ fn part_a(data: &str) -> usize {
 }
 
 #[allow(dead_code)]
-fn part_b(data: &str) -> usize {
+fn part_b(data: &'static str) -> usize {
     for _record in data.lines().map(InputRecord::from) {
         todo!()
     }
