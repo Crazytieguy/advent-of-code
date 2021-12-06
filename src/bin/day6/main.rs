@@ -25,20 +25,20 @@ fn next_state(age_counts: &HashMap<i8, usize>) -> HashMap<i8, usize> {
     age_counts
 }
 
-fn part_a(data: &'static str) -> usize {
+fn num_fish(data: &'static str, generations: usize) -> usize {
     iterate(parse(data), next_state)
-        .nth(80)
+        .nth(generations)
         .unwrap()
         .values()
         .sum()
 }
 
+fn part_a(data: &'static str) -> usize {
+    num_fish(data, 80)
+}
+
 fn part_b(data: &'static str) -> usize {
-    iterate(parse(data), next_state)
-        .nth(256)
-        .unwrap()
-        .values()
-        .sum()
+    num_fish(data, 256)
 }
 
 #[cfg(test)]
