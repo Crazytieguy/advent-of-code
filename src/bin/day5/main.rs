@@ -1,4 +1,4 @@
-use bevy_math::{ivec2, IVec2};
+use glam::{ivec2, IVec2};
 use itertools::Itertools;
 
 const DATA: &str = include_str!("data.txt");
