@@ -7,5 +7,4 @@ edition = "2021"
 
 [dependencies]
 derive-new = "0.5.9"
-glam = "0.20.1"
 itertools = "0.10.1"
