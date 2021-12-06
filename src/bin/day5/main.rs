@@ -35,16 +35,16 @@ fn route1d(start: i32, stop: i32) -> Chain<RangeInclusive<i32>, Rev<RangeInclusi
     (start..=stop).chain((stop..=start).rev())
 }
 
-fn part_a(data: &'static str) -> usize {
+fn solution(data: &'static str, calc_diagonal: impl Fn(Vent) -> Vec<(i32, i32)>) -> usize {
     data.lines()
         .map(Vent::from)
         .flat_map(|Vent { x1, y1, x2, y2 }| {
             if x1 == x2 {
-                repeat(x1).zip(route1d(y1, y2)).collect_vec()
+                repeat(x1).zip(route1d(y1, y2)).collect()
             } else if y1 == y2 {
-                route1d(x1, x2).zip(repeat(y1)).collect_vec()
+                route1d(x1, x2).zip(repeat(y1)).collect()
             } else {
-                vec![]
+                calc_diagonal(Vent { x1, y1, x2, y2 })
             }
         })
         .counts()
@@ -53,23 +53,14 @@ fn part_a(data: &'static str) -> usize {
         .count()
 }
 
-#[allow(dead_code)]
+fn part_a(data: &'static str) -> usize {
+    solution(data, |_| vec![])
+}
+
 fn part_b(data: &'static str) -> usize {
-    data.lines()
-        .map(Vent::from)
-        .flat_map(|Vent { x1, y1, x2, y2 }| {
-            if x1 == x2 {
-                repeat(x1).zip(route1d(y1, y2)).collect_vec()
-            } else if y1 == y2 {
-                route1d(x1, x2).zip(repeat(y1)).collect_vec()
-            } else {
-                route1d(x1, x2).zip(route1d(y1, y2)).collect_vec()
-            }
-        })
-        .counts()
-        .values()
-        .filter(|&&v| v >= 2)
-        .count()
+    solution(data, |Vent { x1, y1, x2, y2 }| {
+        route1d(x1, x2).zip(route1d(y1, y2)).collect()
+    })
 }
 
 #[cfg(test)]
