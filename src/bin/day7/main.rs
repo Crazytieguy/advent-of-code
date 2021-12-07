@@ -12,15 +12,10 @@ fn parse(data: &'static str) -> Vec<i64> {
 }
 
 fn part_a(data: &'static str) -> i64 {
-    let positions = parse(data);
-    if let MinMaxResult::MinMax(&min, &max) = positions.iter().minmax() {
-        (min..max)
-            .map(|align| positions.iter().map(|pos| (pos - align).abs()).sum::<i64>())
-            .min()
-            .unwrap()
-    } else {
-        panic!()
-    }
+    let mut positions = parse(data);
+    positions.sort_unstable();
+    let align = positions[positions.len() / 2];
+    positions.iter().map(|pos| (pos - align).abs()).sum()
 }
 
 fn fuel_needed(steps: i64) -> i64 {
