@@ -1,5 +1,3 @@
-use itertools::{Itertools, MinMaxResult};
-
 const DATA: &str = include_str!("data.txt");
 
 fn main() {
@@ -22,21 +20,25 @@ fn fuel_needed(steps: i64) -> i64 {
     (steps + 1) * steps / 2
 }
 
+fn total_fuel(positions: &[i64], align: i64) -> i64 {
+    positions
+        .iter()
+        .map(|pos| fuel_needed((pos - align).abs()))
+        .sum()
+}
+
+/// We can't just round the average, because the derivative is
+/// align - avg + sum(signum(align - pos)) / 2N
+/// As opposed to
+/// align - avg.
+/// Since the last term can never be more than 0.5,
+/// We only need to check the floor and ceiling of avg
 fn part_b(data: &'static str) -> i64 {
     let positions = parse(data);
-    if let MinMaxResult::MinMax(&min, &max) = positions.iter().minmax() {
-        (min..max)
-            .map(|align| {
-                positions
-                    .iter()
-                    .map(|pos| fuel_needed((pos - align).abs()))
-                    .sum::<i64>()
-            })
-            .min()
-            .unwrap()
-    } else {
-        panic!()
-    }
+    let avg = positions.iter().sum::<i64>() as f64 / positions.len() as f64;
+    let floor = avg.floor() as i64;
+    let ceil = avg.ceil() as i64;
+    total_fuel(&positions, floor).min(total_fuel(&positions, ceil))
 }
 
 #[cfg(test)]
