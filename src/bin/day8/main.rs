@@ -48,47 +48,55 @@ fn part_b(data: &'static str) -> usize {
     for fdd in data.lines().map(FourDigitDisplay::from) {
         let mut digits = HashMap::new();
         for pat in &fdd.patterns {
-            match pat.len() {
-                2 => digits.insert('1', pat),
-                3 => digits.insert('7', pat),
-                4 => digits.insert('4', pat),
-                7 => digits.insert('8', pat),
+            let digit = match pat.len() {
+                2 => Some('1'),
+                3 => Some('7'),
+                4 => Some('4'),
+                7 => Some('8'),
                 _ => None,
             };
+            if let Some(digit) = digit {
+                digits.insert(digit, pat);
+            }
         }
         for pat in &fdd.patterns {
-            match pat.len() {
+            let digit = match pat.len() {
                 5 => {
                     if pat.intersection(digits[&'4']).count() == 2 {
-                        digits.insert('2', pat)
+                        Some('2')
                     } else if pat.intersection(digits[&'1']).count() == 2 {
-                        digits.insert('3', pat)
+                        Some('3')
                     } else {
-                        digits.insert('5', pat)
+                        Some('5')
                     }
                 }
                 6 => {
                     if pat.intersection(digits[&'1']).count() == 1 {
-                        digits.insert('6', pat)
+                        Some('6')
                     } else if pat.intersection(digits[&'4']).count() == 3 {
-                        digits.insert('0', pat)
+                        Some('0')
                     } else {
-                        digits.insert('9', pat)
+                        Some('9')
                     }
                 }
                 _ => None,
             };
-        }
-        let mut number = String::new();
-        for out_pat in &fdd.output {
-            for (&digit, &pat) in &digits {
-                if out_pat == pat {
-                    number.push(digit);
-                    break;
-                }
+            if let Some(digit) = digit {
+                digits.insert(digit, pat);
             }
         }
-        sum += number.parse::<usize>().unwrap()
+        sum += fdd
+            .output
+            .iter()
+            .map(|out_pat| {
+                digits
+                    .keys()
+                    .find(|digit| out_pat == digits[digit])
+                    .unwrap()
+            })
+            .collect::<String>()
+            .parse::<usize>()
+            .unwrap();
     }
     sum
 }
