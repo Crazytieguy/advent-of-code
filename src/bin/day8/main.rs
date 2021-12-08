@@ -1,0 +1,110 @@
+use std::collections::{HashMap, HashSet};
+
+use itertools::Itertools;
+
+const DATA: &str = include_str!("data.txt");
+
+fn main() {
+    println!("part a: {}", part_a(DATA));
+    println!("part b: {}", part_b(DATA));
+}
+
+#[derive(Default)]
+struct FourDigitDisplay {
+    patterns: [HashSet<char>; 10],
+    output: [HashSet<char>; 4],
+}
+
+impl From<&'static str> for FourDigitDisplay {
+    fn from(s: &'static str) -> Self {
+        let (patterns_str, output_str) = s.split(" | ").collect_tuple().unwrap();
+        let mut fdd = Self::default();
+        for (i, pat) in patterns_str.split_whitespace().enumerate() {
+            fdd.patterns[i] = pat.chars().collect();
+        }
+        for (i, pat) in output_str.split_whitespace().enumerate() {
+            fdd.output[i] = pat.chars().collect();
+        }
+        fdd
+    }
+}
+
+fn parse(data: &'static str) -> Vec<FourDigitDisplay> {
+    data.lines().map(FourDigitDisplay::from).collect()
+}
+
+fn part_a(data: &'static str) -> usize {
+    let displays = parse(data);
+    let one_four_seven_eight = [2, 3, 4, 7];
+    displays
+        .iter()
+        .flat_map(|fdd| fdd.output.iter())
+        .filter(|digit| one_four_seven_eight.contains(&digit.len()))
+        .count()
+}
+
+fn part_b(data: &'static str) -> usize {
+    let mut sum = 0;
+    for fdd in data.lines().map(FourDigitDisplay::from) {
+        let mut digits = HashMap::new();
+        for pat in &fdd.patterns {
+            match pat.len() {
+                2 => digits.insert('1', pat),
+                3 => digits.insert('7', pat),
+                4 => digits.insert('4', pat),
+                7 => digits.insert('8', pat),
+                _ => None,
+            };
+        }
+        for pat in &fdd.patterns {
+            match pat.len() {
+                5 => {
+                    if pat.intersection(digits[&'4']).count() == 2 {
+                        digits.insert('2', pat)
+                    } else if pat.intersection(digits[&'1']).count() == 2 {
+                        digits.insert('3', pat)
+                    } else {
+                        digits.insert('5', pat)
+                    }
+                }
+                6 => {
+                    if pat.intersection(digits[&'1']).count() == 1 {
+                        digits.insert('6', pat)
+                    } else if pat.intersection(digits[&'4']).count() == 3 {
+                        digits.insert('0', pat)
+                    } else {
+                        digits.insert('9', pat)
+                    }
+                }
+                _ => None,
+            };
+        }
+        let mut number = String::new();
+        for out_pat in &fdd.output {
+            for (&digit, &pat) in &digits {
+                if out_pat == pat {
+                    number.push(digit);
+                    break;
+                }
+            }
+        }
+        sum += number.parse::<usize>().unwrap()
+    }
+    sum
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    const SAMPLE_DATA: &str = include_str!("sample.txt");
+
+    #[test]
+    fn test_a() {
+        assert_eq!(part_a(SAMPLE_DATA), 26);
+    }
+
+    #[test]
+    fn test_b() {
+        assert_eq!(part_b(SAMPLE_DATA), 61229);
+    }
+}
