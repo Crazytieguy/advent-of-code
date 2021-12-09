@@ -14,21 +14,16 @@ fn main() {
 
 #[derive(Default)]
 struct FourDigitDisplay {
-    patterns: [&'static str; 10],
-    output: [&'static str; 4],
+    patterns: Vec<&'static str>,
+    output: Vec<&'static str>,
 }
 
 impl From<&'static str> for FourDigitDisplay {
     fn from(s: &'static str) -> Self {
         let (patterns_str, output_str) = s.split(" | ").collect_tuple().unwrap();
-        let mut fdd = Self::default();
-        for (i, pat) in patterns_str.split_whitespace().enumerate() {
-            fdd.patterns[i] = pat;
-        }
-        for (i, pat) in output_str.split_whitespace().enumerate() {
-            fdd.output[i] = pat;
-        }
-        fdd
+        let patterns = patterns_str.split_whitespace().collect();
+        let output = output_str.split_whitespace().collect();
+        Self { patterns, output }
     }
 }
 
@@ -44,7 +39,7 @@ const PATTERNS: [&str; 10] = [
     "abcefg", "cf", "acdeg", "acdfg", "bcdf", "abdfg", "abdefg", "acf", "abcdefg", "abcdfg",
 ];
 
-fn get_decoder() -> impl Fn(&[&'static str; 10]) -> HashMap<char, char> {
+fn get_decoder() -> impl Fn(&[&'static str]) -> HashMap<char, char> {
     let key_to_char_true = get_key_to_char(&PATTERNS);
     move |patterns| {
         let key_to_char_mangled = get_key_to_char(patterns);
@@ -55,21 +50,16 @@ fn get_decoder() -> impl Fn(&[&'static str; 10]) -> HashMap<char, char> {
     }
 }
 
-fn get_key_to_char(patterns: &[&'static str; 10]) -> HashMap<(usize, BTreeSet<usize>), char> {
-    let char_to_occurences = patterns.iter().flat_map(|pat| pat.chars()).counts();
-    let char_to_pat_lengths = patterns
+fn get_key_to_char(patterns: &[&'static str]) -> HashMap<(usize, BTreeSet<usize>), char> {
+    let occurences = patterns.iter().flat_map(|pat| pat.chars()).counts();
+    let pat_lengths = patterns
         .iter()
         .flat_map(|pat| pat.chars().zip(repeat(pat.len())))
         .into_group_map();
     ('a'..='g')
         .map(|c| {
-            (
-                (
-                    char_to_occurences[&c],
-                    (&char_to_pat_lengths[&c]).iter().copied().collect(),
-                ),
-                c,
-            )
+            let lengths = (&pat_lengths[&c]).iter().copied().collect();
+            ((occurences[&c], lengths), c)
         })
         .collect()
 }
