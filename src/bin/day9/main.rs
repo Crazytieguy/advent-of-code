@@ -1,7 +1,4 @@
-use std::{
-    collections::{HashMap, HashSet},
-    iter::repeat,
-};
+use std::collections::HashSet;
 
 use itertools::Itertools;
 
@@ -23,59 +20,54 @@ fn parse(data: &'static str) -> Vec<Vec<usize>> {
 }
 
 fn adjacent_coords(
-    row: usize,
-    col: usize,
+    (row, col): (usize, usize),
     num_rows: usize,
     num_cols: usize,
 ) -> impl Iterator<Item = (usize, usize)> {
     [
-        row.checked_sub(1).zip(Some(col)),
-        Some(row).zip(col.checked_sub(1)),
-        Some(row + 1).filter(|&row| row < num_rows).zip(Some(col)),
-        Some(row).zip(Some(col + 1).filter(|&col| col < num_cols)),
+        row.checked_sub(1).zip(Some(col)),                          // up
+        Some(row).zip(col.checked_sub(1)),                          // left
+        Some(row + 1).filter(|&row| row < num_rows).zip(Some(col)), // down
+        Some(row).zip(Some(col + 1).filter(|&col| col < num_cols)), // right
     ]
     .into_iter()
     .flatten()
 }
 
-fn part_a(data: &'static str) -> usize {
-    let data = parse(data);
+fn get_low_points(data: &[Vec<usize>]) -> impl Iterator<Item = (usize, usize)> + '_ {
     (0..data.len())
         .cartesian_product(0..data[0].len())
-        .filter(|&(row, col)| {
-            adjacent_coords(row, col, data.len(), data[0].len())
-                .all(|(adj_row, adj_col)| data[adj_row][adj_col] > data[row][col])
+        .filter(|&point| {
+            adjacent_coords(point, data.len(), data[0].len())
+                .all(|adj| data[adj.0][adj.1] > data[point.0][point.1])
         })
+}
+
+fn part_a(data: &'static str) -> usize {
+    let data = parse(data);
+    get_low_points(&data)
         .map(|(row, col)| data[row][col] + 1)
         .sum()
 }
 
-fn crawl(row: usize, col: usize, data: &[Vec<usize>], basin: &mut HashSet<(usize, usize)>) {
-    if basin.contains(&(row, col)) || data[row][col] == 9 {
+fn get_basin_size(coords: (usize, usize), data: &[Vec<usize>]) -> usize {
+    let mut basin = HashSet::new();
+    crawl(coords, data, &mut basin);
+    basin.len()
+}
+
+fn crawl(coords: (usize, usize), data: &[Vec<usize>], basin: &mut HashSet<(usize, usize)>) {
+    if basin.contains(&coords) || data[coords.0][coords.1] == 9 {
         return;
     }
-    basin.insert((row, col));
-    adjacent_coords(row, col, data.len(), data[0].len())
-        .for_each(|(row, col)| crawl(row, col, data, basin))
+    basin.insert(coords);
+    adjacent_coords(coords, data.len(), data[0].len()).for_each(|coords| crawl(coords, data, basin))
 }
 
 fn part_b(data: &'static str) -> usize {
     let data = parse(data);
-    let mut coords_to_basin = HashMap::new();
-    for row in 0..data.len() {
-        for col in 0..data[0].len() {
-            if coords_to_basin.contains_key(&(row, col)) {
-                continue;
-            }
-            let mut basin = HashSet::new();
-            crawl(row, col, &data, &mut basin);
-            coords_to_basin.extend(basin.into_iter().zip(repeat((row, col))));
-        }
-    }
-    coords_to_basin
-        .into_values()
-        .counts()
-        .into_values()
+    get_low_points(&data)
+        .map(|coords| get_basin_size(coords, &data))
         .sorted_unstable()
         .rev()
         .take(3)
