@@ -1,4 +1,7 @@
-use std::collections::{HashMap, HashSet};
+use std::{
+    collections::{BTreeSet, HashMap},
+    iter::repeat,
+};
 
 use itertools::Itertools;
 
@@ -11,8 +14,8 @@ fn main() {
 
 #[derive(Default)]
 struct FourDigitDisplay {
-    patterns: [HashSet<char>; 10],
-    output: [HashSet<char>; 4],
+    patterns: [&'static str; 10],
+    output: [&'static str; 4],
 }
 
 impl From<&'static str> for FourDigitDisplay {
@@ -20,10 +23,10 @@ impl From<&'static str> for FourDigitDisplay {
         let (patterns_str, output_str) = s.split(" | ").collect_tuple().unwrap();
         let mut fdd = Self::default();
         for (i, pat) in patterns_str.split_whitespace().enumerate() {
-            fdd.patterns[i] = pat.chars().collect();
+            fdd.patterns[i] = pat;
         }
         for (i, pat) in output_str.split_whitespace().enumerate() {
-            fdd.output[i] = pat.chars().collect();
+            fdd.output[i] = pat;
         }
         fdd
     }
@@ -41,104 +44,59 @@ const PATTERNS: [&str; 10] = [
     "abcefg", "cf", "acdeg", "acdfg", "bcdf", "abdfg", "abdefg", "acf", "abcdefg", "abcdfg",
 ];
 
-fn get_algo() -> impl Fn(&[HashSet<char>; 10]) -> HashMap<usize, &HashSet<char>> {
-    let patterns = PATTERNS.map(|s| s.chars().collect::<HashSet<char>>());
-    let positions_by_length = (0..10).into_group_map_by(|&i| patterns[i].len());
-    let (determined, undetermined): (HashMap<_, _>, _) = positions_by_length
-        .into_iter()
-        .partition(|(_len, pats)| pats.len() == 1);
-    let length_to_num: HashMap<_, _> = determined
-        .into_iter()
-        .map(|(len, positions)| (len, positions[0]))
-        .collect();
-    let positions_by_length_and_intersection_length = undetermined
-        .into_iter()
-        .flat_map(|(len, positions)| {
-            positions
-                .into_iter()
-                .flat_map(|pos| {
-                    length_to_num
-                        .iter()
-                        .map(|(&det_len, &det_pos)| {
-                            (
-                                (
-                                    len,
-                                    det_len,
-                                    patterns[pos].intersection(&patterns[det_pos]).count(),
-                                ),
-                                pos,
-                            )
-                        })
-                        .collect_vec()
-                })
-                .collect_vec()
-        })
-        .into_group_map();
-    let determined_second_order = positions_by_length_and_intersection_length
-        .into_iter()
-        .filter_map(|(cond, positions)| {
-            if positions.len() == 1 {
-                Some((positions[0], cond))
-            } else {
-                None
-            }
-        })
-        .collect::<HashMap<_, _>>()
-        .into_iter()
-        .map(|(k, (len, det_len, inter_len))| (len, (det_len, inter_len, k)))
-        .into_group_map();
+fn get_algo() -> impl Fn(&[&'static str; 10]) -> HashMap<char, char> {
+    let key_to_char_true = get_key_to_char(&PATTERNS);
     move |patterns| {
-        let positions_by_length = (0..10).into_group_map_by(|&i| patterns[i].len());
-        let (determined, undetermined_): (HashMap<_, _>, _) = positions_by_length
+        let key_to_char_mangled = get_key_to_char(patterns);
+        key_to_char_mangled
             .into_iter()
-            .partition(|(_len, pats)| pats.len() == 1);
-        let determined: HashMap<_, _> = determined
-            .into_iter()
-            .map(|(len, positions)| (len, positions[0]))
-            .collect();
-        let mut decoded = determined
-            .iter()
-            .map(|(len, &pos)| (length_to_num[len], &patterns[pos]))
-            .collect::<HashMap<_, _>>();
-        decoded.extend(undetermined_.into_iter().flat_map(|(len, positions)| {
-            positions
-                .into_iter()
-                .map(|pos| {
-                    determined_second_order[&len]
-                        .iter()
-                        .find(|(det_len, inter_len, _num)| {
-                            patterns[pos]
-                                .intersection(&patterns[length_to_num[det_len]])
-                                .count()
-                                == *inter_len
-                        })
-                        .map(|(_, _, num)| (*num, &patterns[pos]))
-                        .expect("number could not be determined")
-                })
-                .collect_vec()
-        }));
-        decoded
+            .map(|(key, c)| (c, key_to_char_true[&key]))
+            .collect()
     }
+}
+
+fn get_key_to_char(patterns: &[&'static str; 10]) -> HashMap<(usize, BTreeSet<usize>), char> {
+    let char_to_occurences = patterns.iter().flat_map(|pat| pat.chars()).counts();
+    let char_to_pat_lengths = patterns
+        .iter()
+        .flat_map(|pat| pat.chars().zip(repeat(pat.len())))
+        .into_group_map();
+    ('a'..='g')
+        .map(|c| {
+            (
+                (
+                    char_to_occurences[&c],
+                    (&char_to_pat_lengths[&c]).iter().copied().collect(),
+                ),
+                c,
+            )
+        })
+        .collect()
 }
 
 fn part_b(data: &'static str) -> usize {
     let decode = get_algo();
-
     data.lines()
         .map(FourDigitDisplay::from)
         .map(|fdd| {
-            let digits = decode(&fdd.patterns);
+            let translation = decode(&fdd.patterns);
             fdd.output
                 .iter()
-                .map(|out_pat| {
-                    digits
-                        .keys()
-                        .find(|digit| out_pat == digits[digit])
+                .map(|&out_pat| {
+                    let pat = out_pat
+                        .chars()
+                        .map(|c| translation[&c])
+                        .sorted_unstable()
+                        .collect::<String>();
+                    PATTERNS
+                        .iter()
+                        .find_position(|&&p| p == pat)
+                        .map(|(num, _)| num)
                         .unwrap()
                 })
                 .rev()
                 .enumerate()
-                .map(|(i, digit)| digit * 10_usize.pow(i as u32))
+                .map(|(i, num)| num * 10_usize.pow(i as u32))
                 .sum::<usize>()
         })
         .sum()
