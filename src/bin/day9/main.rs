@@ -1,4 +1,4 @@
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 
 use itertools::Itertools;
 
@@ -9,65 +9,58 @@ fn main() {
     println!("part b: {}", part_b(DATA));
 }
 
-fn parse(data: &'static str) -> Vec<Vec<usize>> {
+fn parse(data: &'static str) -> HashMap<(i64, i64), usize> {
     data.lines()
-        .map(|line| {
+        .enumerate()
+        .flat_map(|(row, line)| {
             line.chars()
                 .map(|c| c.to_digit(10).unwrap() as usize)
-                .collect()
+                .enumerate()
+                .map(|(col, val)| ((row as i64, col as i64), val))
+                .collect_vec()
         })
         .collect()
 }
 
-fn adjacent_coords(
-    (row, col): (usize, usize),
-    num_rows: usize,
-    num_cols: usize,
-) -> impl Iterator<Item = (usize, usize)> {
-    [
-        row.checked_sub(1).zip(Some(col)),                          // up
-        Some(row).zip(col.checked_sub(1)),                          // left
-        Some(row + 1).filter(|&row| row < num_rows).zip(Some(col)), // down
-        Some(row).zip(Some(col + 1).filter(|&col| col < num_cols)), // right
-    ]
-    .into_iter()
-    .flatten()
+fn adjacent_points(
+    (y, x): (i64, i64),
+    data: &HashMap<(i64, i64), usize>,
+) -> impl Iterator<Item = (i64, i64)> + '_ {
+    [(-1, 0), (1, 0), (0, -1), (0, 1)]
+        .map(|(dy, dx)| (y + dy, x + dx))
+        .into_iter()
+        .filter(|p| data.contains_key(p))
 }
 
-fn get_low_points(data: &[Vec<usize>]) -> impl Iterator<Item = (usize, usize)> + '_ {
-    (0..data.len())
-        .cartesian_product(0..data[0].len())
-        .filter(|&point| {
-            adjacent_coords(point, data.len(), data[0].len())
-                .all(|adj| data[adj.0][adj.1] > data[point.0][point.1])
-        })
+fn get_low_points(data: &HashMap<(i64, i64), usize>) -> impl Iterator<Item = (i64, i64)> + '_ {
+    data.keys()
+        .copied()
+        .filter(|&p| adjacent_points(p, data).all(|adj| data[&adj] > data[&p]))
 }
 
 fn part_a(data: &'static str) -> usize {
     let data = parse(data);
-    get_low_points(&data)
-        .map(|(row, col)| data[row][col] + 1)
-        .sum()
+    get_low_points(&data).map(|p| data[&p] + 1).sum()
 }
 
-fn get_basin_size(coords: (usize, usize), data: &[Vec<usize>]) -> usize {
+fn get_basin_size(p: (i64, i64), data: &HashMap<(i64, i64), usize>) -> usize {
     let mut basin = HashSet::new();
-    crawl(coords, data, &mut basin);
+    crawl(p, data, &mut basin);
     basin.len()
 }
 
-fn crawl(coords: (usize, usize), data: &[Vec<usize>], basin: &mut HashSet<(usize, usize)>) {
-    if basin.contains(&coords) || data[coords.0][coords.1] == 9 {
+fn crawl(p: (i64, i64), data: &HashMap<(i64, i64), usize>, basin: &mut HashSet<(i64, i64)>) {
+    if basin.contains(&p) || data[&p] == 9 {
         return;
     }
-    basin.insert(coords);
-    adjacent_coords(coords, data.len(), data[0].len()).for_each(|coords| crawl(coords, data, basin))
+    basin.insert(p);
+    adjacent_points(p, data).for_each(|p| crawl(p, data, basin))
 }
 
 fn part_b(data: &'static str) -> usize {
     let data = parse(data);
     get_low_points(&data)
-        .map(|coords| get_basin_size(coords, &data))
+        .map(|p| get_basin_size(p, &data))
         .sorted_unstable()
         .rev()
         .take(3)
