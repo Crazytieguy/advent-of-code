@@ -44,7 +44,7 @@ const PATTERNS: [&str; 10] = [
     "abcefg", "cf", "acdeg", "acdfg", "bcdf", "abdfg", "abdefg", "acf", "abcdefg", "abcdfg",
 ];
 
-fn get_algo() -> impl Fn(&[&'static str; 10]) -> HashMap<char, char> {
+fn get_decoder() -> impl Fn(&[&'static str; 10]) -> HashMap<char, char> {
     let key_to_char_true = get_key_to_char(&PATTERNS);
     move |patterns| {
         let key_to_char_mangled = get_key_to_char(patterns);
@@ -75,7 +75,7 @@ fn get_key_to_char(patterns: &[&'static str; 10]) -> HashMap<(usize, BTreeSet<us
 }
 
 fn part_b(data: &'static str) -> usize {
-    let decode = get_algo();
+    let decode = get_decoder();
     data.lines()
         .map(FourDigitDisplay::from)
         .map(|fdd| {
@@ -88,11 +88,7 @@ fn part_b(data: &'static str) -> usize {
                         .map(|c| translation[&c])
                         .sorted_unstable()
                         .collect::<String>();
-                    PATTERNS
-                        .iter()
-                        .find_position(|&&p| p == pat)
-                        .map(|(num, _)| num)
-                        .unwrap()
+                    PATTERNS.iter().find_position(|&&p| p == pat).unwrap().0
                 })
                 .rev()
                 .enumerate()
