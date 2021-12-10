@@ -8,3 +8,4 @@ edition = "2021"
 [dependencies]
 derive-new = "0.5.9"
 itertools = "0.10.1"
+lazy_static = "1.4.0"

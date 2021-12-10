@@ -9,49 +9,52 @@ fn main() {
     println!("part b: {}", part_b(DATA));
 }
 
+lazy_static::lazy_static! {
+    static ref PAIRS: HashMap<char, char> = HashMap::from([
+        ('(', ')'),
+        ('[', ']'),
+        ('{', '}'),
+        ('<', '>'),
+    ]);
+}
+
+fn is_corrupt(stack: &mut Vec<char>, c: char) -> bool {
+    if PAIRS.contains_key(&c) {
+        stack.push(c);
+        return false;
+    }
+    if let Some(last) = stack.pop() {
+        if PAIRS[&last] == c {
+            return false;
+        }
+    }
+    true
+}
+
 fn part_a(data: &'static str) -> usize {
-    let pairs = HashMap::from([('(', ')'), ('[', ']'), ('{', '}'), ('<', '>')]);
+    let char_to_score = HashMap::from([(')', 3), (']', 57), ('}', 1197), ('>', 25137)]);
     data.lines()
         .filter_map(|line| {
             let mut stack = Vec::new();
             for c in line.chars() {
-                if pairs.contains_key(&c) {
-                    stack.push(c);
-                } else if let Some(last) = stack.pop() {
-                    if pairs.get(&last) != Some(&c) {
-                        return Some(c);
-                    }
-                } else {
+                if is_corrupt(&mut stack, c) {
                     return Some(c);
                 }
             }
             None
         })
-        .map(|illegal_char| match illegal_char {
-            ')' => 3,
-            ']' => 57,
-            '}' => 1197,
-            '>' => 25137,
-            _ => panic!(),
-        })
+        .map(|illegal_char| char_to_score[&illegal_char])
         .sum()
 }
 
 fn part_b(data: &'static str) -> usize {
-    let pairs = HashMap::from([('(', ')'), ('[', ']'), ('{', '}'), ('<', '>')]);
     let char_to_score = HashMap::from([('(', 1), ('[', 2), ('{', 3), ('<', 4)]);
     let mut scores = data
         .lines()
         .filter_map(|line| {
             let mut stack = Vec::new();
             for c in line.chars() {
-                if pairs.contains_key(&c) {
-                    stack.push(c);
-                } else if let Some(last) = stack.pop() {
-                    if pairs.get(&last) != Some(&c) {
-                        return None;
-                    }
-                } else {
+                if is_corrupt(&mut stack, c) {
                     return None;
                 }
             }
