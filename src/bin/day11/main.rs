@@ -16,7 +16,7 @@ fn parse(data: &'static str) -> HashMap<(i32, i32), u32> {
             line.chars()
                 .map(|c| c.to_digit(10).unwrap())
                 .enumerate()
-                .map(|(col, e)| ((row as i32, col as i32), e))
+                .map(|(col, energy)| ((row as i32, col as i32), energy))
                 .collect_vec()
         })
         .collect()
@@ -24,7 +24,7 @@ fn parse(data: &'static str) -> HashMap<(i32, i32), u32> {
 
 fn flash_if_gt_9(grid: &mut HashMap<(i32, i32), u32>, (y, x): (i32, i32)) {
     match grid.get_mut(&(y, x)) {
-        Some(e) if *e >= 9 => *e = 0,
+        Some(energy) if *energy >= 9 => *energy = 0,
         _ => return,
     };
     (-1..=1)
