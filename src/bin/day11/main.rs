@@ -23,34 +23,21 @@ fn parse(data: &'static str) -> HashMap<(i32, i32), u32> {
 }
 
 fn flash_if_gt_9(grid: &mut HashMap<(i32, i32), u32>, (y, x): (i32, i32)) {
-    let e = match grid.get_mut(&(y, x)) {
-        Some(e) => e,
-        None => return,
+    match grid.get_mut(&(y, x)) {
+        Some(e) if *e >= 9 => *e = 0,
+        _ => return,
     };
-    if *e <= 9 {
-        return;
-    }
-    *e = 0;
-    [
-        (-1, 0),
-        (1, 0),
-        (0, -1),
-        (0, 1),
-        (-1, -1),
-        (-1, 1),
-        (1, -1),
-        (1, 1),
-    ]
-    .map(|(dy, dx)| (y + dy, x + dx))
-    .into_iter()
-    .for_each(|adj| {
-        if let Some(e_adj) = grid.get_mut(&adj) {
-            if *e_adj > 0 {
-                *e_adj += 1;
-                flash_if_gt_9(grid, adj)
+    (-1..=1)
+        .cartesian_product(-1..=1)
+        .map(|(dy, dx)| (y + dy, x + dx))
+        .for_each(|adj| {
+            if let Some(energy) = grid.get_mut(&adj) {
+                if *energy > 0 {
+                    *energy += 1;
+                    flash_if_gt_9(grid, adj)
+                }
             }
-        }
-    })
+        })
 }
 
 fn step(grid: &mut HashMap<(i32, i32), u32>) -> usize {
@@ -63,11 +50,7 @@ fn step(grid: &mut HashMap<(i32, i32), u32>) -> usize {
 
 fn part_a(data: &'static str) -> usize {
     let mut grid = parse(data);
-    let mut sum = 0;
-    for _ in 0..100 {
-        sum += step(&mut grid);
-    }
-    sum
+    repeat_with(|| step(&mut grid)).take(100).sum()
 }
 
 fn part_b(data: &'static str) -> usize {
