@@ -1,45 +1,70 @@
-use std::collections::{HashMap, HashSet};
+use std::{collections::HashMap, iter};
 
 use itertools::Itertools;
 
 const DATA: &str = include_str!("data.txt");
+const MAX_CAVES: usize = 11;
 
 fn main() {
     println!("part a: {}", part_a(DATA));
     println!("part b: {}", part_b(DATA));
 }
 
-fn parse(data: &'static str) -> HashMap<&str, Vec<&str>> {
-    data.lines()
+struct Graph {
+    start: usize,
+    end: usize,
+    is_small: [bool; MAX_CAVES],
+    connected_to: [Vec<usize>; MAX_CAVES],
+}
+
+fn parse(data: &'static str) -> Graph {
+    let mut is_small = [false; MAX_CAVES];
+    let mut connected_to: [Vec<usize>; MAX_CAVES] = Default::default();
+    let str_graph = data
+        .lines()
         .flat_map(|line| {
             let (a, b) = line.split('-').collect_tuple().unwrap();
             [(a, b), (b, a)]
         })
         .filter(|&(a, b)| a != "end" && b != "start")
-        .into_group_map()
+        .into_group_map();
+    let name_to_id: HashMap<_, _> = str_graph
+        .keys()
+        .chain(iter::once(&"end"))
+        .enumerate()
+        .inspect(|&(id, &name)| is_small[id] = name.chars().next().unwrap().is_ascii_lowercase())
+        .map(|(id, &name)| (name, id))
+        .collect();
+    str_graph.into_iter().for_each(|(from, to)| {
+        connected_to[name_to_id[from]] = to.into_iter().map(|name| name_to_id[name]).collect()
+    });
+    Graph {
+        start: name_to_id["start"],
+        end: name_to_id["end"],
+        is_small,
+        connected_to,
+    }
 }
 
-fn count_paths<'a>(
-    graph: &HashMap<&'a str, Vec<&'a str>>,
-    cur_position: &'a str,
-    mut visited: HashSet<&'a str>,
+fn count_paths(
+    graph: &Graph,
+    cur_position: usize,
+    mut visited: [bool; MAX_CAVES],
     second_visit_allowed: bool,
 ) -> usize {
-    if cur_position == "end" {
+    if cur_position == graph.end {
         return 1;
     }
-    if cur_position.chars().all(|c| c.is_ascii_lowercase()) {
-        visited.insert(cur_position);
-    };
-    graph[cur_position]
+    visited[cur_position] = graph.is_small[cur_position];
+    graph.connected_to[cur_position]
         .iter()
-        .filter(|&&next_position| second_visit_allowed || !visited.contains(next_position))
-        .map(|next_position| {
+        .filter(|&&next_position| second_visit_allowed || !visited[next_position])
+        .map(|&next_position| {
             count_paths(
                 graph,
                 next_position,
-                visited.clone(),
-                second_visit_allowed && !visited.contains(next_position),
+                visited,
+                second_visit_allowed && !visited[next_position],
             )
         })
         .sum()
@@ -47,12 +72,12 @@ fn count_paths<'a>(
 
 fn part_a(data: &'static str) -> usize {
     let graph = parse(data);
-    count_paths(&graph, "start", HashSet::new(), false)
+    count_paths(&graph, graph.start, Default::default(), false)
 }
 
 fn part_b(data: &'static str) -> usize {
     let graph = parse(data);
-    count_paths(&graph, "start", HashSet::new(), true)
+    count_paths(&graph, graph.start, Default::default(), true)
 }
 
 #[cfg(test)]
