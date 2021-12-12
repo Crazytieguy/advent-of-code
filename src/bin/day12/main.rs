@@ -28,16 +28,14 @@ fn parse(data: &'static str) -> Graph {
         })
         .filter(|&(a, b)| a != "end" && b != "start")
         .into_group_map();
-    let name_to_id: HashMap<_, _> = str_graph
-        .keys()
-        .chain(iter::once(&"end"))
-        .enumerate()
-        .inspect(|&(id, &name)| is_small[id] = name.chars().next().unwrap().is_ascii_lowercase())
-        .map(|(id, &name)| (name, id))
-        .collect();
-    str_graph.into_iter().for_each(|(from, to)| {
+    let mut name_to_id = HashMap::new();
+    for (id, &name) in str_graph.keys().chain(iter::once(&"end")).enumerate() {
+        is_small[id] = name.chars().next().unwrap().is_ascii_lowercase();
+        name_to_id.insert(name, id);
+    }
+    for (from, to) in str_graph {
         connected_to[name_to_id[from]] = to.into_iter().map(|name| name_to_id[name]).collect()
-    });
+    }
     Graph {
         start: name_to_id["start"],
         end: name_to_id["end"],
