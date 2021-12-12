@@ -7,51 +7,41 @@ fn main() {
     println!("part b: {}", part_b(DATA));
 }
 
-fn parse(data: &'static str) -> Vec<Vec<bool>> {
-    data.lines()
-        .map(|line| line.chars().map(|c| c == '1').collect())
-        .collect()
+fn parse(data: &'static str) -> (Vec<u16>, usize) {
+    (
+        data.lines()
+            .map(|line| u16::from_str_radix(line, 2).unwrap())
+            .collect(),
+        data.chars().take_while(|&c| c != '\n').count(),
+    )
 }
 
 fn part_a(data: &'static str) -> usize {
-    let data = parse(data);
-    let row_length = data[0].len();
-    let most_common: Vec<bool> = (0..row_length)
-        .map(|i| {
-            let counts = data.iter().counts_by(|row| row[i]);
-            counts[&true] > counts[&false]
-        })
-        .collect();
-    let least_common = most_common.iter().map(|v| !v).collect::<Vec<_>>();
-    let gamma = binary_to_number(&most_common);
-    let epsilon = binary_to_number(&least_common);
-    gamma * epsilon
+    let (data, num_bits) = parse(data);
+    let gamma = (0..num_bits)
+        .map(|bit_pos| 1 << bit_pos)
+        .filter(|mask| data.iter().filter(|&num| num & mask != 0).count() > data.len() / 2)
+        .fold(0, |gamma, mask| gamma | mask) as usize;
+    let interesting_bits = (1 << num_bits) - 1;
+    gamma * (!gamma & interesting_bits)
 }
 
-fn binary_to_number(b: &[bool]) -> usize {
-    b.iter()
-        .rev()
-        .enumerate()
-        .map(|(i, bit)| if *bit { 2_usize.pow(i as u32) } else { 0 })
-        .sum()
-}
-
-#[allow(dead_code)]
 fn part_b(data: &'static str) -> usize {
-    let data = parse(data);
-    let oxygen_generator_rating = rating(&data, true);
-    let co2_scrubber_rating = rating(&data, false);
-    oxygen_generator_rating * co2_scrubber_rating
+    let (data, num_bits) = parse(data);
+    rating(&data, num_bits, true) * rating(&data, num_bits, false)
 }
 
-fn rating(data: &[Vec<bool>], bit_criteria: bool) -> usize {
-    let mut remaining: Vec<_> = data.iter().collect();
-    for i in 0..data[0].len() {
-        let counts = remaining.iter().counts_by(|row| row[i]);
-        let keep = bit_criteria == (counts[&true] >= counts[&false]);
-        remaining = remaining.into_iter().filter(|row| row[i] == keep).collect();
+fn rating(data: &[u16], num_bits: usize, bit_criteria: bool) -> usize {
+    let mut remaining = data.iter().copied().collect_vec();
+    for bit_pos in (0..num_bits).rev() {
+        let mask = 1 << bit_pos;
+        let mut groups = remaining.into_iter().into_group_map_by(|num| num & mask);
+        remaining = match bit_criteria == (groups[&mask].len() >= groups[&0].len()) {
+            true => groups.remove(&mask).unwrap(),
+            false => groups.remove(&0).unwrap(),
+        };
         if remaining.len() == 1 {
-            return binary_to_number(remaining[0]);
+            return remaining[0] as usize;
         }
     }
     panic!()
