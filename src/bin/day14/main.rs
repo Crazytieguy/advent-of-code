@@ -1,7 +1,7 @@
 #![feature(array_windows)]
-use std::{collections::HashMap, iter};
+use std::collections::HashMap;
 
-use itertools::{self, Itertools, MinMaxResult};
+use itertools::{self, Itertools};
 
 const DATA: &str = include_str!("data.txt");
 
@@ -11,64 +11,45 @@ fn main() {
 }
 
 type Pair = [char; 2];
-type Pairs = [Pair; 2];
 
-fn parse(data: &'static str) -> (HashMap<Pair, usize>, HashMap<Pair, Pairs>) {
-    let mut lines = data.lines();
-    let initial_pair_counts = iter::once('^')
-        .chain(lines.next().unwrap().chars())
-        .chain(iter::once('$'))
-        .tuple_windows()
-        .map(|(c0, c1)| [c0, c1])
-        .counts();
-    lines.next();
-    let rules = lines
-        .map(|line| {
-            let (pair_0, pair_1, insert) = line
-                .chars()
-                .filter(|c| c.is_ascii_uppercase())
-                .collect_tuple()
-                .unwrap();
-            ([pair_0, pair_1], [[pair_0, insert], [insert, pair_1]])
-        })
+fn parse(data: &'static str) -> (HashMap<Pair, usize>, HashMap<Pair, char>) {
+    let lines = data
+        .lines()
+        .map(|line| line.chars().collect_vec())
+        .collect_vec();
+    let mut initial_pair_counts = lines[0].array_windows().copied().counts();
+    initial_pair_counts.insert([*lines[0].last().unwrap(), '$'], 1);
+    let rules = lines[2..]
+        .iter()
+        .map(|line| ([line[0], line[1]], line[6]))
         .collect();
     (initial_pair_counts, rules)
 }
 
-fn step(pair_counts: &HashMap<Pair, usize>, rules: &HashMap<Pair, Pairs>) -> HashMap<Pair, usize> {
-    pair_counts
-        .iter()
-        .flat_map(|(&pair, &count)| {
-            rules.get(&pair).map_or_else(
-                || vec![(pair, count)],
-                |&[pair_0, pair_1]| vec![(pair_0, count), (pair_1, count)],
-            )
-        })
-        .into_grouping_map()
-        .sum()
-}
-
-fn pair_counts_to_elem_counts(pair_counts: &HashMap<Pair, usize>) -> HashMap<char, usize> {
-    let mut counts = pair_counts
-        .iter()
-        .flat_map(|(&[c0, c1], &count)| [(c0, count), (c1, count)])
-        .filter(|(c, _)| !matches!(c, '^' | '$'))
-        .into_grouping_map()
-        .sum();
-    counts.values_mut().for_each(|count| *count /= 2);
-    counts
-}
-
 fn solution(data: &'static str, num_steps: usize) -> usize {
     let (pair_counts, rules) = parse(data);
-    let pair_counts = itertools::iterate(pair_counts, |pair_counts| step(pair_counts, &rules))
-        .nth(num_steps)
-        .unwrap();
-    let elem_counts = pair_counts_to_elem_counts(&pair_counts);
-    match elem_counts.into_values().minmax() {
-        MinMaxResult::MinMax(min, max) => max - min,
-        _ => unreachable!(),
-    }
+    let pair_counts = itertools::iterate(pair_counts, |pair_counts| {
+        pair_counts
+            .iter()
+            .flat_map(|(&[c0, c1], &count)| {
+                if let Some(&insert) = rules.get(&[c0, c1]) {
+                    vec![([c0, insert], count), ([insert, c1], count)]
+                } else {
+                    vec![([c0, c1], count)]
+                }
+            })
+            .into_grouping_map()
+            .sum()
+    })
+    .nth(num_steps)
+    .unwrap();
+    let elem_counts = pair_counts
+        .iter()
+        .map(|(&[c0, _], &count)| (c0, count))
+        .into_grouping_map()
+        .sum();
+    let (min, max) = elem_counts.into_values().minmax().into_option().unwrap();
+    max - min
 }
 
 fn part_a(data: &'static str) -> usize {
