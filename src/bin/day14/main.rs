@@ -30,13 +30,10 @@ fn solution(data: &'static str, num_steps: usize) -> usize {
     let (mut pair_counts, rules) = parse(data);
     for _ in 0..num_steps {
         pair_counts = pair_counts
-            .iter()
-            .flat_map(|(&[c0, c1], &count)| {
-                if let Some(&insert) = rules.get(&[c0, c1]) {
-                    vec![([c0, insert], count), ([insert, c1], count)]
-                } else {
-                    vec![([c0, c1], count)]
-                }
+            .into_iter()
+            .flat_map(|([c0, c1], count)| match rules.get(&[c0, c1]) {
+                Some(&insert) => vec![([c0, insert], count), ([insert, c1], count)],
+                None => vec![([c0, c1], count)],
             })
             .into_grouping_map()
             .sum()

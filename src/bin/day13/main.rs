@@ -1,4 +1,7 @@
-use std::{collections::HashSet, iter};
+use std::{
+    collections::HashSet,
+    iter::{self, repeat},
+};
 
 use itertools::Itertools;
 
@@ -57,7 +60,6 @@ fn apply_folds(points: HashSet<Point>, folds: &[Fold]) -> HashSet<Point> {
         .collect()
 }
 
-#[allow(dead_code)]
 fn part_b(data: &'static str) -> String {
     let (mut points, folds) = parse(data);
     points = apply_folds(points, &folds);
@@ -69,9 +71,9 @@ fn part_b(data: &'static str) -> String {
     (0..=max_y)
         .flat_map(|y| {
             (0..=max_x)
-                .map(|x| if points.contains(&(x, y)) { '█' } else { ' ' })
+                .zip(repeat(y))
+                .map(|(x, y)| if points.contains(&(x, y)) { '█' } else { ' ' })
                 .chain(iter::once('\n'))
-                .collect_vec()
         })
         .collect()
 }
