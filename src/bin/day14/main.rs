@@ -38,10 +38,10 @@ fn parse(data: &'static str) -> (HashMap<Pair, usize>, HashMap<Pair, Pairs>) {
 fn step(pair_counts: &HashMap<Pair, usize>, rules: &HashMap<Pair, Pairs>) -> HashMap<Pair, usize> {
     pair_counts
         .iter()
-        .flat_map(|(&p, &count)| {
-            rules.get(&p).map_or_else(
-                || vec![(p, count)],
-                |&[p0, p1]| vec![(p0, count), (p1, count)],
+        .flat_map(|(&pair, &count)| {
+            rules.get(&pair).map_or_else(
+                || vec![(pair, count)],
+                |&[pair_0, pair_1]| vec![(pair_0, count), (pair_1, count)],
             )
         })
         .into_grouping_map()
