@@ -1,9 +1,4 @@
-use std::{
-    collections::HashSet,
-    iter::{self, repeat},
-};
-
-use itertools::Itertools;
+use std::collections::HashSet;
 
 const DATA: &str = include_str!("data.txt");
 
@@ -17,7 +12,7 @@ enum Fold {
     Y(i64),
 }
 
-type Point = (i64, i64);
+type Point = (usize, usize);
 
 fn parse(data: &'static str) -> (HashSet<Point>, Vec<Fold>) {
     let mut lines = data.lines();
@@ -39,7 +34,7 @@ fn parse(data: &'static str) -> (HashSet<Point>, Vec<Fold>) {
                 _ => panic!(),
             }
         })
-        .collect_vec();
+        .collect();
     (points, folds)
 }
 
@@ -53,8 +48,8 @@ fn apply_folds(points: HashSet<Point>, folds: &[Fold]) -> HashSet<Point> {
         .into_iter()
         .map(|p| {
             folds.iter().fold(p, |(x, y), fold| match *fold {
-                Fold::X(v) => (v - (v - x).abs(), y),
-                Fold::Y(v) => (x, v - (v - y).abs()),
+                Fold::X(v) => ((v - (v - x as i64).abs()) as usize, y),
+                Fold::Y(v) => (x, (v - (v - y as i64).abs()) as usize),
             })
         })
         .collect()
@@ -65,17 +60,11 @@ fn part_b(data: &'static str) -> String {
     points = apply_folds(points, &folds);
     let (max_x, max_y) = points
         .iter()
-        .copied()
-        .reduce(|(x1, y1), (x2, y2)| (x1.max(x2), y1.max(y2)))
-        .unwrap();
-    (0..=max_y)
-        .flat_map(|y| {
-            (0..=max_x)
-                .zip(repeat(y))
-                .map(|(x, y)| if points.contains(&(x, y)) { '█' } else { ' ' })
-                .chain(iter::once('\n'))
-        })
-        .collect()
+        .fold((0, 0), |(x1, y1), &(x2, y2)| (x1.max(x2), y1.max(y2)));
+    let mut grid = vec![vec!['.'; max_x + 1]; max_y + 1];
+    grid.iter_mut().for_each(|line| line.push('\n'));
+    points.into_iter().for_each(|(x, y)| grid[y][x] = '█');
+    grid.into_iter().flatten().collect()
 }
 
 #[cfg(test)]
@@ -92,11 +81,11 @@ mod tests {
     fn test_b() {
         assert_eq!(
             part_b(SAMPLE_DATA),
-            "#####\n\
-             #   #\n\
-             #   #\n\
-             #   #\n\
-             #####\n"
+            "█████\n\
+             █...█\n\
+             █...█\n\
+             █...█\n\
+             █████"
         );
     }
 }
