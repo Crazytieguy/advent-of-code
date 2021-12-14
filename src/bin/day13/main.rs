@@ -1,5 +1,6 @@
-#![feature(destructuring_assignment)]
-use itertools::{repeat_n, Itertools};
+use std::{collections::HashSet, iter};
+
+use itertools::Itertools;
 
 const DATA: &str = include_str!("data.txt");
 
@@ -15,18 +16,17 @@ enum Fold {
 
 type Point = (i64, i64);
 
-fn parse(data: &'static str) -> (Vec<Point>, Vec<Fold>) {
-    let points = data
-        .lines()
+fn parse(data: &'static str) -> (HashSet<Point>, Vec<Fold>) {
+    let mut lines = data.lines();
+    let points = lines
+        .by_ref()
         .take_while(|line| !line.is_empty())
         .map(|line| {
             let (x, y) = line.split_once(',').unwrap();
             (x.parse().unwrap(), y.parse().unwrap())
         })
-        .collect_vec();
-    let folds = data
-        .lines()
-        .skip_while(|line| !line.starts_with('f'))
+        .collect();
+    let folds = lines
         .map(|line| {
             let (axis, value) = line.split_once('=').unwrap();
             let value = value.parse().unwrap();
@@ -45,7 +45,7 @@ fn part_a(data: &'static str) -> usize {
     apply_folds(points, &folds[0..=0]).len()
 }
 
-fn apply_folds(points: Vec<Point>, folds: &[Fold]) -> Vec<Point> {
+fn apply_folds(points: HashSet<Point>, folds: &[Fold]) -> HashSet<Point> {
     points
         .into_iter()
         .map(|p| {
@@ -54,7 +54,6 @@ fn apply_folds(points: Vec<Point>, folds: &[Fold]) -> Vec<Point> {
                 Fold::Y(v) => (x, v - (v - y).abs()),
             })
         })
-        .unique()
         .collect()
 }
 
@@ -62,19 +61,19 @@ fn apply_folds(points: Vec<Point>, folds: &[Fold]) -> Vec<Point> {
 fn part_b(data: &'static str) -> String {
     let (mut points, folds) = parse(data);
     points = apply_folds(points, &folds);
-    points.sort_unstable_by(|(xa, ya), (xb, yb)| (ya, xa).cmp(&(yb, xb)));
-    let mut picture = String::new();
-    let (mut x, mut y) = (-1, 0);
-    for (next_x, next_y) in points {
-        if next_y != y {
-            picture.extend(repeat_n('\n', (next_y - y) as usize));
-            x = -1;
-        }
-        picture.extend(repeat_n(' ', (next_x - x - 1) as usize));
-        picture.push('#');
-        (x, y) = (next_x, next_y);
-    }
-    picture
+    let (max_x, max_y) = points
+        .iter()
+        .copied()
+        .reduce(|(x1, y1), (x2, y2)| (x1.max(x2), y1.max(y2)))
+        .unwrap();
+    (0..=max_y)
+        .flat_map(|y| {
+            (0..=max_x)
+                .map(|x| if points.contains(&(x, y)) { '█' } else { ' ' })
+                .chain(iter::once('\n'))
+                .collect_vec()
+        })
+        .collect()
 }
 
 #[cfg(test)]
@@ -95,7 +94,7 @@ mod tests {
              #   #\n\
              #   #\n\
              #   #\n\
-             #####"
+             #####\n"
         );
     }
 }
