@@ -1,5 +1,5 @@
 #![feature(array_windows)]
-use std::collections::HashMap;
+use std::{collections::HashMap, iter};
 
 use itertools::Itertools;
 
@@ -10,37 +10,27 @@ fn main() {
     println!("part b: {}", part_b(DATA));
 }
 
-type Pair = [char; 2];
-
-fn parse(data: &'static str) -> (HashMap<Pair, usize>, HashMap<Pair, char>) {
-    let lines = data
-        .lines()
-        .map(|line| line.chars().collect_vec())
-        .collect_vec();
-    let mut initial_pair_counts = lines[0].array_windows().copied().counts();
-    initial_pair_counts.insert([*lines[0].last().unwrap(), '$'], 1);
-    let rules = lines[2..]
+fn solution(data: &'static str, num_steps: usize) -> usize {
+    let lines = data.lines().map(|line| line.as_bytes()).collect_vec();
+    let mut pair_counts = lines[0].array_windows().copied().counts();
+    let rules: HashMap<[u8; 2], u8> = lines[2..]
         .iter()
         .map(|line| ([line[0], line[1]], line[6]))
         .collect();
-    (initial_pair_counts, rules)
-}
-
-fn solution(data: &'static str, num_steps: usize) -> usize {
-    let (mut pair_counts, rules) = parse(data);
     for _ in 0..num_steps {
         pair_counts = pair_counts
             .into_iter()
-            .flat_map(|([c0, c1], count)| match rules.get(&[c0, c1]) {
-                Some(&insert) => vec![([c0, insert], count), ([insert, c1], count)],
-                None => vec![([c0, c1], count)],
+            .flat_map(|([a, c], count)| {
+                let b = rules[&[a, c]];
+                [([a, b], count), ([b, c], count)]
             })
             .into_grouping_map()
             .sum()
     }
     let elem_counts = pair_counts
-        .iter()
-        .map(|(&[c0, _], &count)| (c0, count))
+        .into_iter()
+        .map(|([c0, _], count)| (c0, count))
+        .chain(iter::once((*lines[0].last().unwrap(), 1)))
         .into_grouping_map()
         .sum();
     let (min, max) = elem_counts.into_values().minmax().into_option().unwrap();
