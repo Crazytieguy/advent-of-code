@@ -1,3 +1,4 @@
+#![feature(destructuring_assignment)]
 use itertools::{repeat_n, Itertools};
 
 const DATA: &str = include_str!("data.txt");
@@ -41,34 +42,29 @@ fn parse(data: &'static str) -> (Vec<Point>, Vec<Fold>) {
 
 fn part_a(data: &'static str) -> usize {
     let (points, folds) = parse(data);
-    apply_fold(&folds[0], points).len()
+    apply_folds(points, &folds[0..=0]).len()
 }
 
-fn apply_fold(fold: &Fold, points: Vec<(i64, i64)>) -> Vec<(i64, i64)> {
-    match fold {
-        Fold::X(v) => points
-            .iter()
-            .map(|&(x, y)| ((x - v).abs() - 1, y))
-            .unique()
-            .collect(),
-        Fold::Y(v) => points
-            .iter()
-            .map(|&(x, y)| (x, v - (v - y).abs()))
-            .unique()
-            .collect(),
-    }
+fn apply_folds(points: Vec<Point>, folds: &[Fold]) -> Vec<Point> {
+    points
+        .into_iter()
+        .map(|p| {
+            folds.iter().fold(p, |(x, y), fold| match *fold {
+                Fold::X(v) => (v - (v - x).abs(), y),
+                Fold::Y(v) => (x, v - (v - y).abs()),
+            })
+        })
+        .unique()
+        .collect()
 }
 
 #[allow(dead_code)]
 fn part_b(data: &'static str) -> String {
     let (mut points, folds) = parse(data);
-    points = folds
-        .iter()
-        .fold(points, |points, fold| apply_fold(fold, points));
+    points = apply_folds(points, &folds);
     points.sort_unstable_by(|(xa, ya), (xb, yb)| (ya, xa).cmp(&(yb, xb)));
     let mut picture = String::new();
-    let mut x = -1;
-    let mut y = 0;
+    let (mut x, mut y) = (-1, 0);
     for (next_x, next_y) in points {
         if next_y != y {
             picture.extend(repeat_n('\n', (next_y - y) as usize));
@@ -76,8 +72,7 @@ fn part_b(data: &'static str) -> String {
         }
         picture.extend(repeat_n(' ', (next_x - x - 1) as usize));
         picture.push('#');
-        y = next_y;
-        x = next_x;
+        (x, y) = (next_x, next_y);
     }
     picture
 }
@@ -94,6 +89,13 @@ mod tests {
 
     #[test]
     fn test_b() {
-        assert_eq!(part_b(SAMPLE_DATA), "#####\n#   #\n#   #\n#   #\n#####");
+        assert_eq!(
+            part_b(SAMPLE_DATA),
+            "#####\n\
+             #   #\n\
+             #   #\n\
+             #   #\n\
+             #####"
+        );
     }
 }
