@@ -1,7 +1,7 @@
 #![feature(array_windows)]
 use std::collections::HashMap;
 
-use itertools::{self, Itertools};
+use itertools::Itertools;
 
 const DATA: &str = include_str!("data.txt");
 
@@ -27,9 +27,9 @@ fn parse(data: &'static str) -> (HashMap<Pair, usize>, HashMap<Pair, char>) {
 }
 
 fn solution(data: &'static str, num_steps: usize) -> usize {
-    let (pair_counts, rules) = parse(data);
-    let pair_counts = itertools::iterate(pair_counts, |pair_counts| {
-        pair_counts
+    let (mut pair_counts, rules) = parse(data);
+    for _ in 0..num_steps {
+        pair_counts = pair_counts
             .iter()
             .flat_map(|(&[c0, c1], &count)| {
                 if let Some(&insert) = rules.get(&[c0, c1]) {
@@ -40,9 +40,7 @@ fn solution(data: &'static str, num_steps: usize) -> usize {
             })
             .into_grouping_map()
             .sum()
-    })
-    .nth(num_steps)
-    .unwrap();
+    }
     let elem_counts = pair_counts
         .iter()
         .map(|(&[c0, _], &count)| (c0, count))
