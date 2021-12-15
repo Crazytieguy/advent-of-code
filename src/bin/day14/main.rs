@@ -1,7 +1,7 @@
 #![feature(array_windows)]
 use std::{collections::HashMap, iter};
 
-use itertools::Itertools;
+use itertools::{iterate, Itertools};
 
 const DATA: &str = include_str!("data.txt");
 
@@ -12,21 +12,24 @@ fn main() {
 
 fn solution(data: &'static str, num_steps: usize) -> usize {
     let lines = data.lines().map(|line| line.as_bytes()).collect_vec();
-    let mut pair_counts = lines[0].array_windows().copied().counts();
     let rules: HashMap<[u8; 2], u8> = lines[2..]
         .iter()
-        .map(|line| ([line[0], line[1]], line[6]))
+        .map(|&line| match *line {
+            [a, b, .., c] => ([a, b], c),
+            _ => panic!(),
+        })
         .collect();
-    for _ in 0..num_steps {
-        pair_counts = pair_counts
-            .into_iter()
-            .flat_map(|([a, c], count)| {
+    let pair_counts = iterate(lines[0].array_windows().copied().counts(), |prev| {
+        prev.iter()
+            .flat_map(|(&[a, c], &count)| {
                 let b = rules[&[a, c]];
                 [([a, b], count), ([b, c], count)]
             })
             .into_grouping_map()
             .sum()
-    }
+    })
+    .nth(num_steps)
+    .unwrap();
     let elem_counts = pair_counts
         .into_iter()
         .map(|([c0, _], count)| (c0, count))
