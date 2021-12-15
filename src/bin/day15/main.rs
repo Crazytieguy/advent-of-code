@@ -1,5 +1,6 @@
 use std::{
-    collections::{HashMap, VecDeque},
+    cmp::Reverse,
+    collections::{BinaryHeap, HashMap},
     iter,
 };
 
@@ -30,15 +31,15 @@ fn part_a(data: &'static str) -> u32 {
 
 fn best_total_risk(grid: &HashMap<(i16, i16), u32>) -> u32 {
     let mut best_known = HashMap::new();
-    let mut queue = VecDeque::from([(0, 0, 0)]);
-    while let Some((x, y, total_risk)) = queue.pop_front() {
+    let mut queue = BinaryHeap::from([(Reverse(0), 0, 0)]);
+    while let Some((Reverse(total_risk), x, y)) = queue.pop() {
         let best_known_risk = best_known.entry((x, y)).or_insert(u32::MAX);
         if total_risk < *best_known_risk {
             *best_known_risk = total_risk;
             for (dx, dy) in [(0, 1), (1, 0), (-1, 0), (0, -1)] {
                 let (x, y) = (x + dx, y + dy);
                 if let Some(risk) = grid.get(&(x, y)) {
-                    queue.push_back((x, y, total_risk + risk));
+                    queue.push((Reverse(total_risk + risk), x, y));
                 }
             }
         }
