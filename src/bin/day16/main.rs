@@ -1,5 +1,3 @@
-#![feature(array_chunks)]
-
 const DATA: &str = include_str!("data.txt");
 
 fn main() {
@@ -11,123 +9,82 @@ fn parse(data: &'static str) -> Vec<bool> {
     data.trim().chars().flat_map(hex_char_to_bits).collect()
 }
 
-fn hex_char_to_bits(c: char) -> [bool; 4] {
-    const F: bool = false;
-    const T: bool = true;
-
-    match c {
-        '0' => [F, F, F, F],
-        '1' => [F, F, F, T],
-        '2' => [F, F, T, F],
-        '3' => [F, F, T, T],
-        '4' => [F, T, F, F],
-        '5' => [F, T, F, T],
-        '6' => [F, T, T, F],
-        '7' => [F, T, T, T],
-        '8' => [T, F, F, F],
-        '9' => [T, F, F, T],
-        'A' => [T, F, T, F],
-        'B' => [T, F, T, T],
-        'C' => [T, T, F, F],
-        'D' => [T, T, F, T],
-        'E' => [T, T, T, F],
-        'F' => [T, T, T, T],
-        _ => panic!(),
-    }
+fn hex_char_to_bits(c: char) -> Vec<bool> {
+    let n = c.to_digit(16).unwrap();
+    (0..4).rev().map(|i| (n & (1 << i)) != 0).collect()
 }
 
-fn bin_to_num(bin: &[bool]) -> usize {
-    bin.iter()
+fn bits_to_num(bits: &[bool]) -> usize {
+    bits.iter()
         .rev()
         .enumerate()
         .map(|(i, &b)| (b as usize) << i)
         .sum()
 }
 
-struct ParseResult {
+struct ParseOutcome {
     version_sum: usize,
-    num_bits_read: usize,
     value: usize,
 }
 
-fn parse_bits(bits: &[bool]) -> ParseResult {
-    let mut version_sum = bin_to_num(&bits[0..3]);
-    let t = bin_to_num(&bits[3..6]);
-    if t == 4 {
-        let mut num_bits_read = 6;
+fn parse_bits(bits: &[bool], pos: &mut usize) -> ParseOutcome {
+    let mut next_slice = |size| {
+        let out = &bits[*pos..*pos + size];
+        *pos += size;
+        out
+    };
+
+    let mut version_sum = bits_to_num(next_slice(3));
+    let type_id = bits_to_num(next_slice(3));
+
+    if type_id == 4 {
         let mut literal_bin = Vec::new();
-        for [keep_reading, val @ ..] in bits[6..].array_chunks::<5>() {
-            literal_bin.extend_from_slice(val);
-            num_bits_read += 5;
-            if !keep_reading {
-                break;
-            }
+        let mut keep_reading = true;
+        while keep_reading {
+            keep_reading = next_slice(1)[0];
+            literal_bin.extend_from_slice(next_slice(4))
         }
-        let value = bin_to_num(&literal_bin);
-        ParseResult {
-            version_sum,
-            num_bits_read,
-            value,
-        }
-    } else {
-        let len_type_is_subpackets = bits[6];
-        let mut num_bits_read = 7;
-        let mut sub_values = Vec::new();
-        if len_type_is_subpackets {
-            let num_subpackets = bin_to_num(&bits[7..7 + 11]) as usize;
-            num_bits_read += 11;
-            for _ in 0..num_subpackets {
-                let parsed = parse_bits(&bits[num_bits_read..]);
-                num_bits_read += parsed.num_bits_read;
-                version_sum += parsed.version_sum;
-                sub_values.push(parsed.value);
-            }
-        } else {
-            let num_bits = bin_to_num(&bits[7..7 + 15]) as usize;
-            if num_bits > bits.len() {
-                panic!("too many bits!")
-            }
-            num_bits_read += 15;
-            let mut data_bits_read = 0;
-            while data_bits_read < num_bits {
-                let parsed = parse_bits(&bits[num_bits_read..]);
-                num_bits_read += parsed.num_bits_read;
-                data_bits_read += parsed.num_bits_read;
-                version_sum += parsed.version_sum;
-                sub_values.push(parsed.value);
-            }
-            assert_eq!(num_bits, data_bits_read);
-            assert_eq!(num_bits_read, num_bits + 22);
-        }
-        if t > 4 {
-            assert_eq!(sub_values.len(), 2);
-        }
-        let value = match t {
-            0 => sub_values.into_iter().sum(),
-            1 => sub_values.into_iter().product(),
-            2 => sub_values.into_iter().min().unwrap(),
-            3 => sub_values.into_iter().max().unwrap(),
-            5 => (sub_values[0] > sub_values[1]) as usize,
-            6 => (sub_values[0] < sub_values[1]) as usize,
-            7 => (sub_values[0] == sub_values[1]) as usize,
-            _ => panic!("{} is not a valid type id", t),
-        };
-        ParseResult {
-            version_sum,
-            num_bits_read,
-            value,
-        }
+        let value = bits_to_num(&literal_bin);
+        return ParseOutcome { version_sum, value };
     }
+
+    let len_type_is_subpackets = next_slice(1)[0];
+    let (num_subpackets, num_bits) = if len_type_is_subpackets {
+        (bits_to_num(next_slice(11)), usize::MAX)
+    } else {
+        (usize::MAX, bits_to_num(next_slice(15)))
+    };
+
+    let initial_pos = *pos;
+    let mut sub_values = Vec::new();
+    while (*pos - initial_pos) < num_bits && sub_values.len() < num_subpackets {
+        let parsed = parse_bits(bits, pos);
+        version_sum += parsed.version_sum;
+        sub_values.push(parsed.value);
+    }
+
+    let value = match type_id {
+        0 => sub_values.into_iter().sum(),
+        1 => sub_values.into_iter().product(),
+        2 => sub_values.into_iter().min().unwrap(),
+        3 => sub_values.into_iter().max().unwrap(),
+        5 => (sub_values[0] > sub_values[1]) as usize,
+        6 => (sub_values[0] < sub_values[1]) as usize,
+        7 => (sub_values[0] == sub_values[1]) as usize,
+        _ => panic!("{} is not a valid type id", type_id),
+    };
+
+    ParseOutcome { version_sum, value }
 }
 
 fn part_a(data: &'static str) -> usize {
     let bits = parse(data);
-    parse_bits(&bits).version_sum
+    parse_bits(&bits, &mut 0).version_sum
 }
 
 fn part_b(data: &'static str) -> usize {
     let bits = parse(data);
-    parse_bits(&bits).value
+    parse_bits(&bits, &mut 0).value
 }
 
 #[cfg(test)]
