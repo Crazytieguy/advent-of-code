@@ -1,7 +1,6 @@
 use std::{
     cmp::Reverse,
     collections::{BinaryHeap, HashMap},
-    iter,
 };
 
 use itertools::Itertools;
@@ -17,9 +16,9 @@ fn parse(data: &'static str) -> HashMap<(i16, i16), u32> {
     data.lines()
         .enumerate()
         .flat_map(|(y, line)| {
-            iter::repeat(y)
-                .zip(line.chars().enumerate())
-                .map(|(y, (x, c))| ((x as i16, y as i16), c.to_digit(10).unwrap()))
+            line.chars()
+                .enumerate()
+                .map(move |(x, c)| ((x as i16, y as i16), c.to_digit(10).unwrap()))
         })
         .collect()
 }
@@ -53,15 +52,12 @@ fn part_b(data: &'static str) -> u32 {
     let grid = grid
         .into_iter()
         .flat_map(|((x, y), risk)| {
-            (0..5)
-                .cartesian_product(0..5)
-                .map(|(tile_x, tile_y)| {
-                    (
-                        (tile_x * tile_width + x, tile_y * tile_height + y),
-                        (risk + tile_x as u32 + tile_y as u32 - 1) % 9 + 1,
-                    )
-                })
-                .collect_vec()
+            (0..5).cartesian_product(0..5).map(move |(tile_x, tile_y)| {
+                (
+                    (tile_x * tile_width + x, tile_y * tile_height + y),
+                    (risk + tile_x as u32 + tile_y as u32 - 1) % 9 + 1,
+                )
+            })
         })
         .collect();
     best_total_risk(&grid)

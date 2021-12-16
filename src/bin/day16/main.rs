@@ -6,12 +6,13 @@ fn main() {
 }
 
 fn parse(data: &'static str) -> Vec<bool> {
-    data.trim().chars().flat_map(hex_char_to_bits).collect()
-}
-
-fn hex_char_to_bits(c: char) -> Vec<bool> {
-    let n = c.to_digit(16).unwrap();
-    (0..4).rev().map(|i| (n & (1 << i)) != 0).collect()
+    data.trim()
+        .chars()
+        .flat_map(|c| {
+            let n = c.to_digit(16).unwrap();
+            (0..4).rev().map(move |i| (n & (1 << i)) != 0)
+        })
+        .collect()
 }
 
 fn bits_to_num(bits: &[bool]) -> usize {

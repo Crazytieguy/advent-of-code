@@ -16,8 +16,7 @@ fn parse(data: &'static str) -> HashMap<(i32, i32), u32> {
             line.chars()
                 .map(|c| c.to_digit(10).unwrap())
                 .enumerate()
-                .map(|(col, energy)| ((row as i32, col as i32), energy))
-                .collect_vec()
+                .map(move |(col, energy)| ((row as i32, col as i32), energy))
         })
         .collect()
 }
