@@ -1,3 +1,7 @@
+use std::vec::IntoIter;
+
+use itertools::Itertools;
+
 const DATA: &str = include_str!("data.txt");
 
 fn main() {
@@ -15,11 +19,12 @@ fn parse(data: &'static str) -> Vec<bool> {
         .collect()
 }
 
-fn bits_to_num(bits: &[bool]) -> usize {
-    bits.iter()
+fn bits_to_num(bits: impl Iterator<Item = bool>) -> usize {
+    bits.collect_vec()
+        .into_iter()
         .rev()
         .enumerate()
-        .map(|(i, &b)| (b as usize) << i)
+        .map(|(i, b)| (b as usize) << i)
         .sum()
 }
 
@@ -28,38 +33,32 @@ struct ParseOutcome {
     value: usize,
 }
 
-fn parse_bits(bits: &[bool], pos: &mut usize) -> ParseOutcome {
-    let mut read_next = |size| {
-        let out = &bits[*pos..*pos + size];
-        *pos += size;
-        out
-    };
-
-    let mut version_sum = bits_to_num(read_next(3));
-    let type_id = bits_to_num(read_next(3));
+fn parse_bits(bits: &mut IntoIter<bool>) -> ParseOutcome {
+    let mut version_sum = bits_to_num(bits.take(3));
+    let type_id = bits_to_num(bits.take(3));
 
     if type_id == 4 {
         let mut literal_bin = Vec::new();
         let mut keep_reading = true;
         while keep_reading {
-            keep_reading = read_next(1)[0];
-            literal_bin.extend_from_slice(read_next(4))
+            keep_reading = bits.next().unwrap();
+            literal_bin.extend(bits.take(4))
         }
-        let value = bits_to_num(&literal_bin);
+        let value = bits_to_num(literal_bin.into_iter());
         return ParseOutcome { version_sum, value };
     }
 
-    let len_type_is_subpackets = read_next(1)[0];
+    let len_type_is_subpackets = bits.next().unwrap();
     let (num_subpackets, num_bits) = if len_type_is_subpackets {
-        (bits_to_num(read_next(11)), usize::MAX)
+        (bits_to_num(bits.take(11)), usize::MAX)
     } else {
-        (usize::MAX, bits_to_num(read_next(15)))
+        (usize::MAX, bits_to_num(bits.take(15)))
     };
 
-    let initial_pos = *pos;
+    let bits_left = bits.len();
     let mut sub_values = Vec::new();
-    while (*pos - initial_pos) < num_bits && sub_values.len() < num_subpackets {
-        let parsed = parse_bits(bits, pos);
+    while (bits_left - bits.len()) < num_bits && sub_values.len() < num_subpackets {
+        let parsed = parse_bits(bits);
         version_sum += parsed.version_sum;
         sub_values.push(parsed.value);
     }
@@ -80,12 +79,12 @@ fn parse_bits(bits: &[bool], pos: &mut usize) -> ParseOutcome {
 
 fn part_a(data: &'static str) -> usize {
     let bits = parse(data);
-    parse_bits(&bits, &mut 0).version_sum
+    parse_bits(bits.into_iter().by_ref()).version_sum
 }
 
 fn part_b(data: &'static str) -> usize {
     let bits = parse(data);
-    parse_bits(&bits, &mut 0).value
+    parse_bits(bits.into_iter().by_ref()).value
 }
 
 #[cfg(test)]
