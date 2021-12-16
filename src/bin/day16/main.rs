@@ -19,13 +19,16 @@ fn parse(data: &'static str) -> Vec<bool> {
         .collect()
 }
 
-fn bits_to_num(bits: impl Iterator<Item = bool>) -> usize {
-    bits.collect_vec()
-        .into_iter()
+fn bits_to_number(bits: &[bool]) -> usize {
+    bits.iter()
         .rev()
         .enumerate()
-        .map(|(i, b)| (b as usize) << i)
+        .map(|(i, &b)| (b as usize) << i)
         .sum()
+}
+
+fn bits_iter_to_number(bits: impl Iterator<Item = bool>) -> usize {
+    bits_to_number(&bits.collect_vec())
 }
 
 struct ParseOutcome {
@@ -34,8 +37,8 @@ struct ParseOutcome {
 }
 
 fn parse_bits(bits: &mut IntoIter<bool>) -> ParseOutcome {
-    let mut version_sum = bits_to_num(bits.take(3));
-    let type_id = bits_to_num(bits.take(3));
+    let mut version_sum = bits_iter_to_number(bits.take(3));
+    let type_id = bits_iter_to_number(bits.take(3));
 
     if type_id == 4 {
         let mut literal_bin = Vec::new();
@@ -44,15 +47,15 @@ fn parse_bits(bits: &mut IntoIter<bool>) -> ParseOutcome {
             keep_reading = bits.next().unwrap();
             literal_bin.extend(bits.take(4))
         }
-        let value = bits_to_num(literal_bin.into_iter());
+        let value = bits_to_number(&literal_bin);
         return ParseOutcome { version_sum, value };
     }
 
     let len_type_is_subpackets = bits.next().unwrap();
     let (num_subpackets, num_bits) = if len_type_is_subpackets {
-        (bits_to_num(bits.take(11)), usize::MAX)
+        (bits_iter_to_number(bits.take(11)), usize::MAX)
     } else {
-        (usize::MAX, bits_to_num(bits.take(15)))
+        (usize::MAX, bits_iter_to_number(bits.take(15)))
     };
 
     let bits_left = bits.len();
