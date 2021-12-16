@@ -28,31 +28,31 @@ struct ParseOutcome {
 }
 
 fn parse_bits(bits: &[bool], pos: &mut usize) -> ParseOutcome {
-    let mut next_slice = |size| {
+    let mut read_next = |size| {
         let out = &bits[*pos..*pos + size];
         *pos += size;
         out
     };
 
-    let mut version_sum = bits_to_num(next_slice(3));
-    let type_id = bits_to_num(next_slice(3));
+    let mut version_sum = bits_to_num(read_next(3));
+    let type_id = bits_to_num(read_next(3));
 
     if type_id == 4 {
         let mut literal_bin = Vec::new();
         let mut keep_reading = true;
         while keep_reading {
-            keep_reading = next_slice(1)[0];
-            literal_bin.extend_from_slice(next_slice(4))
+            keep_reading = read_next(1)[0];
+            literal_bin.extend_from_slice(read_next(4))
         }
         let value = bits_to_num(&literal_bin);
         return ParseOutcome { version_sum, value };
     }
 
-    let len_type_is_subpackets = next_slice(1)[0];
+    let len_type_is_subpackets = read_next(1)[0];
     let (num_subpackets, num_bits) = if len_type_is_subpackets {
-        (bits_to_num(next_slice(11)), usize::MAX)
+        (bits_to_num(read_next(11)), usize::MAX)
     } else {
-        (usize::MAX, bits_to_num(next_slice(15)))
+        (usize::MAX, bits_to_num(read_next(15)))
     };
 
     let initial_pos = *pos;
