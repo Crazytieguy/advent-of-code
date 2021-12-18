@@ -35,6 +35,11 @@ fn parse_number(number: &'static str) -> Vec<Element> {
 }
 
 fn reduce_snail_number(number: &mut Vec<Element>) {
+    explode(number);
+    split(number);
+}
+
+fn explode(number: &mut Vec<Element>) {
     let mut nesting_level = 0;
     let explode_at = number
         .iter()
@@ -56,10 +61,11 @@ fn reduce_snail_number(number: &mut Vec<Element>) {
             after.val += removed.val;
             after.closed_before -= 1
         }
-        reduce_snail_number(number);
-        return;
+        explode(number);
     }
+}
 
+fn split(number: &mut Vec<Element>) {
     let split_at = number
         .iter()
         .find_position(|elem| elem.val >= 10)
