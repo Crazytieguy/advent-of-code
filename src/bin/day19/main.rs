@@ -1,7 +1,4 @@
-use std::{
-    collections::{HashMap, HashSet},
-    iter::repeat_with,
-};
+use std::{collections::HashMap, iter::repeat_with};
 
 use glam::IVec3;
 use itertools::{iterate, Itertools};
@@ -50,8 +47,8 @@ fn all_rotations(p: IVec3) -> impl Iterator<Item = IVec3> {
         .flat_map(|p| iterate(p, |&p| rotate_y(p)).take(2))
 }
 
-fn all_scanner_variations(scanner: &[IVec3]) -> impl Iterator<Item = Vec<IVec3>> {
-    let mut iter_vec = scanner.iter().copied().map(all_rotations).collect_vec();
+fn all_scanner_variations(points: &[IVec3]) -> impl Iterator<Item = Vec<IVec3>> {
+    let mut iter_vec = points.iter().copied().map(all_rotations).collect_vec();
     repeat_with(move || {
         iter_vec
             .iter_mut()
@@ -61,47 +58,87 @@ fn all_scanner_variations(scanner: &[IVec3]) -> impl Iterator<Item = Vec<IVec3>>
     .while_some()
 }
 
-fn diffmap(scanner: &[IVec3]) -> HashMap<IVec3, Vec<(IVec3, IVec3)>> {
-    scanner
+fn diffmap(points: &[IVec3]) -> HashMap<IVec3, Vec<(IVec3, IVec3)>> {
+    points
         .iter()
         .tuple_combinations()
         .flat_map(|(&p1, &p2)| [(p1, p2), (p2, p1)])
         .into_group_map_by(|&(p1, p2)| p2 - p1)
 }
 
-// Assumes that a is aligned
-fn compare_scanners(a: &[IVec3], b: &[IVec3]) -> Option<(Vec<IVec3>, IVec3)> {
-    let a_diffmap = diffmap(a);
-    all_scanner_variations(b).find_map(|mut b| {
-        let b_diffmap = diffmap(&b);
-        let alignment_counts = a_diffmap
+struct ScannerData {
+    points: Vec<IVec3>,
+    diffmap: HashMap<IVec3, Vec<(IVec3, IVec3)>>,
+}
+
+impl ScannerData {
+    fn new(points: Vec<IVec3>) -> Self {
+        let diffmap = diffmap(&points);
+        Self { points, diffmap }
+    }
+}
+
+fn get_alignement(a: &ScannerData, b: &ScannerData) -> Option<IVec3> {
+    let alignement_counts = a
+        .diffmap
+        .iter()
+        .flat_map(|(&diff, pairs)| {
+            pairs
+                .iter()
+                .cartesian_product(b.diffmap.get(&diff).cloned().unwrap_or_default())
+        })
+        .flat_map(|(&(a1, a2), (b1, b2))| [(a1, b1), (a2, b2)])
+        .unique()
+        .map(|(a, b)| a - b)
+        .counts();
+    alignement_counts
+        .into_iter()
+        .find(|(_, count)| *count >= 12)
+        .map(|(alignement, _)| alignement)
+}
+
+fn allign_all_scanners(mut unalligned: Vec<Vec<IVec3>>) -> (Vec<Vec<IVec3>>, Vec<IVec3>) {
+    let mut alligned = vec![ScannerData::new(unalligned.remove(0))];
+    let mut allignements = vec![IVec3::new(0, 0, 0)];
+    let mut unalligned_all_variations = unalligned
+        .into_iter()
+        .map(|points| {
+            all_scanner_variations(&points)
+                .map(ScannerData::new)
+                .collect_vec()
+        })
+        .collect_vec();
+    while !unalligned_all_variations.is_empty() {
+        let ((scanner_idx, variation_idx), alignement) = alligned
             .iter()
-            .flat_map(|(&diff, pairs)| {
-                pairs
-                    .iter()
-                    .cartesian_product(b_diffmap.get(&diff).cloned().unwrap_or_default())
+            .flat_map(|match_against| {
+                unalligned_all_variations.iter().enumerate().flat_map(
+                    move |(scanner_idx, scanner_variations)| {
+                        scanner_variations.iter().enumerate().map(
+                            move |(variation_idx, scannerdata)| {
+                                (match_against, scanner_idx, variation_idx, scannerdata)
+                            },
+                        )
+                    },
+                )
             })
-            .flat_map(|(&(a1, a2), (b1, b2))| [(a1, b1), (a2, b2)])
-            .unique()
-            .map(|(a, b)| a - b)
-            .counts();
-        if let Some((alignment, _)) = alignment_counts.into_iter().find(|(_, count)| *count >= 12) {
-            b.iter_mut().for_each(|p| *p += alignment);
-            assert!(
-                b.iter()
-                    .collect::<HashSet<_>>()
-                    .intersection(&a.iter().collect())
-                    .count()
-                    >= 12,
-                "a:\n{:?}\nb:\n{:?}",
-                a,
-                b
-            );
-            Some((b, alignment))
-        } else {
-            None
-        }
-    })
+            .find_map(|(match_against, scanner_idx, variation_idx, scannerdata)| {
+                Some((scanner_idx, variation_idx)).zip(get_alignement(match_against, scannerdata))
+            })
+            .unwrap();
+        alligned.push(ScannerData::new(
+            unalligned_all_variations.remove(scanner_idx)[variation_idx]
+                .points
+                .iter()
+                .map(|&p| p + alignement)
+                .collect(),
+        ));
+        allignements.push(alignement);
+    }
+    (
+        alligned.into_iter().map(|sd| sd.points).collect(),
+        allignements,
+    )
 }
 
 fn part_a(data: &'static str) -> usize {
@@ -120,24 +157,6 @@ fn part_b(data: &'static str) -> usize {
         .map(|dist| dist.x + dist.y + dist.z)
         .max()
         .unwrap() as usize
-}
-
-fn allign_all_scanners(mut unalligned: Vec<Vec<IVec3>>) -> (Vec<Vec<IVec3>>, Vec<IVec3>) {
-    let mut alligned = vec![unalligned.remove(0)];
-    let mut allignements = vec![IVec3::new(0, 0, 0)];
-    while !unalligned.is_empty() {
-        let (i, (alligned_scanner, allignement)) = alligned
-            .iter()
-            .cartesian_product(unalligned.iter().enumerate())
-            .find_map(|(match_against, (i, scanner))| {
-                Some(i).zip(compare_scanners(match_against, scanner))
-            })
-            .expect("no pair found :(");
-        alligned.push(alligned_scanner);
-        allignements.push(allignement);
-        unalligned.remove(i);
-    }
-    (alligned, allignements)
 }
 
 #[cfg(test)]
