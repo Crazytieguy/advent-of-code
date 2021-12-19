@@ -10,9 +10,8 @@ fn main() {
 
 #[derive(Debug, PartialEq, Eq, Clone, Copy, new)]
 struct Element {
-    open_before: usize,
-    closed_before: usize,
-    val: usize,
+    open_before: u8,
+    val: u32,
 }
 
 fn parse(data: &'static str) -> Vec<Vec<Element>> {
@@ -23,15 +22,45 @@ fn parse_number(number: &'static str) -> Vec<Element> {
     number
         .split_inclusive(|c: char| c.is_ascii_digit())
         .flat_map(|elem| {
-            elem.chars().last().and_then(|c| c.to_digit(10)).map(|val| {
-                Element::new(
-                    elem.chars().filter(|&c| c == '[').count(),
-                    elem.chars().filter(|&c| c == ']').count(),
-                    val as usize,
-                )
-            })
+            elem.chars()
+                .last()
+                .and_then(|c| c.to_digit(10))
+                .map(|val| Element::new(elem.chars().filter(|&c| c == '[').count() as u8, val))
         })
         .collect()
+}
+
+#[derive(Debug, Clone, Copy)]
+struct Path(u8);
+
+impl Path {
+    fn new() -> Self {
+        Self(0b10000000)
+    }
+
+    fn depth(&self) -> u32 {
+        8 - self.0.leading_zeros() - 1
+    }
+
+    fn iterate(&mut self, elem: &Element) {
+        let deduced = (self.0 >> self.0.trailing_zeros()) - 1 + (self.0 >> 7);
+        self.0 = (deduced << elem.open_before) + (1 << elem.open_before) - 1
+    }
+
+    fn count_left(&self) -> u32 {
+        self.0.count_ones() - 1
+    }
+
+    fn count_right(&self) -> u32 {
+        self.0.count_zeros() - self.0.leading_zeros()
+    }
+}
+
+fn traverse(num: &[Element]) -> impl Iterator<Item = (Path, &Element)> {
+    num.iter().scan(Path::new(), |path, elem| {
+        path.iterate(elem);
+        Some((*path, elem))
+    })
 }
 
 fn reduce_snail_number(number: &mut Vec<Element>) {
@@ -40,14 +69,7 @@ fn reduce_snail_number(number: &mut Vec<Element>) {
 }
 
 fn explode(number: &mut Vec<Element>) {
-    let explode_at = number
-        .iter()
-        .scan(0, |depth, elem| {
-            *depth += elem.open_before;
-            *depth -= elem.closed_before;
-            Some(*depth)
-        })
-        .position(|depth| depth == 5);
+    let explode_at = traverse(number).position(|(path, _)| path.depth() == 5);
     if let Some(i) = explode_at {
         number[i].open_before -= 1;
         if let Some(before_i) = i.checked_sub(1) {
@@ -57,7 +79,6 @@ fn explode(number: &mut Vec<Element>) {
         let removed = number.remove(i + 1);
         if let Some(after) = number.get_mut(i + 1) {
             after.val += removed.val;
-            after.closed_before -= 1
         }
         explode(number);
     }
@@ -67,46 +88,33 @@ fn split(number: &mut Vec<Element>) {
     let split_at = number.iter().position(|elem| elem.val >= 10);
     if let Some(i) = split_at {
         number[i].open_before += 1;
-        if let Some(after) = number.get_mut(i + 1) {
-            after.closed_before += 1
-        }
         let new_val = number[i].val / 2 + number[i].val % 2;
-        number.insert(i + 1, Element::new(0, 0, new_val));
+        number.insert(i + 1, Element::new(0, new_val));
         number[i].val /= 2;
         reduce_snail_number(number);
     }
 }
 
-fn get_magnitude(number: &[Element]) -> usize {
-    let mut multiplier = 1;
-    let mut magnitude = 0;
-    for elem in number {
-        multiplier *= 3_usize.pow(elem.open_before as u32);
-        multiplier /= 2_usize.pow(elem.closed_before as u32);
-        magnitude += multiplier * elem.val;
-        multiplier *= 2;
-        multiplier /= 3;
-    }
-    magnitude
+fn get_magnitude(number: &[Element]) -> u32 {
+    traverse(number)
+        .map(|(path, elem)| elem.val * 3_u32.pow(path.count_left()) * 2_u32.pow(path.count_right()))
+        .sum()
 }
 
 fn sum_snail_numbers(mut a: Vec<Element>, mut b: Vec<Element>) -> Vec<Element> {
-    b[0].closed_before = a
-        .iter()
-        .fold(0, |acc, elem| acc + elem.open_before - elem.closed_before);
     a[0].open_before += 1;
     a.append(&mut b);
     reduce_snail_number(&mut a);
     a
 }
 
-fn part_a(data: &'static str) -> usize {
+fn part_a(data: &'static str) -> u32 {
     let numbers = parse(data);
     let final_number = numbers.into_iter().reduce(sum_snail_numbers).unwrap();
     get_magnitude(&final_number)
 }
 
-fn part_b(data: &'static str) -> usize {
+fn part_b(data: &'static str) -> u32 {
     let nums = parse(data);
     nums.iter()
         .tuple_combinations()
@@ -125,11 +133,7 @@ mod tests {
     fn test_parse_number() {
         assert_eq!(
             parse_number("[[1,2],3]"),
-            [
-                Element::new(2, 0, 1),
-                Element::new(0, 0, 2),
-                Element::new(0, 1, 3),
-            ]
+            [Element::new(2, 1), Element::new(0, 2), Element::new(0, 3),]
         )
     }
 
