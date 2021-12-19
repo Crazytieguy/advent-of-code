@@ -79,8 +79,7 @@ impl ScannerData {
 }
 
 fn get_alignement(a: &ScannerData, b: &ScannerData) -> Option<IVec3> {
-    let alignement_counts = a
-        .diffmap
+    a.diffmap
         .iter()
         .flat_map(|(&diff, pairs)| {
             pairs
@@ -90,8 +89,7 @@ fn get_alignement(a: &ScannerData, b: &ScannerData) -> Option<IVec3> {
         .flat_map(|(&(a1, a2), (b1, b2))| [(a1, b1), (a2, b2)])
         .unique()
         .map(|(a, b)| a - b)
-        .counts();
-    alignement_counts
+        .counts()
         .into_iter()
         .find(|(_, count)| *count >= 12)
         .map(|(alignement, _)| alignement)
