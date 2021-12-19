@@ -105,27 +105,26 @@ fn compare_scanners(a: &[IVec3], b: &[IVec3]) -> Option<(Vec<IVec3>, IVec3)> {
 }
 
 fn part_a(data: &'static str) -> usize {
-    let mut unalligned = parse(data);
-    let mut alligned = vec![unalligned.remove(0)];
-    while !unalligned.is_empty() {
-        let (i, (alligned_scanner, _)) = alligned
-            .iter()
-            .cartesian_product(unalligned.iter().enumerate())
-            .find_map(|(match_against, (i, scanner))| {
-                Some(i).zip(compare_scanners(match_against, scanner))
-            })
-            .expect("no pair found");
-        alligned.push(alligned_scanner);
-        unalligned.remove(i);
-    }
+    let unalligned = parse(data);
+    let (alligned, _) = allign_all_scanners(unalligned);
     alligned.into_iter().flatten().unique().count()
 }
 
 fn part_b(data: &'static str) -> usize {
-    let mut unalligned = parse(data);
+    let unalligned = parse(data);
+    let (_, allignements) = allign_all_scanners(unalligned);
+    allignements
+        .into_iter()
+        .tuple_combinations()
+        .map(|(p1, p2)| (p1 - p2).abs())
+        .map(|dist| dist.x + dist.y + dist.z)
+        .max()
+        .unwrap() as usize
+}
+
+fn allign_all_scanners(mut unalligned: Vec<Vec<IVec3>>) -> (Vec<Vec<IVec3>>, Vec<IVec3>) {
     let mut alligned = vec![unalligned.remove(0)];
     let mut allignements = vec![IVec3::new(0, 0, 0)];
-    alligned[0].sort_unstable_by_key(|p| (p.x, p.y, p.z));
     while !unalligned.is_empty() {
         let (i, (alligned_scanner, allignement)) = alligned
             .iter()
@@ -138,13 +137,7 @@ fn part_b(data: &'static str) -> usize {
         allignements.push(allignement);
         unalligned.remove(i);
     }
-    allignements
-        .into_iter()
-        .tuple_combinations()
-        .map(|(p1, p2)| (p1 - p2).abs())
-        .map(|dist| dist.x + dist.y + dist.z)
-        .max()
-        .unwrap() as usize
+    (alligned, allignements)
 }
 
 #[cfg(test)]
