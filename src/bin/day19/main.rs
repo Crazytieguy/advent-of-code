@@ -111,6 +111,7 @@ fn allign_all_scanners(mut unalligned: Vec<Vec<IVec3>>) -> (Vec<Vec<IVec3>>, Vec
     while !unalligned_all_variations.is_empty() {
         let ((scanner_idx, variation_idx), alignement) = alligned
             .iter()
+            .rev()
             .flat_map(|match_against| {
                 unalligned_all_variations.iter().enumerate().flat_map(
                     move |(scanner_idx, scanner_variations)| {
