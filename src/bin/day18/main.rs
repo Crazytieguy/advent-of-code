@@ -40,16 +40,14 @@ fn reduce_snail_number(number: &mut Vec<Element>) {
 }
 
 fn explode(number: &mut Vec<Element>) {
-    let mut nesting_level = 0;
     let explode_at = number
         .iter()
-        .tuple_windows()
-        .find_position(|(elem0, elem1)| {
-            nesting_level += elem0.open_before;
-            nesting_level -= elem0.closed_before;
-            nesting_level > 4 && elem1.open_before + elem1.closed_before == 0
+        .scan(0, |depth, elem| {
+            *depth += elem.open_before;
+            *depth -= elem.closed_before;
+            Some(*depth)
         })
-        .map(|(i, _)| i);
+        .position(|depth| depth == 5);
     if let Some(i) = explode_at {
         number[i].open_before -= 1;
         if let Some(before_i) = i.checked_sub(1) {
@@ -66,10 +64,7 @@ fn explode(number: &mut Vec<Element>) {
 }
 
 fn split(number: &mut Vec<Element>) {
-    let split_at = number
-        .iter()
-        .find_position(|elem| elem.val >= 10)
-        .map(|(i, _)| i);
+    let split_at = number.iter().position(|elem| elem.val >= 10);
     if let Some(i) = split_at {
         number[i].open_before += 1;
         if let Some(after) = number.get_mut(i + 1) {
@@ -112,11 +107,11 @@ fn part_a(data: &'static str) -> usize {
 }
 
 fn part_b(data: &'static str) -> usize {
-    let numbers = parse(data);
-    numbers
-        .iter()
-        .cartesian_product(numbers.iter())
-        .map(|(n0, n1)| get_magnitude(&sum_snail_numbers(n0.clone(), n1.clone())))
+    let nums = parse(data);
+    nums.iter()
+        .tuple_combinations()
+        .flat_map(|(a, b)| [(a, b), (b, a)])
+        .map(|(a, b)| get_magnitude(&sum_snail_numbers(a.clone(), b.clone())))
         .max()
         .unwrap()
 }
