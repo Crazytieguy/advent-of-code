@@ -116,7 +116,6 @@ fn part_b(data: &'static str) -> usize {
     numbers
         .iter()
         .cartesian_product(numbers.iter())
-        .flat_map(|(n0, n1)| [(n0, n1), (n1, n0)])
         .map(|(n0, n1)| get_magnitude(&sum_snail_numbers(n0.clone(), n1.clone())))
         .max()
         .unwrap()
