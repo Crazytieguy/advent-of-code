@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use derive_new::new;
-use itertools::{iterate, Itertools};
+use itertools::{iterate, repeat_n, Itertools};
 
 const DATA: &str = include_str!("data.txt");
 
@@ -36,12 +36,12 @@ fn parse(data: &'static str) -> (Vec<bool>, Image) {
     )
 }
 
-fn bits_to_number(bits: &[bool]) -> usize {
-    bits.iter()
-        .rev()
-        .enumerate()
-        .map(|(i, &b)| (b as usize) << i)
-        .sum()
+fn bits_to_number(bits: impl DoubleEndedIterator<Item = bool>) -> usize {
+    bits.rev().enumerate().map(|(i, b)| (b as usize) << i).sum()
+}
+
+lazy_static::lazy_static! {
+    static ref ADJACENT_COORDS: [(i64, i64); 9] = (-1..=1).cartesian_product(-1..=1).collect_vec().try_into().unwrap();
 }
 
 fn enhance_image(image_enhancement: &[bool], image: &Image) -> Image {
@@ -49,21 +49,15 @@ fn enhance_image(image_enhancement: &[bool], image: &Image) -> Image {
     let data = ((min_row - 1)..=(max_row + 1))
         .cartesian_product((min_col - 1)..=(max_col + 1))
         .map(|(row, col)| {
-            let bits = ((row - 1)..=(row + 1))
-                .cartesian_product((col - 1)..=(col + 1))
-                .map(|(row, col)| {
-                    image
-                        .data
-                        .get(&(row, col))
-                        .copied()
-                        .unwrap_or(image.default)
-                })
-                .collect_vec();
-            let enhanced_bit = image_enhancement[bits_to_number(&bits)];
+            let bits = ADJACENT_COORDS.iter().map(|(d_row, d_col)| {
+                let coords = (row + d_row, col + d_col);
+                image.data.get(&coords).copied().unwrap_or(image.default)
+            });
+            let enhanced_bit = image_enhancement[bits_to_number(bits)];
             ((row, col), enhanced_bit)
         })
         .collect();
-    let default = image_enhancement[bits_to_number(&[image.default; 9])];
+    let default = image_enhancement[bits_to_number(repeat_n(image.default, 9))];
     let new_bounds = ((min_row - 1, min_col - 1), (max_row + 1, max_col + 1));
     Image::new(data, default, new_bounds)
 }
