@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 
-use itertools::{iterate, repeat_n, Itertools};
+use derive_new::new;
+use itertools::{iterate, Itertools};
 
 const DATA: &str = include_str!("data.txt");
 
@@ -9,23 +10,18 @@ fn main() {
     println!("part b: {}", part_b(DATA));
 }
 
+#[derive(new)]
 struct Image {
     data: HashMap<(i64, i64), bool>,
     default: bool,
+    bounds: ((i64, i64), (i64, i64)),
 }
 
 fn parse(data: &'static str) -> (Vec<bool>, Image) {
-    let image_enhancement = data
-        .lines()
-        .next()
-        .unwrap()
-        .chars()
-        .map(|c| c == '#')
-        .collect_vec();
-
-    let data = data
-        .lines()
-        .skip(2)
+    let lines = data.lines().collect_vec();
+    let image_enhancement = lines[0].chars().map(|c| c == '#').collect_vec();
+    let data = lines[2..]
+        .iter()
         .enumerate()
         .flat_map(|(row, line)| {
             line.chars()
@@ -33,12 +29,10 @@ fn parse(data: &'static str) -> (Vec<bool>, Image) {
                 .map(move |(col, c)| ((row as i64, col as i64), c == '#'))
         })
         .collect();
+    let max_bound = (lines[2..].len() as i64, lines[2].len() as i64);
     (
         image_enhancement,
-        Image {
-            data,
-            default: false,
-        },
+        Image::new(data, false, ((0, 0), max_bound)),
     )
 }
 
@@ -51,8 +45,7 @@ fn bits_to_number(bits: &[bool]) -> usize {
 }
 
 fn enhance_image(image_enhancement: &[bool], image: &Image) -> Image {
-    let ((min_row, min_col), (max_row, max_col)) =
-        image.data.keys().minmax().into_option().unwrap();
+    let ((min_row, min_col), (max_row, max_col)) = image.bounds;
     let data = ((min_row - 1)..=(max_row + 1))
         .cartesian_product((min_col - 1)..=(max_col + 1))
         .map(|(row, col)| {
@@ -70,14 +63,15 @@ fn enhance_image(image_enhancement: &[bool], image: &Image) -> Image {
             ((row, col), enhanced_bit)
         })
         .collect();
-    let default_bits = repeat_n(image.default, 9).collect_vec();
-    let default = image_enhancement[bits_to_number(&default_bits)];
-    Image { data, default }
+    let default = image_enhancement[bits_to_number(&[image.default; 9])];
+    let new_bounds = ((min_row - 1, min_col - 1), (max_row + 1, max_col + 1));
+    Image::new(data, default, new_bounds)
 }
 
+// for debugging
+#[allow(dead_code)]
 fn print_image(image: &Image) {
-    let (&(min_row, min_col), &(max_row, max_col)) =
-        image.data.keys().minmax().into_option().unwrap();
+    let ((min_row, min_col), (max_row, max_col)) = image.bounds;
     let image_str: String = (min_row..=max_row)
         .flat_map(|row| {
             (min_col..=max_col)
@@ -88,22 +82,20 @@ fn print_image(image: &Image) {
     println!("{}", image_str)
 }
 
-fn part_a(data: &'static str) -> usize {
+fn solve(data: &'static str, iterations: usize) -> usize {
     let (image_enhancement, image) = parse(data);
     let image = iterate(image, |image| enhance_image(&image_enhancement, image))
-        .inspect(print_image)
-        .nth(2)
+        .nth(iterations)
         .unwrap();
     image.data.into_values().filter(|&b| b).count()
 }
 
+fn part_a(data: &'static str) -> usize {
+    solve(data, 2)
+}
+
 fn part_b(data: &'static str) -> usize {
-    let (image_enhancement, image) = parse(data);
-    let image = iterate(image, |image| enhance_image(&image_enhancement, image))
-        .inspect(|_| println!("Done iteration"))
-        .nth(50)
-        .unwrap();
-    image.data.into_values().filter(|&b| b).count()
+    solve(data, 50)
 }
 
 #[cfg(test)]
