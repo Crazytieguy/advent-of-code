@@ -35,7 +35,7 @@ fn enhance_image(image_enhancement: &[bool], image: &Image) -> Image {
     let shape = image.data.shape();
     let default = image_enhancement[if image.default { 0b111111111 } else { 0 }];
     let mut data = Array2::from_elem([shape[0] + 2, shape[1] + 2], default);
-    Zip::from(image.data.windows((3, 3))).map_assign_into(
+    Zip::from(image.data.windows([3, 3])).map_assign_into(
         data.slice_mut(s![2..-2, 2..-2]),
         |window| {
             let idx = (window[[0, 0]] as usize * 0b100000000)
