@@ -1,7 +1,7 @@
 #![allow(clippy::reversed_empty_ranges)]
 use derive_new::new;
 use itertools::{iterate, Itertools};
-use ndarray::{array, s, Array, Array2, Zip};
+use ndarray::{s, Array, Array2, Zip};
 
 const DATA: &str = include_str!("data.txt");
 
@@ -31,14 +31,6 @@ fn parse(data: &'static str) -> (Vec<bool>, Image) {
     (image_enhancement, Image::new(data, default))
 }
 
-lazy_static::lazy_static! {
-    static ref VAL_BY_POSITION: Array2<usize> = array![
-        [0b100000000, 0b010000000, 0b001000000],
-        [0b000100000, 0b000010000, 0b000001000],
-        [0b000000100, 0b000000010, 0b000000001],
-    ];
-}
-
 fn enhance_image(image_enhancement: &[bool], image: &Image) -> Image {
     let shape = image.data.shape();
     let default = image_enhancement[if image.default { 0b111111111 } else { 0 }];
@@ -46,9 +38,15 @@ fn enhance_image(image_enhancement: &[bool], image: &Image) -> Image {
     Zip::from(image.data.windows((3, 3))).map_assign_into(
         data.slice_mut(s![2..-2, 2..-2]),
         |window| {
-            let idx = Zip::from(window)
-                .and(&*VAL_BY_POSITION)
-                .fold(0, |acc, &is_bright, val| acc | (is_bright as usize * val));
+            let idx = (window[[0, 0]] as usize * 0b100000000)
+                | (window[[0, 1]] as usize * 0b010000000)
+                | (window[[0, 2]] as usize * 0b001000000)
+                | (window[[1, 0]] as usize * 0b000100000)
+                | (window[[1, 1]] as usize * 0b000010000)
+                | (window[[1, 2]] as usize * 0b000001000)
+                | (window[[2, 0]] as usize * 0b000000100)
+                | (window[[2, 1]] as usize * 0b000000010)
+                | (window[[2, 2]] as usize);
             image_enhancement[idx]
         },
     );
