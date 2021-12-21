@@ -73,11 +73,7 @@ impl Iterator for QuantumIterate {
             })
             .partition(|player_state| player_state.score >= 21);
         self.state = didnt_win;
-        Some([&won, &self.state].map(|pss| {
-            pss.iter()
-                .map(|player_state| player_state.num_universes)
-                .sum()
-        }))
+        Some([&won, &self.state].map(|pss| pss.iter().map(|ps| ps.num_universes).sum()))
     }
 }
 
