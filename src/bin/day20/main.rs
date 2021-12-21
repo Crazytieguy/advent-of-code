@@ -1,6 +1,5 @@
 #![allow(clippy::reversed_empty_ranges)]
 use derive_new::new;
-use itertools::{iterate, Itertools};
 use ndarray::{s, Array, Array2, Zip};
 
 const DATA: &str = include_str!("data.txt");
@@ -17,15 +16,15 @@ struct Image {
 }
 
 fn parse(data: &'static str) -> (Vec<bool>, Image) {
-    let lines = data.lines().collect_vec();
-    let image_enhancement = lines[0].chars().map(|c| c == '#').collect_vec();
+    let lines: Vec<_> = data.lines().collect();
+    let image_enhancement = lines[0].chars().map(|c| c == '#').collect();
     let (rows, cols) = (lines[2..].len(), lines[2].len());
     let default = false;
     let mut data = Array2::from_elem([rows + 4, cols + 4], default);
     let data_vec = lines[2..]
         .iter()
         .flat_map(|line| line.chars().map(|c| c == '#'))
-        .collect_vec();
+        .collect();
     data.slice_mut(s![2..-2, 2..-2])
         .assign(&Array::from_shape_vec([rows, cols], data_vec).unwrap());
     (image_enhancement, Image::new(data, default))
@@ -54,10 +53,10 @@ fn enhance_image(image_enhancement: &[bool], image: &Image) -> Image {
 }
 
 fn solve(data: &'static str, iterations: usize) -> usize {
-    let (image_enhancement, image) = parse(data);
-    let image = iterate(image, |image| enhance_image(&image_enhancement, image))
-        .nth(iterations)
-        .unwrap();
+    let (image_enhancement, mut image) = parse(data);
+    for _ in 0..iterations {
+        image = enhance_image(&image_enhancement, &image)
+    }
     image.data.map(|&b| b as usize).sum()
 }
 
