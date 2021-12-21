@@ -1,5 +1,5 @@
 use derive_new::new;
-use itertools::Itertools;
+use num::Integer;
 
 const DATA: &str = include_str!("data.txt");
 
@@ -8,39 +8,30 @@ fn main() {
     println!("part b: {}", part_b(DATA));
 }
 
-fn parse(data: &'static str) -> (u32, u32) {
-    data.lines()
-        .map(|line| line.chars().last().unwrap().to_digit(10).unwrap())
-        .collect_tuple()
-        .unwrap()
+fn parse(data: &'static str) -> [usize; 2] {
+    let mut positions = data
+        .lines()
+        .map(|line| line.chars().last().unwrap().to_digit(10).unwrap() as usize);
+    [positions.next().unwrap(), positions.next().unwrap()]
+}
+
+fn cycle<T: Integer>(val: T, quot: T) -> T {
+    (val - T::one()) % quot + T::one()
 }
 
 fn part_a(data: &'static str) -> usize {
-    let (mut p1_pos, mut p2_pos) = parse(data);
-    let (mut p1_score, mut p2_score) = (0, 0);
-    let mut die = (1..=100).cycle().enumerate();
-    let mut turn = true;
-    while p1_score < 1000 && p2_score < 1000 {
-        let (pos, score) = match turn {
-            true => {
-                turn = false;
-                (&mut p1_pos, &mut p1_score)
-            }
-            false => {
-                turn = true;
-                (&mut p2_pos, &mut p2_score)
-            }
-        };
-        let roll_sum = die.by_ref().take(3).map(|(_i, roll)| roll).sum::<u32>();
-        *pos = (*pos + roll_sum - 1) % 10 + 1;
-        *score += *pos;
+    let mut positions = parse(data);
+    let mut scores = [0, 0];
+    for turn in 0.. {
+        let player_idx = turn % 2;
+        let roll_sum = (1..=3).map(|i| cycle(turn * 3 + i, 100)).sum::<usize>();
+        positions[player_idx] = cycle(positions[player_idx] + roll_sum, 10);
+        scores[player_idx] += positions[player_idx];
+        if scores[player_idx] >= 1000 {
+            return scores[(player_idx + 1) % 2] * (turn + 1) * 3;
+        }
     }
-    let num_rolls = die.next().map(|(i, _)| i).unwrap();
-    num_rolls
-        * match turn {
-            true => p1_score,
-            false => p2_score,
-        } as usize
+    unreachable!()
 }
 
 #[derive(new, Clone, Copy)]
@@ -54,8 +45,8 @@ struct QuantumIterate {
     state: Vec<PlayerState>,
 }
 
-impl From<u32> for QuantumIterate {
-    fn from(pos: u32) -> Self {
+impl From<usize> for QuantumIterate {
+    fn from(pos: usize) -> Self {
         Self {
             state: vec![PlayerState::new(pos as u8, 0, 1)],
         }
@@ -63,7 +54,7 @@ impl From<u32> for QuantumIterate {
 }
 
 impl Iterator for QuantumIterate {
-    type Item = (usize, usize);
+    type Item = [usize; 2];
 
     fn next(&mut self) -> Option<Self::Item> {
         if self.state.is_empty() {
@@ -72,54 +63,39 @@ impl Iterator for QuantumIterate {
         let (won, didnt_win) = self
             .state
             .iter()
-            .flat_map(|&player_state| {
+            .flat_map(|&ps| {
                 [(3, 1), (4, 3), (5, 6), (6, 7), (7, 6), (8, 3), (9, 1)].map(
                     |(roll_sum, num_universes)| {
-                        let pos = (player_state.position + roll_sum - 1) % 10 + 1;
-                        PlayerState::new(
-                            pos,
-                            player_state.score + pos,
-                            player_state.num_universes * num_universes,
-                        )
+                        let pos = cycle(ps.position + roll_sum, 10);
+                        PlayerState::new(pos, ps.score + pos, ps.num_universes * num_universes)
                     },
                 )
             })
             .partition(|player_state| player_state.score >= 21);
         self.state = didnt_win;
-        Some((
-            won.iter()
+        Some([&won, &self.state].map(|pss| {
+            pss.iter()
                 .map(|player_state| player_state.num_universes)
-                .sum(),
-            self.state
-                .iter()
-                .map(|player_state| player_state.num_universes)
-                .sum(),
-        ))
+                .sum()
+        }))
     }
 }
 
 fn part_b(data: &'static str) -> usize {
-    let (p1_pos, p2_pos) = parse(data);
-    let iterate_p1 = QuantumIterate::from(p1_pos);
-    let iterate_p2 = QuantumIterate::from(p2_pos);
-    let win_lose_per_turn_p1: Vec<_> = iterate_p1.collect();
-    let win_lose_per_turn_p2: Vec<_> = iterate_p2.collect();
-    let p1_wins = win_lose_per_turn_p1
-        .iter()
-        .skip(1)
-        .zip(win_lose_per_turn_p2.iter())
-        .map(|((wins_p1, _), (_, losses_p2))| wins_p1 * losses_p2)
-        .sum();
-    let p2_wins = win_lose_per_turn_p2
-        .iter()
-        .zip(win_lose_per_turn_p1.iter())
-        .map(|((_, losses_p1), (wins_p2, _))| wins_p2 * losses_p1)
-        .sum();
-    if p1_wins > p2_wins {
-        p1_wins
-    } else {
-        p2_wins
-    }
+    let player_positions = parse(data);
+    let player_win_lose_per_turn = player_positions
+        .map(QuantumIterate::from)
+        .map(|it| it.collect::<Vec<_>>());
+    let [p1, p2] = player_win_lose_per_turn;
+    let total_wins: [usize; 2] =
+        [(&p1[1..], &p2[..]), (&p2[..], &p1[..])].map(|(winner, loser)| {
+            winner
+                .iter()
+                .zip(loser.iter())
+                .map(|([wins, _], [_, losses])| wins * losses)
+                .sum()
+        });
+    total_wins[0].max(total_wins[1])
 }
 
 #[cfg(test)]
