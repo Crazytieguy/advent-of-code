@@ -79,18 +79,17 @@ impl Iterator for QuantumIterate {
 
 fn part_b(data: &'static str) -> usize {
     let player_positions = parse(data);
-    let player_win_lose_per_turn = player_positions
+    let player_win_lose_per_turn: [Vec<[usize; 2]>; 2] = player_positions
         .map(QuantumIterate::from)
-        .map(|it| it.collect::<Vec<_>>());
+        .map(|it| it.collect());
     let [p1, p2] = player_win_lose_per_turn;
-    let total_wins: [usize; 2] =
-        [(&p1[1..], &p2[..]), (&p2[..], &p1[..])].map(|(winner, loser)| {
-            winner
-                .iter()
-                .zip(loser.iter())
-                .map(|([wins, _], [_, losses])| wins * losses)
-                .sum()
-        });
+    let total_wins = [(&p1[1..], &p2[..]), (&p2[..], &p1[..])].map(|(winner, loser)| {
+        winner
+            .iter()
+            .zip(loser.iter())
+            .map(|([wins, _], [_, losses])| wins * losses)
+            .sum::<usize>()
+    });
     total_wins[0].max(total_wins[1])
 }
 
