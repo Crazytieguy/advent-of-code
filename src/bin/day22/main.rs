@@ -1,3 +1,4 @@
+#![feature(test)]
 use std::collections::HashMap;
 
 use derive_new::new;
@@ -175,6 +176,9 @@ fn part_b(data: &'static str) -> i64 {
 
 #[cfg(test)]
 mod tests {
+    extern crate test;
+    use test::Bencher;
+
     use super::*;
     const SAMPLE_A: &str = include_str!("sample_a.txt");
     const SAMPLE_B: &str = include_str!("sample_b.txt");
@@ -184,8 +188,18 @@ mod tests {
         assert_eq!(part_a(SAMPLE_A), 590784);
     }
 
+    #[bench]
+    fn bench_a(b: &mut Bencher) {
+        b.iter(|| part_a(DATA));
+    }
+
     #[test]
     fn test_b() {
         assert_eq!(part_b(SAMPLE_B), 2758514936282235);
+    }
+
+    #[bench]
+    fn bench_b(b: &mut Bencher) {
+        b.iter(|| part_b(DATA));
     }
 }
