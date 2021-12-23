@@ -23,7 +23,7 @@ fn parse(data: &'static str) -> HashMap<(i32, i32), u32> {
 
 fn flash_if_gt_9(grid: &mut HashMap<(i32, i32), u32>, (y, x): (i32, i32)) {
     match grid.get_mut(&(y, x)) {
-        Some(energy) if *energy >= 9 => *energy = 0,
+        Some(energy) if *energy > 9 => *energy = 0,
         _ => return,
     };
     (-1..=1)
@@ -55,8 +55,7 @@ fn part_a(data: &'static str) -> usize {
 fn part_b(data: &'static str) -> usize {
     let mut grid = parse(data);
     repeat_with(|| step(&mut grid))
-        .find_position(|&flashes| flashes == 100)
-        .map(|(pos, _)| pos)
+        .position(|flashes| flashes == 100)
         .unwrap()
         + 1
 }
