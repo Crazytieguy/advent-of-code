@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use derive_new::new;
 use itertools::Itertools;
 use ndarray::{s, Array3};
@@ -88,7 +90,55 @@ fn parse(data: &'static str) -> Vec<Step> {
         .collect()
 }
 
-fn do_step(mut volumes: Vec<Step>, step: Step) -> Vec<Step> {
+fn grid_compression(steps: &[Step]) -> i64 {
+    let (mut xs, (mut ys, mut zs)): (Vec<_>, (Vec<_>, Vec<_>)) = steps
+        .iter()
+        .flat_map(|s| {
+            [
+                (s.cuboid.x.0, (s.cuboid.y.0, s.cuboid.z.0)),
+                (s.cuboid.x.1, (s.cuboid.y.1, s.cuboid.z.1)),
+            ]
+        })
+        .unzip();
+    xs.sort_unstable();
+    ys.sort_unstable();
+    zs.sort_unstable();
+    let xs_map: HashMap<_, _> = xs.iter().enumerate().map(|(i, &x)| (x, i)).collect();
+    let ys_map: HashMap<_, _> = ys.iter().enumerate().map(|(i, &y)| (y, i)).collect();
+    let zs_map: HashMap<_, _> = zs.iter().enumerate().map(|(i, &z)| (z, i)).collect();
+    let mut cubes_compressed = Array3::from_elem([xs.len() - 1, ys.len() - 1, zs.len() - 1], false);
+    for step in steps {
+        let x0 = xs_map[&step.cuboid.x.0];
+        let x1 = xs_map[&step.cuboid.x.1];
+        let y0 = ys_map[&step.cuboid.y.0];
+        let y1 = ys_map[&step.cuboid.y.1];
+        let z0 = zs_map[&step.cuboid.z.0];
+        let z1 = zs_map[&step.cuboid.z.1];
+        let mut slice = cubes_compressed.slice_mut(s![x0..x1, y0..y1, z0..z1]);
+        slice.fill(step.on);
+    }
+    cubes_compressed
+        .indexed_iter()
+        .map(|(i, &on)| {
+            on as i64
+                * (xs[i.0 + 1] - xs[i.0]) as i64
+                * (ys[i.1 + 1] - ys[i.1]) as i64
+                * (zs[i.2 + 1] - zs[i.2]) as i64
+        })
+        .sum()
+}
+
+fn part_a_calc(steps: &[Step]) -> i64 {
+    grid_compression(
+        &steps
+            .iter()
+            .take_while(|s| s.cuboid.is_init())
+            .copied()
+            .collect_vec(),
+    )
+}
+
+fn step_volumes(mut volumes: Vec<Step>, step: Step) -> Vec<Step> {
     volumes.extend(
         volumes
             .iter()
@@ -106,30 +156,21 @@ fn do_step(mut volumes: Vec<Step>, step: Step) -> Vec<Step> {
     volumes
 }
 
-fn init_cubes_on(steps: Vec<Step>) -> i64 {
-    let mut cubes = Array3::from_elem([101, 101, 101], false);
-    for step in steps {
-        let mut slice = cubes.slice_mut(s![
-            step.cuboid.x.0 + 50..step.cuboid.x.1 + 50,
-            step.cuboid.y.0 + 50..step.cuboid.y.1 + 50,
-            step.cuboid.z.0 + 50..step.cuboid.z.1 + 50,
-        ]);
-        slice.fill(step.on);
-    }
-    cubes.fold(0, |acc, &cur| acc + cur as i64)
+fn part_b_calc(steps: Vec<Step>) -> i64 {
+    let volumes = steps
+        .into_iter()
+        .skip_while(|s| s.cuboid.is_init())
+        .fold(Vec::new(), step_volumes);
+    volumes.into_iter().map(|s| s.volume()).sum()
 }
 
 fn part_a(data: &'static str) -> i64 {
-    let steps = parse(data);
-    init_cubes_on(steps.into_iter().filter(|s| s.cuboid.is_init()).collect())
+    part_a_calc(&parse(data))
 }
 
 fn part_b(data: &'static str) -> i64 {
     let steps = parse(data);
-    let (steps_init, steps_rest): (Vec<_>, Vec<_>) =
-        steps.into_iter().partition(|s| s.cuboid.is_init());
-    let rest_volumes = steps_rest.into_iter().fold(Vec::new(), do_step);
-    init_cubes_on(steps_init) + rest_volumes.into_iter().map(|s| s.volume()).sum::<i64>()
+    part_a_calc(&steps) + part_b_calc(steps)
 }
 
 #[cfg(test)]
