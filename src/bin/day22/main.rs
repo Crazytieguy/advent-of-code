@@ -54,8 +54,8 @@ fn parse(data: &'static str) -> Vec<Step> {
         .collect()
 }
 
-// get non contiguous cuboids formed by subtracting rhs from lhs
-// when lhs and rhs are non contiguous this give only 1 valid cuboid: lhs
+// get non overlapping cuboids formed by subtracting rhs from lhs
+// when lhs and rhs are non overlapping this give only 1 valid cuboid: lhs
 fn subtract_cuboids(lhs: Cuboid, rhs: Cuboid) -> [Cuboid; 6] {
     [
         Cuboid::new((lhs.x.0, lhs.x.1.min(rhs.x.0)), lhs.y, lhs.z),
@@ -83,8 +83,8 @@ fn subtract_cuboids(lhs: Cuboid, rhs: Cuboid) -> [Cuboid; 6] {
     ]
 }
 
-fn do_step(non_contiguous_cuboids: Vec<Cuboid>, step: Step) -> Vec<Cuboid> {
-    non_contiguous_cuboids
+fn do_step(non_overlapping_cuboids: Vec<Cuboid>, step: Step) -> Vec<Cuboid> {
+    non_overlapping_cuboids
         .into_iter()
         .flat_map(|lhs| subtract_cuboids(lhs, step.cuboid))
         .filter(Cuboid::is_valid)
@@ -94,7 +94,7 @@ fn do_step(non_contiguous_cuboids: Vec<Cuboid>, step: Step) -> Vec<Cuboid> {
 
 fn part_a(data: &'static str) -> usize {
     let steps = parse(data);
-    let non_contiguous_cuboids = steps
+    let non_overlapping_cuboids = steps
         .into_iter()
         .filter(|s| {
             s.cuboid.x.0 >= -50
@@ -105,13 +105,13 @@ fn part_a(data: &'static str) -> usize {
                 && s.cuboid.z.1 <= 51
         })
         .fold(Vec::new(), do_step);
-    non_contiguous_cuboids.into_iter().map(|c| c.size()).sum()
+    non_overlapping_cuboids.into_iter().map(|c| c.size()).sum()
 }
 
 fn part_b(data: &'static str) -> usize {
     let steps = parse(data);
-    let non_contiguous_cuboids = steps.into_iter().fold(Vec::new(), do_step);
-    non_contiguous_cuboids.into_iter().map(|c| c.size()).sum()
+    let non_overlapping_cuboids = steps.into_iter().fold(Vec::new(), do_step);
+    non_overlapping_cuboids.into_iter().map(|c| c.size()).sum()
 }
 
 #[cfg(test)]
