@@ -1,5 +1,6 @@
 use derive_new::new;
 use itertools::Itertools;
+use ndarray::{s, Array3};
 
 const DATA: &str = include_str!("data.txt");
 
@@ -8,7 +9,7 @@ fn main() {
     println!("part b: {}", part_b(DATA));
 }
 
-type Bounds = (i64, i64);
+type Bounds = (i32, i32);
 
 #[derive(Debug, Clone, Copy, new)]
 struct Cuboid {
@@ -18,13 +19,36 @@ struct Cuboid {
 }
 
 impl Cuboid {
-    fn size(&self) -> usize {
-        (0.max(self.x.1 - self.x.0) * 0.max(self.y.1 - self.y.0) * 0.max(self.z.1 - self.z.0))
-            as usize
+    fn size(&self) -> i64 {
+        0.max(self.x.1 - self.x.0) as i64
+            * 0.max(self.y.1 - self.y.0) as i64
+            * 0.max(self.z.1 - self.z.0) as i64
     }
 
     fn is_valid(&self) -> bool {
         self.size() > 0
+    }
+
+    fn intersection(&self, other: Cuboid) -> Option<Cuboid> {
+        let c = Cuboid {
+            x: (self.x.0.max(other.x.0), self.x.1.min(other.x.1)),
+            y: (self.y.0.max(other.y.0), self.y.1.min(other.y.1)),
+            z: (self.z.0.max(other.z.0), self.z.1.min(other.z.1)),
+        };
+        if c.is_valid() {
+            Some(c)
+        } else {
+            None
+        }
+    }
+
+    fn is_init(&self) -> bool {
+        self.x.0 >= -50
+            && self.x.1 <= 51
+            && self.y.0 >= -50
+            && self.y.1 <= 51
+            && self.z.0 >= -50
+            && self.z.1 <= 51
     }
 }
 
@@ -32,6 +56,16 @@ impl Cuboid {
 struct Step {
     on: bool,
     cuboid: Cuboid,
+}
+
+impl Step {
+    fn volume(&self) -> i64 {
+        if self.on {
+            self.cuboid.size()
+        } else {
+            -self.cuboid.size()
+        }
+    }
 }
 
 fn parse(data: &'static str) -> Vec<Step> {
@@ -42,7 +76,7 @@ fn parse(data: &'static str) -> Vec<Step> {
                 .split(',')
                 .map(|part| {
                     let (min, max) = &part[2..].split_once("..").unwrap();
-                    (min.parse().unwrap(), max.parse::<i64>().unwrap() + 1)
+                    (min.parse().unwrap(), max.parse::<i32>().unwrap() + 1)
                 })
                 .collect_tuple()
                 .unwrap();
@@ -54,64 +88,48 @@ fn parse(data: &'static str) -> Vec<Step> {
         .collect()
 }
 
-// get non overlapping cuboids formed by subtracting rhs from lhs
-// when lhs and rhs are non overlapping this give only 1 valid cuboid: lhs
-fn subtract_cuboids(lhs: Cuboid, rhs: Cuboid) -> [Cuboid; 6] {
-    [
-        Cuboid::new((lhs.x.0, lhs.x.1.min(rhs.x.0)), lhs.y, lhs.z),
-        Cuboid::new(
-            (rhs.x.0.max(lhs.x.0), rhs.x.1.min(lhs.x.1)),
-            (lhs.y.0, lhs.y.1.min(rhs.y.0)),
-            lhs.z,
-        ),
-        Cuboid::new(
-            (rhs.x.0.max(lhs.x.0), rhs.x.1.min(lhs.x.1)),
-            (rhs.y.0.max(lhs.y.0), rhs.y.1.min(lhs.y.1)),
-            (lhs.z.0, lhs.z.1.min(rhs.z.0)),
-        ),
-        Cuboid::new(
-            (rhs.x.0.max(lhs.x.0), rhs.x.1.min(lhs.x.1)),
-            (rhs.y.0.max(lhs.y.0), rhs.y.1.min(lhs.y.1)),
-            (rhs.z.1.max(lhs.z.0), lhs.z.1),
-        ),
-        Cuboid::new(
-            (rhs.x.0.max(lhs.x.0), rhs.x.1.min(lhs.x.1)),
-            (rhs.y.1.max(lhs.y.0), lhs.y.1),
-            lhs.z,
-        ),
-        Cuboid::new((rhs.x.1.max(lhs.x.0), lhs.x.1), lhs.y, lhs.z),
-    ]
+fn do_step(mut volumes: Vec<Step>, step: Step) -> Vec<Step> {
+    volumes.extend(
+        volumes
+            .iter()
+            .flat_map(|s| {
+                s.cuboid.intersection(step.cuboid).map(|c| Step {
+                    on: !s.on,
+                    cuboid: c,
+                })
+            })
+            .collect_vec(),
+    );
+    if step.on {
+        volumes.push(step)
+    }
+    volumes
 }
 
-fn do_step(non_overlapping_cuboids: Vec<Cuboid>, step: Step) -> Vec<Cuboid> {
-    non_overlapping_cuboids
-        .into_iter()
-        .flat_map(|lhs| subtract_cuboids(lhs, step.cuboid))
-        .filter(Cuboid::is_valid)
-        .chain(if step.on { Some(step.cuboid) } else { None })
-        .collect()
+fn init_cubes_on(steps: Vec<Step>) -> i64 {
+    let mut cubes = Array3::from_elem([101, 101, 101], false);
+    for step in steps {
+        let mut slice = cubes.slice_mut(s![
+            step.cuboid.x.0 + 50..step.cuboid.x.1 + 50,
+            step.cuboid.y.0 + 50..step.cuboid.y.1 + 50,
+            step.cuboid.z.0 + 50..step.cuboid.z.1 + 50,
+        ]);
+        slice.fill(step.on);
+    }
+    cubes.fold(0, |acc, &cur| acc + cur as i64)
 }
 
-fn part_a(data: &'static str) -> usize {
+fn part_a(data: &'static str) -> i64 {
     let steps = parse(data);
-    let non_overlapping_cuboids = steps
-        .into_iter()
-        .filter(|s| {
-            s.cuboid.x.0 >= -50
-                && s.cuboid.x.1 <= 51
-                && s.cuboid.y.0 >= -50
-                && s.cuboid.y.1 <= 51
-                && s.cuboid.z.0 >= -50
-                && s.cuboid.z.1 <= 51
-        })
-        .fold(Vec::new(), do_step);
-    non_overlapping_cuboids.into_iter().map(|c| c.size()).sum()
+    init_cubes_on(steps.into_iter().filter(|s| s.cuboid.is_init()).collect())
 }
 
-fn part_b(data: &'static str) -> usize {
+fn part_b(data: &'static str) -> i64 {
     let steps = parse(data);
-    let non_overlapping_cuboids = steps.into_iter().fold(Vec::new(), do_step);
-    non_overlapping_cuboids.into_iter().map(|c| c.size()).sum()
+    let (steps_init, steps_rest): (Vec<_>, Vec<_>) =
+        steps.into_iter().partition(|s| s.cuboid.is_init());
+    let rest_volumes = steps_rest.into_iter().fold(Vec::new(), do_step);
+    init_cubes_on(steps_init) + rest_volumes.into_iter().map(|s| s.volume()).sum::<i64>()
 }
 
 #[cfg(test)]
