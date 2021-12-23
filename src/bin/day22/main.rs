@@ -46,19 +46,16 @@ fn parse(data: &'static str) -> Vec<Step> {
                 })
                 .collect_tuple()
                 .unwrap();
-            let on = match command_str {
-                "on" => true,
-                "off" => false,
-                _ => panic!(),
-            };
             Step {
-                on,
+                on: command_str == "on",
                 cuboid: Cuboid { x, y, z },
             }
         })
         .collect()
 }
 
+// get non contiguous cuboids formed by subtracting rhs from lhs
+// when lhs and rhs are non contiguous this give only 1 valid cuboid: lhs
 fn subtract_cuboids(lhs: Cuboid, rhs: Cuboid) -> [Cuboid; 6] {
     [
         Cuboid::new((lhs.x.0, lhs.x.1.min(rhs.x.0)), lhs.y, lhs.z),
