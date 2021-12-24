@@ -1,0 +1,64 @@
+  inp w     |inp w     |inp w     |inp w     |inp w     |inp w     |inp w     |inp w     |inp w     |inp w     |inp w     |inp w     |inp w     |inp w     
+  mul x 0   |mul x 0   |mul x 0   |mul x 0   |mul x 0   |mul x 0   |mul x 0   |mul x 0   |mul x 0   |mul x 0   |mul x 0   |mul x 0   |mul x 0   |mul x 0   
+  add x z   |add x z   |add x z   |add x z   |add x z   |add x z   |add x z   |add x z   |add x z   |add x z   |add x z   |add x z   |add x z   |add x z   
+  mod x 26  |mod x 26  |mod x 26  |mod x 26  |mod x 26  |mod x 26  |mod x 26  |mod x 26  |mod x 26  |mod x 26  |mod x 26  |mod x 26  |mod x 26  |mod x 26  
+! div z 1   |div z 1   |div z 1   |div z 26  |div z 1   |div z 1   |div z 1   |div z 26  |div z 1   |div z 26  |div z 26  |div z 26  |div z 26  |div z 26  
+! add x 10  |add x 12  |add x 15  |add x -9  |add x 15  |add x 10  |add x 14  |add x -5  |add x 14  |add x -7  |add x -12 |add x -10 |add x -1  |add x -11 
+  eql x w   |eql x w   |eql x w   |eql x w   |eql x w   |eql x w   |eql x w   |eql x w   |eql x w   |eql x w   |eql x w   |eql x w   |eql x w   |eql x w   
+  eql x 0   |eql x 0   |eql x 0   |eql x 0   |eql x 0   |eql x 0   |eql x 0   |eql x 0   |eql x 0   |eql x 0   |eql x 0   |eql x 0   |eql x 0   |eql x 0   
+  mul y 0   |mul y 0   |mul y 0   |mul y 0   |mul y 0   |mul y 0   |mul y 0   |mul y 0   |mul y 0   |mul y 0   |mul y 0   |mul y 0   |mul y 0   |mul y 0   
+  add y 25  |add y 25  |add y 25  |add y 25  |add y 25  |add y 25  |add y 25  |add y 25  |add y 25  |add y 25  |add y 25  |add y 25  |add y 25  |add y 25  
+  mul y x   |mul y x   |mul y x   |mul y x   |mul y x   |mul y x   |mul y x   |mul y x   |mul y x   |mul y x   |mul y x   |mul y x   |mul y x   |mul y x   
+  add y 1   |add y 1   |add y 1   |add y 1   |add y 1   |add y 1   |add y 1   |add y 1   |add y 1   |add y 1   |add y 1   |add y 1   |add y 1   |add y 1   
+  mul z y   |mul z y   |mul z y   |mul z y   |mul z y   |mul z y   |mul z y   |mul z y   |mul z y   |mul z y   |mul z y   |mul z y   |mul z y   |mul z y   
+  mul y 0   |mul y 0   |mul y 0   |mul y 0   |mul y 0   |mul y 0   |mul y 0   |mul y 0   |mul y 0   |mul y 0   |mul y 0   |mul y 0   |mul y 0   |mul y 0   
+  add y w   |add y w   |add y w   |add y w   |add y w   |add y w   |add y w   |add y w   |add y w   |add y w   |add y w   |add y w   |add y w   |add y w   
+! add y 15  |add y 8   |add y 2   |add y 6   |add y 13  |add y 4   |add y 1   |add y 9   |add y 5   |add y 13  |add y 9   |add y 6   |add y 2   |add y 2   
+  mul y x   |mul y x   |mul y x   |mul y x   |mul y x   |mul y x   |mul y x   |mul y x   |mul y x   |mul y x   |mul y x   |mul y x   |mul y x   |mul y x   
+  add z y   |add z y   |add z y   |add z y   |add z y   |add z y   |add z y   |add z y   |add z y   |add z y   |add z y   |add z y   |add z y   |add z y   
+
+in pseudo code:
+
+total = 0
+for (a, b, c) in parsed {
+    w = inp();
+    rem = total % 26;
+    total /= a; (a is 1 | 26)
+    if rem + b != w {
+        total = total * 26 + w + c
+    }
+}
+total == 0
+
+z is kind of like a stack of integers between 1 and 25
+parsed = [
+    (1, 10, 15)  // z = [15 + n[0]]
+    (1, 12, 8)   // z = [15 + n[0], 8 + n[1]]
+    (1, 15, 2)   // z = [15 + n[0], 8 + n[1], 2 + n[2]]
+    (26, -9, 6)  // z = [15 + n[0], 8 + n[1]] 
+    (1, 15, 13)  // z = [15 + n[0], 8 + n[1], 13 + n[4]]
+    (1, 10, 4)   // z = [15 + n[0], 8 + n[1], 13 + n[4], 4 + n[5]]
+    (1, 14, 1)   // z = [15 + n[0], 8 + n[1], 13 + n[4], 4 + n[5], 1 + n[6]]
+    (26, -5, 9)  // z = [15 + n[0], 8 + n[1], 13 + n[4], 4 + n[5]]
+    (1, 14, 5)   // z = [15 + n[0], 8 + n[1], 13 + n[4], 4 + n[5], 5 + n[8]]
+    (26, -7, 13) // z = [15 + n[0], 8 + n[1], 13 + n[4], 4 + n[5]]
+    (26, -12, 9) // z = [15 + n[0], 8 + n[1], 13 + n[4]]
+    (26, -10, 6) // z = [15 + n[0], 8 + n[1]] 
+    (26, -1, 2)  // z = [15 + n[0]]
+    (26, -11, 2) // z = []
+]
+
+for a number n to be valid:
+n[3] == n[2] - 7
+n[7] == n[6] - 4
+n[9] == n[8] - 2
+n[10] == n[5] - 8
+n[11] == n[4] + 3
+n[12] == n[1] + 7
+n[13] == n[0] + 4
+
+which means the largest possible number is:
+52926995971999
+
+and the smallest possible number is:
+11811951311485
