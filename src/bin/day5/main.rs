@@ -1,9 +1,7 @@
-use std::{
-    iter::{repeat, Chain, Rev},
-    ops::RangeInclusive,
-};
+use std::ops::RangeInclusive;
 
 use itertools::Itertools;
+use ndarray::{s, Array2};
 
 const DATA: &str = include_str!("data.txt");
 
@@ -12,55 +10,49 @@ fn main() {
     println!("part b: {}", part_b(DATA));
 }
 
-struct Vent {
-    x1: i32,
-    y1: i32,
-    x2: i32,
-    y2: i32,
-}
-
-impl From<&'static str> for Vent {
-    fn from(s: &'static str) -> Self {
-        let (x1, y1, x2, y2) = s
-            .split(" -> ")
+fn parse(data: &'static str) -> impl Iterator<Item = (usize, usize, usize, usize)> {
+    data.lines().map(|line| {
+        line.split(" -> ")
             .flat_map(|point| point.split(','))
             .map(|coord| coord.parse().unwrap())
             .collect_tuple()
-            .unwrap();
-        Self { x1, y1, x2, y2 }
+            .unwrap()
+    })
+}
+
+fn range(c1: usize, c2: usize) -> RangeInclusive<usize> {
+    c1.min(c2)..=c1.max(c2)
+}
+
+fn solution(data: &'static str, calc_diagonal: bool) -> usize {
+    let mut grid = Array2::zeros([1000, 1000]);
+    for (x1, y1, x2, y2) in parse(data) {
+        if x1 == x2 {
+            let mut points = grid.slice_mut(s![x1, range(y1, y2)]);
+            points += 1;
+        } else if y1 == y2 {
+            let mut points = grid.slice_mut(s![range(x1, x2), y1]);
+            points += 1;
+        } else if calc_diagonal {
+            let step_x = if x1 < x2 { 1 } else { -1 };
+            let step_y = if y1 < y2 { 1 } else { -1 };
+            let mut slice = grid.slice_mut(s![
+                range(x1, x2);step_x,
+                range(y1, y2);step_y
+            ]);
+            let mut points = slice.diag_mut();
+            points += 1;
+        }
     }
-}
-
-fn route1d(start: i32, stop: i32) -> Chain<RangeInclusive<i32>, Rev<RangeInclusive<i32>>> {
-    (start..=stop).chain((stop..=start).rev())
-}
-
-fn solution(data: &'static str, calc_diagonal: impl Fn(Vent) -> Vec<(i32, i32)>) -> usize {
-    data.lines()
-        .map(Vent::from)
-        .flat_map(|Vent { x1, y1, x2, y2 }| {
-            if x1 == x2 {
-                repeat(x1).zip(route1d(y1, y2)).collect()
-            } else if y1 == y2 {
-                route1d(x1, x2).zip(repeat(y1)).collect()
-            } else {
-                calc_diagonal(Vent { x1, y1, x2, y2 })
-            }
-        })
-        .counts()
-        .values()
-        .filter(|&&v| v >= 2)
-        .count()
+    grid.fold(0, |acc, &cur| acc + (cur >= 2) as usize)
 }
 
 fn part_a(data: &'static str) -> usize {
-    solution(data, |_| vec![])
+    solution(data, false)
 }
 
 fn part_b(data: &'static str) -> usize {
-    solution(data, |Vent { x1, y1, x2, y2 }| {
-        route1d(x1, x2).zip(route1d(y1, y2)).collect()
-    })
+    solution(data, true)
 }
 
 #[cfg(test)]
