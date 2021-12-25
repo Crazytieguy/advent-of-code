@@ -1,9 +1,6 @@
-use std::{
-    cmp::Reverse,
-    collections::{BinaryHeap, HashMap},
-};
+use std::{cmp::Reverse, collections::BinaryHeap};
 
-use itertools::Itertools;
+use ndarray::{Array, Array2, Axis};
 
 const DATA: &str = include_str!("data.txt");
 
@@ -12,15 +9,13 @@ fn main() {
     println!("part b: {}", part_b(DATA));
 }
 
-fn parse(data: &'static str) -> HashMap<(i16, i16), u32> {
-    data.lines()
-        .enumerate()
-        .flat_map(|(y, line)| {
-            line.chars()
-                .enumerate()
-                .map(move |(x, c)| ((x as i16, y as i16), c.to_digit(10).unwrap()))
-        })
-        .collect()
+fn parse(data: &'static str) -> Array2<u32> {
+    let lines: Vec<_> = data.lines().collect();
+    Array::from_shape_vec(
+        [lines.len(), lines[0].len()],
+        data.chars().filter_map(|c| c.to_digit(10)).collect(),
+    )
+    .unwrap()
 }
 
 fn part_a(data: &'static str) -> u32 {
@@ -28,39 +23,53 @@ fn part_a(data: &'static str) -> u32 {
     best_total_risk(&grid)
 }
 
-fn best_total_risk(grid: &HashMap<(i16, i16), u32>) -> u32 {
-    let mut best_known = HashMap::new();
-    let mut queue = BinaryHeap::from([(Reverse(0), 0, 0)]);
-    while let Some((Reverse(total_risk), x, y)) = queue.pop() {
-        let best_known_risk = best_known.entry((x, y)).or_insert(u32::MAX);
+fn adjacent([x, y]: [usize; 2]) -> impl Iterator<Item = [usize; 2]> {
+    [
+        Some([x, y + 1]),
+        Some([x + 1, y]),
+        x.checked_sub(1).map(|x| [x, y]),
+        y.checked_sub(1).map(|y| [x, y]),
+    ]
+    .into_iter()
+    .flatten()
+}
+
+fn best_total_risk(grid: &Array2<u32>) -> u32 {
+    let mut best_known = Array::from_elem(grid.shape(), u32::MAX);
+    let mut queue = BinaryHeap::from([(Reverse(0), [0, 0])]);
+    while let Some((Reverse(total_risk), idx)) = queue.pop() {
+        let best_known_risk = best_known.get_mut(idx).unwrap();
         if total_risk < *best_known_risk {
             *best_known_risk = total_risk;
-            for (dx, dy) in [(0, 1), (1, 0), (-1, 0), (0, -1)] {
-                let (x, y) = (x + dx, y + dy);
-                if let Some(risk) = grid.get(&(x, y)) {
-                    queue.push((Reverse(total_risk + risk), x, y));
+            for adj in adjacent(idx) {
+                if let Some(risk) = grid.get(adj) {
+                    queue.push((Reverse(total_risk + risk), adj));
                 }
             }
         }
     }
-    best_known[best_known.keys().max().unwrap()]
+    *best_known.last().unwrap()
+}
+
+fn cycle(risk: u32) -> u32 {
+    (risk - 1) % 9 + 1
 }
 
 fn part_b(data: &'static str) -> u32 {
     let grid = parse(data);
-    let (tile_width, tile_height) = grid.keys().max().map(|(x, y)| (x + 1, y + 1)).unwrap();
-    let grid = grid
-        .into_iter()
-        .flat_map(|((x, y), risk)| {
-            (0..5).cartesian_product(0..5).map(move |(tile_x, tile_y)| {
-                (
-                    (tile_x * tile_width + x, tile_y * tile_height + y),
-                    (risk + tile_x as u32 + tile_y as u32 - 1) % 9 + 1,
-                )
-            })
-        })
-        .collect();
-    best_total_risk(&grid)
+    let mut five_grids = grid.clone();
+    for i in 1..=4 {
+        five_grids
+            .append(Axis(0), grid.mapv(|r| cycle(r + i)).view())
+            .unwrap()
+    }
+    let mut twent_five_grids = five_grids.clone();
+    for i in 1..=4 {
+        twent_five_grids
+            .append(Axis(1), five_grids.mapv(|r| cycle(r + i)).view())
+            .unwrap()
+    }
+    best_total_risk(&twent_five_grids)
 }
 
 #[cfg(test)]
