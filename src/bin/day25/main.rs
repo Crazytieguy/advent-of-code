@@ -61,9 +61,7 @@ fn step_direction(grid: &mut Array2<Option<SeaCucumber>>, direction: SeaCucumber
         indexes_to_move.extend(
             lane.windows(2)
                 .into_iter()
-                .enumerate()
-                .filter(|(_, pair)| [pair[0], pair[1]] == [Some(direction), None])
-                .map(|(i, _)| i),
+                .positions(|pair| [pair[0], pair[1]] == [Some(direction), None]),
         );
         if [*lane.last().unwrap(), lane[0]] == [Some(direction), None] {
             moved = true;
