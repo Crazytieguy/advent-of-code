@@ -30,46 +30,38 @@ fn parse(data: &'static str) -> Vec<Vec<IVec3>> {
         .collect()
 }
 
-fn rotate_z(p: IVec3) -> IVec3 {
-    IVec3::new(p.y, -p.x, p.z)
+trait Rotatable {
+    fn rot_z(self) -> Self;
+    fn rot_y(self) -> Self;
+    fn rot_x(self) -> Self;
 }
 
-fn rotate_y(p: IVec3) -> IVec3 {
-    IVec3::new(-p.z, p.y, p.x)
-}
-
-fn rotate_x(p: IVec3) -> IVec3 {
-    IVec3::new(p.x, p.z, -p.y)
-}
-
-fn rotation(p: IVec3, n: usize) -> IVec3 {
-    match n {
-        0 => p,
-        1 => rotate_z(p),
-        2 => rotate_z(rotate_z(p)),
-        3 => rotate_z(rotate_z(rotate_z(p))),
-        4 => rotate_x(p),
-        5 => rotate_z(rotate_x(p)),
-        6 => rotate_z(rotate_z(rotate_x(p))),
-        7 => rotate_z(rotate_z(rotate_z(rotate_x(p)))),
-        8 => rotate_x(rotate_x(p)),
-        9 => rotate_z(rotate_x(rotate_x(p))),
-        10 => rotate_z(rotate_z(rotate_x(rotate_x(p)))),
-        11 => rotate_z(rotate_z(rotate_z(rotate_x(rotate_x(p))))),
-        12 => rotate_x(rotate_x(rotate_x(p))),
-        13 => rotate_z(rotate_x(rotate_x(rotate_x(p)))),
-        14 => rotate_z(rotate_z(rotate_x(rotate_x(rotate_x(p))))),
-        15 => rotate_z(rotate_z(rotate_z(rotate_x(rotate_x(rotate_x(p)))))),
-        16 => rotate_y(p),
-        17 => rotate_z(rotate_y(p)),
-        18 => rotate_z(rotate_z(rotate_y(p))),
-        19 => rotate_z(rotate_z(rotate_z(rotate_y(p)))),
-        20 => rotate_y(rotate_y(rotate_y(p))),
-        21 => rotate_z(rotate_y(rotate_y(rotate_y(p)))),
-        22 => rotate_z(rotate_z(rotate_y(rotate_y(rotate_y(p))))),
-        23 => rotate_z(rotate_z(rotate_z(rotate_y(rotate_y(rotate_y(p)))))),
-        _ => unreachable!(),
+impl Rotatable for IVec3 {
+    fn rot_z(self) -> Self {
+        Self::new(self.y, -self.x, self.z)
     }
+    fn rot_y(self) -> Self {
+        Self::new(-self.z, self.y, self.x)
+    }
+    fn rot_x(self) -> Self {
+        Self::new(self.x, self.z, -self.y)
+    }
+}
+
+fn rotation(mut p: IVec3, n: usize) -> IVec3 {
+    p = match n / 4 {
+        0 => p,
+        1 => p.rot_x(),
+        2 => p.rot_x().rot_x(),
+        3 => p.rot_x().rot_x().rot_x(),
+        4 => p.rot_y(),
+        5 => p.rot_y().rot_y().rot_y(),
+        _ => unreachable!(),
+    };
+    for _ in 0..(n % 4) {
+        p = p.rot_z()
+    }
+    p
 }
 
 fn all_rotations(p: IVec3) -> impl Iterator<Item = IVec3> {
