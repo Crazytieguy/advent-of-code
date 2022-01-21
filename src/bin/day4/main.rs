@@ -1,104 +1,83 @@
-use std::ops::Range;
+use itertools::Itertools;
+use ndarray::Array2;
 
 const DATA: &str = include_str!("data.txt");
 fn main() {
-    println!("part a: {}", part_a(DATA));
-    println!("part b: {}", part_b(DATA));
+    let (mut boards, draws) = parse(DATA);
+    let win_turns = all_win_turns(&mut boards, &draws);
+    println!("part a: {}", part_a_calc(&win_turns, &boards, &draws));
+    println!("part b: {}", part_b_calc(&win_turns, &boards, &draws));
 }
 
-#[derive(Debug)]
-struct Board {
-    numbers: Vec<usize>,
-    marks: [bool; 25],
-}
+type Board = Array2<(u8, bool)>;
 
-fn row_index_range(row: usize) -> Range<usize> {
-    (row * 5)..(row * 5 + 5)
-}
-
-fn column_indexes(col: usize) -> Vec<usize> {
-    (0..5).map(|row| row * 5 + col).collect()
-}
-
-impl Board {
-    fn mark(&mut self, number: usize) {
-        for (i, num) in self.numbers.iter().enumerate() {
-            if *num == number {
-                self.marks[i] = true;
-            }
-        }
-    }
-
-    fn is_winner(&self) -> bool {
-        for i in 0..5 {
-            if self.marks[row_index_range(i)].iter().all(|v| *v) {
-                return true;
-            }
-            if column_indexes(i).iter().map(|j| self.marks[*j]).all(|v| v) {
-                return true;
-            }
-        }
-        false
-    }
-
-    fn score(&self, drawn: usize) -> usize {
-        let sum_unmarked: usize = self
-            .numbers
-            .iter()
-            .zip(self.marks.iter())
-            .map(|(&num, &mark)| if !mark { num } else { 0 })
-            .sum();
-        sum_unmarked * drawn
-    }
-}
-
-impl From<&str> for Board {
-    fn from(s: &str) -> Self {
-        let numbers = s.split_whitespace().map(|s| s.parse().unwrap()).collect();
-        let marks = [false; 25];
-        Self { numbers, marks }
-    }
-}
-
-fn parse(data: &'static str) -> (Vec<usize>, Vec<Board>) {
-    let mut records = data.split("\n\n");
-    let drawn = records
+fn parse(data: &'static str) -> (Vec<Board>, Vec<u8>) {
+    let mut split = data.trim().split("\n\n");
+    let draws: Vec<u8> = split
         .next()
         .unwrap()
         .split(',')
         .map(|n| n.parse().unwrap())
         .collect();
-    let boards = records.map(Board::from).collect();
-    (drawn, boards)
+    let boards = split
+        .map(|board_str| {
+            let board_vec = board_str
+                .split_whitespace()
+                .map(|n| (n.parse().unwrap(), false))
+                .collect();
+            Array2::from_shape_vec([5, 5], board_vec).unwrap()
+        })
+        .collect();
+    (boards, draws)
 }
 
-fn part_a(data: &'static str) -> usize {
-    let (drawn, mut boards) = parse(data);
-    for num in drawn {
-        for board in boards.iter_mut() {
-            board.mark(num);
-            if board.is_winner() {
-                return board.score(num);
+fn mark_board(board: &mut Board, draw: u8) -> Option<(usize, usize)> {
+    board
+        .indexed_iter_mut()
+        .find(|&(_idx, &mut (num, _mark))| num == draw)
+        .map(|(idx, (_num, mark))| {
+            *mark = true;
+            idx
+        })
+}
+
+fn board_win_turn(board: &mut Board, draws: &[u8]) -> usize {
+    draws
+        .iter()
+        .position(|&draw| {
+            if let Some((row, col)) = mark_board(board, draw) {
+                return board.row(row).iter().all(|&(_num, mark)| mark)
+                    || board.column(col).iter().all(|&(_num, mark)| mark);
             }
-        }
-    }
-    panic!()
+            false
+        })
+        .unwrap()
 }
 
-#[allow(dead_code)]
-fn part_b(data: &'static str) -> usize {
-    let (drawn, mut boards) = parse(data);
-    for num in drawn {
-        for board in boards.iter_mut() {
-            board.mark(num);
-        }
-        if boards.len() == 1 {
-            assert!(boards[0].is_winner());
-            return boards[0].score(num);
-        }
-        boards = boards.into_iter().filter(|b| !b.is_winner()).collect();
-    }
-    panic!()
+fn all_win_turns(boards: &mut [Board], draws: &[u8]) -> Vec<usize> {
+    boards
+        .iter_mut()
+        .map(|b| board_win_turn(b, draws))
+        .collect()
+}
+
+fn score(board: &Board, winning_draw: u8) -> usize {
+    board
+        .iter()
+        .filter(|&&(_num, mark)| !mark)
+        .map(|&(num, _mark)| num as usize)
+        .sum::<usize>()
+        * winning_draw as usize
+}
+
+fn part_a_calc(win_turns: &[usize], boards: &[Board], draws: &[u8]) -> usize {
+    let best_board_id = win_turns.iter().position_min().unwrap();
+    score(&boards[best_board_id], draws[win_turns[best_board_id]])
+}
+
+fn part_b_calc(win_turns: &[usize], boards: &[Board], draws: &[u8]) -> usize {
+    let worst_board_id = win_turns.iter().position_max().unwrap();
+    score(&boards[worst_board_id], draws[win_turns[worst_board_id]])
 }
 
 #[cfg(test)]
@@ -108,11 +87,15 @@ mod tests {
 
     #[test]
     fn test_a() {
-        assert_eq!(part_a(SAMPLE_DATA), 4512);
+        let (mut boards, draws) = parse(SAMPLE_DATA);
+        let win_turns = all_win_turns(&mut boards, &draws);
+        assert_eq!(part_a_calc(&win_turns, &boards, &draws), 4512);
     }
 
     #[test]
     fn test_b() {
-        assert_eq!(part_b(SAMPLE_DATA), 1924);
+        let (mut boards, draws) = parse(SAMPLE_DATA);
+        let win_turns = all_win_turns(&mut boards, &draws);
+        assert_eq!(part_b_calc(&win_turns, &boards, &draws), 1924);
     }
 }
