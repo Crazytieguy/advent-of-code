@@ -4,11 +4,6 @@ use itertools::Itertools;
 
 const DATA: &str = include_str!("data.txt");
 
-fn main() {
-    println!("part a: {}", part_a(DATA));
-    println!("part b: {}", part_b(DATA));
-}
-
 fn parse(data: &'static str) -> Vec<Vec<usize>> {
     data.split("\n\n")
         .map(|inventory| inventory.lines().map(|l| l.parse().unwrap()).collect())
@@ -42,10 +37,17 @@ mod tests {
     #[test]
     fn test_a() {
         assert_eq!(part_a(SAMPLE_DATA), 24000);
+        println!("part a: {}", part_a(DATA));
     }
 
     #[test]
     fn test_b() {
         assert_eq!(part_b(SAMPLE_DATA), 45000);
+        println!("part b: {}", part_b(DATA));
     }
+}
+
+fn main() {
+    println!("part a: {}", part_a(DATA));
+    println!("part b: {}", part_b(DATA));
 }

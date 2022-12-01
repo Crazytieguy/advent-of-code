@@ -1,10 +1,5 @@
 const DATA: &str = include_str!("data.txt");
 
-fn main() {
-    println!("part a: {}", part_a(DATA));
-    println!("part b: {}", part_b(DATA));
-}
-
 fn parse(data: &'static str) {
     println!("{}", data)
 }
@@ -27,10 +22,17 @@ mod tests {
     #[test]
     fn test_a() {
         assert_eq!(part_a(SAMPLE_DATA), 0);
+        println!("part a: {}", part_a(DATA));
     }
 
     #[test]
     fn test_b() {
         assert_eq!(part_b(SAMPLE_DATA), 0);
+        println!("part b: {}", part_b(DATA));
     }
+}
+
+fn main() {
+    println!("part a: {}", part_a(DATA));
+    println!("part b: {}", part_b(DATA));
 }
