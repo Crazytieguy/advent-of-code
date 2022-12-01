@@ -17,6 +17,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "advent-2022"
+version = "0.1.0"
+dependencies = [
+ "itertools",
+]
+
+[[package]]
 name = "aho-corasick"
 version = "0.7.20"
 source = "registry+https://github.com/rust-lang/crates.io-index"
