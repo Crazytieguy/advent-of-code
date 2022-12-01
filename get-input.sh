@@ -1,3 +1,5 @@
 #!/bin/bash
 
-curl https://adventofcode.com/2021/day/$1/input --cookie "session=$(cat session)" > src/bin/day$1/data.txt
+mkdir -p $1/src/bin/day$2
+cp $1/src/bin/template/* $1/src/bin/day$2/
+curl https://adventofcode.com/$1/day/$2/input --cookie "session=$(cat session)" > $1/src/bin/day$2/data.txt
