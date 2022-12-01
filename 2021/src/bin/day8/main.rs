@@ -58,7 +58,7 @@ fn get_key_to_char(patterns: &[&'static str]) -> HashMap<(usize, BTreeSet<usize>
         .into_group_map();
     ('a'..='g')
         .map(|c| {
-            let lengths = (&pat_lengths[&c]).iter().copied().collect();
+            let lengths = pat_lengths[&c].iter().copied().collect();
             ((occurences[&c], lengths), c)
         })
         .collect()

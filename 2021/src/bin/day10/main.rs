@@ -36,12 +36,7 @@ fn part_a(data: &'static str) -> usize {
     data.lines()
         .filter_map(|line| {
             let mut stack = Vec::new();
-            for c in line.chars() {
-                if is_corrupt(&mut stack, c) {
-                    return Some(c);
-                }
-            }
-            None
+            line.chars().find(|&c| is_corrupt(&mut stack, c))
         })
         .map(|illegal_char| char_to_score[&illegal_char])
         .sum()
