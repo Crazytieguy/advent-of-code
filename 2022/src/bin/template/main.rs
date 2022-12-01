@@ -1,16 +1,18 @@
 const DATA: &str = include_str!("data.txt");
 
-fn parse(data: &'static str) {
-    println!("{}", data)
+type Parsed = &'static str;
+
+fn parse(data: &'static str) -> Parsed {
+    data
 }
 
-fn part_a(data: &'static str) -> usize {
-    parse(data);
+fn part_a(data: &Parsed) -> usize {
+    println!("{data:?}");
     0
 }
 
-fn part_b(data: &'static str) -> usize {
-    parse(data);
+fn part_b(data: &Parsed) -> usize {
+    println!("{data:?}");
     0
 }
 
@@ -21,18 +23,19 @@ mod tests {
 
     #[test]
     fn test_a() {
-        assert_eq!(part_a(SAMPLE_DATA), 0);
-        println!("part a: {}", part_a(DATA));
+        assert_eq!(part_a(&parse(SAMPLE_DATA)), 0);
+        println!("part a: {}", part_a(&parse(DATA)));
     }
 
     #[test]
     fn test_b() {
-        assert_eq!(part_b(SAMPLE_DATA), 0);
-        println!("part b: {}", part_b(DATA));
+        assert_eq!(part_b(&parse(SAMPLE_DATA)), 0);
+        println!("part b: {}", part_b(&parse(DATA)));
     }
 }
 
 fn main() {
-    println!("part a: {}", part_a(DATA));
-    println!("part b: {}", part_b(DATA));
+    let parsed = parse(DATA);
+    println!("part a: {}", part_a(&parsed));
+    println!("part b: {}", part_b(&parsed));
 }
