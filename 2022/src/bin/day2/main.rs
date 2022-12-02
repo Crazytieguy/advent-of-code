@@ -1,13 +1,19 @@
+use nom::{
+    bytes::complete::take, character::complete::char, combinator::map_res, multi::separated_list0,
+    sequence::separated_pair, IResult,
+};
+use serde::Deserialize;
+
 const DATA: &str = include_str!("data.txt");
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, Deserialize)]
 enum Left {
     A,
     B,
     C,
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, Deserialize)]
 enum Right {
     X,
     Y,
@@ -16,26 +22,15 @@ enum Right {
 
 type Parsed = Vec<(Left, Right)>;
 
-fn parse(data: &'static str) -> Parsed {
-    data.lines()
-        .map(|line| {
-            let (first, second) = line.split_once(' ').unwrap();
-            (
-                match first {
-                    "A" => Left::A,
-                    "B" => Left::B,
-                    "C" => Left::C,
-                    _ => panic!(),
-                },
-                match second {
-                    "X" => Right::X,
-                    "Y" => Right::Y,
-                    "Z" => Right::Z,
-                    _ => panic!(),
-                },
-            )
-        })
-        .collect()
+fn parse(data: &'static str) -> IResult<&'static str, Parsed> {
+    separated_list0(
+        char('\n'),
+        separated_pair(
+            map_res(take(1usize), serde_plain::from_str),
+            char(' '),
+            map_res(take(1usize), serde_plain::from_str),
+        ),
+    )(data)
 }
 
 fn choice_score(own: Right) -> usize {
@@ -92,6 +87,10 @@ fn part_b(data: &Parsed) -> usize {
         .sum()
 }
 
+fn parse_unwrap(data: &'static str) -> Parsed {
+    parse(data).unwrap().1
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -99,19 +98,19 @@ mod tests {
 
     #[test]
     fn test_a() {
-        assert_eq!(part_a(&parse(SAMPLE_DATA)), 15);
-        println!("part a: {}", part_a(&parse(DATA)));
+        assert_eq!(part_a(&parse_unwrap(SAMPLE_DATA)), 15);
+        println!("part a: {}", part_a(&parse_unwrap(DATA)));
     }
 
     #[test]
     fn test_b() {
-        assert_eq!(part_b(&parse(SAMPLE_DATA)), 12);
-        println!("part b: {}", part_b(&parse(DATA)));
+        assert_eq!(part_b(&parse_unwrap(SAMPLE_DATA)), 12);
+        println!("part b: {}", part_b(&parse_unwrap(DATA)));
     }
 }
 
 fn main() {
-    let parsed = parse(DATA);
+    let parsed = parse_unwrap(DATA);
     println!("part a: {}", part_a(&parsed));
     println!("part b: {}", part_b(&parsed));
 }
