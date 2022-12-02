@@ -33,56 +33,28 @@ fn parse(data: &'static str) -> IResult<&'static str, Parsed> {
     )(data)
 }
 
-fn choice_score(own: Right) -> usize {
-    match own {
-        Right::X => 1,
-        Right::Y => 2,
-        Right::Z => 3,
-    }
-}
-
 fn part_a(data: &Parsed) -> usize {
     data.iter()
-        .map(|&(opp, own)| {
-            let result_score = match (opp, own) {
-                (Left::A, Right::X) => 3,
-                (Left::A, Right::Y) => 6,
-                (Left::A, Right::Z) => 0,
-                (Left::B, Right::Y) => 3,
-                (Left::B, Right::Z) => 6,
-                (Left::B, Right::X) => 0,
-                (Left::C, Right::Z) => 3,
-                (Left::C, Right::X) => 6,
-                (Left::C, Right::Y) => 0,
+        .map(|&(opponent_choice, own_choice)| {
+            let result_score = match (own_choice as i8 - opponent_choice as i8).rem_euclid(3) {
+                0 => 3, // tie
+                1 => 6, // win
+                2 => 0, // lose
+                _ => unreachable!(),
             };
-            choice_score(own) + result_score
+            let choice_score = own_choice as usize + 1;
+            choice_score + result_score
         })
         .sum()
 }
 
-fn result_score(right: Right) -> usize {
-    match right {
-        Right::X => 0,
-        Right::Y => 3,
-        Right::Z => 6,
-    }
-}
-
 fn part_b(data: &Parsed) -> usize {
     data.iter()
-        .map(|&(opp, result)| {
-            let choice_score = match (opp, result) {
-                (Left::A, Right::Y) => 1,
-                (Left::A, Right::Z) => 2,
-                (Left::A, Right::X) => 3,
-                (Left::B, Right::X) => 1,
-                (Left::B, Right::Y) => 2,
-                (Left::B, Right::Z) => 3,
-                (Left::C, Right::Z) => 1,
-                (Left::C, Right::X) => 2,
-                (Left::C, Right::Y) => 3,
-            };
-            choice_score + result_score(result)
+        .map(|&(opponent_choice, result)| {
+            let choice_score =
+                (opponent_choice as i8 + result as i8 - 1).rem_euclid(3) as usize + 1;
+            let result_score = result as usize * 3;
+            choice_score + result_score
         })
         .sum()
 }
