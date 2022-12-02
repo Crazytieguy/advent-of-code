@@ -1,6 +1,10 @@
 use nom::{
-    bytes::complete::take, character::complete::char, combinator::map_res, multi::separated_list0,
-    sequence::separated_pair, IResult,
+    bytes::complete::take,
+    character::complete::{char, line_ending},
+    combinator::map_res,
+    multi::separated_list0,
+    sequence::separated_pair,
+    IResult,
 };
 use serde::Deserialize;
 
@@ -24,7 +28,7 @@ type Parsed = Vec<(Left, Right)>;
 
 fn parse(data: &'static str) -> IResult<&'static str, Parsed> {
     separated_list0(
-        char('\n'),
+        line_ending,
         separated_pair(
             map_res(take(1usize), serde_plain::from_str),
             char(' '),
