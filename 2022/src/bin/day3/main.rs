@@ -26,8 +26,7 @@ fn part_a(data: &'static str) -> usize {
     data.lines()
         .map(|line| {
             let (left, right) = line.split_at(line.len() / 2);
-            let item = intersecting_item([left, right]);
-            priority(item)
+            priority(intersecting_item([left, right]))
         })
         .sum()
 }
@@ -36,10 +35,7 @@ fn part_b(data: &'static str) -> usize {
     data.lines()
         .chunks(3)
         .into_iter()
-        .map(|group| {
-            let item = intersecting_item(group);
-            priority(item)
-        })
+        .map(|group| priority(intersecting_item(group)))
         .sum()
 }
 
