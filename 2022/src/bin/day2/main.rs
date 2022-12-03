@@ -2,11 +2,12 @@ use nom::{
     bytes::complete::take,
     character::complete::{char, line_ending},
     combinator::map_res,
-    multi::separated_list0,
+    multi::separated_list1,
     sequence::separated_pair,
     IResult,
 };
 use serde::Deserialize;
+use std::error::Error;
 
 const DATA: &str = include_str!("data.txt");
 
@@ -27,7 +28,7 @@ enum Right {
 type Parsed = Vec<(Left, Right)>;
 
 fn parse(data: &'static str) -> IResult<&'static str, Parsed> {
-    separated_list0(
+    separated_list1(
         line_ending,
         separated_pair(
             map_res(take(1usize), serde_plain::from_str),
@@ -63,30 +64,29 @@ fn part_b(data: &Parsed) -> usize {
         .sum()
 }
 
-fn parse_unwrap(data: &'static str) -> Parsed {
-    parse(data).unwrap().1
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
     const SAMPLE_DATA: &str = include_str!("sample.txt");
 
     #[test]
-    fn test_a() {
-        assert_eq!(part_a(&parse_unwrap(SAMPLE_DATA)), 15);
-        println!("part a: {}", part_a(&parse_unwrap(DATA)));
+    fn test_a() -> Result<(), Box<dyn Error>> {
+        assert_eq!(part_a(&parse(SAMPLE_DATA)?.1), 15);
+        println!("part a: {}", part_a(&parse(DATA)?.1));
+        Ok(())
     }
 
     #[test]
-    fn test_b() {
-        assert_eq!(part_b(&parse_unwrap(SAMPLE_DATA)), 12);
-        println!("part b: {}", part_b(&parse_unwrap(DATA)));
+    fn test_b() -> Result<(), Box<dyn Error>> {
+        assert_eq!(part_b(&parse(SAMPLE_DATA)?.1), 12);
+        println!("part b: {}", part_b(&parse(DATA)?.1));
+        Ok(())
     }
 }
 
-fn main() {
-    let parsed = parse_unwrap(DATA);
+fn main() -> Result<(), Box<dyn Error>> {
+    let parsed = parse(DATA)?.1;
     println!("part a: {}", part_a(&parsed));
     println!("part b: {}", part_b(&parsed));
+    Ok(())
 }
