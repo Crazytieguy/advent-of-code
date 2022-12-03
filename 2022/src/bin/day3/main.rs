@@ -24,10 +24,9 @@ fn intersecting_item(group: impl IntoIterator<Item = &'static str>) -> char {
 
 fn part_a(data: &'static str) -> usize {
     data.lines()
-        .map(|line| {
-            let (left, right) = line.split_at(line.len() / 2);
-            priority(intersecting_item([left, right]))
-        })
+        .map(|line| line.split_at(line.len() / 2))
+        .map(|(left, right)| intersecting_item([left, right]))
+        .map(priority)
         .sum()
 }
 
@@ -35,7 +34,8 @@ fn part_b(data: &'static str) -> usize {
     data.lines()
         .chunks(3)
         .into_iter()
-        .map(|group| priority(intersecting_item(group)))
+        .map(intersecting_item)
+        .map(priority)
         .sum()
 }
 
