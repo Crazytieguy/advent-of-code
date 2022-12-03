@@ -10,8 +10,8 @@ def priority(item: str) -> int:
 
 part_a = 0
 for line in data.splitlines():
-    left = line[: int(len(line) / 2)]
-    right = line[int(len(line) / 2) :]
+    left = line[: len(line) // 2]
+    right = line[len(line) // 2 :]
     intersection = set(left) & set(right)
     part_a += priority(intersection.pop())
 
