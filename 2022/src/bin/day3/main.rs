@@ -11,8 +11,9 @@ fn priority(item: char) -> usize {
     }
 }
 
-fn intersecting_item(group: impl Iterator<Item = &'static str>) -> char {
+fn intersecting_item(group: impl IntoIterator<Item = &'static str>) -> char {
     group
+        .into_iter()
         .fold(HashSet::new(), |acc, cur| {
             acc.intersection(&cur.chars().collect()).copied().collect()
         })
@@ -25,7 +26,7 @@ fn part_a(data: &'static str) -> usize {
     data.lines()
         .map(|line| {
             let (left, right) = line.split_at(line.len() / 2);
-            let item = intersecting_item([left, right].into_iter());
+            let item = intersecting_item([left, right]);
             priority(item)
         })
         .sum()
