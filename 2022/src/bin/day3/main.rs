@@ -18,11 +18,12 @@ fn char_set(items: &'static str) -> HashSet<char> {
 fn intersecting_item(group: impl Iterator<Item = &'static str>) -> char {
     group
         .map(char_set)
-        .reduce(|a, b| a.intersection(&b).copied().collect())
-        .expect("there to be more than one set")
+        .fold(HashSet::new(), |acc, cur| {
+            acc.intersection(&cur).copied().collect()
+        })
         .into_iter()
         .exactly_one()
-        .expect("there is exactly one item in the intersection")
+        .expect("there should be exactly one item in the intersection")
 }
 
 fn part_a(data: &'static str) -> usize {
