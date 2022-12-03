@@ -14,9 +14,9 @@ fn priority(item: char) -> usize {
 fn intersecting_item(group: impl IntoIterator<Item = &'static str>) -> char {
     group
         .into_iter()
-        .fold(HashSet::new(), |acc, cur| {
-            acc.intersection(&cur.chars().collect()).copied().collect()
-        })
+        .map(|items| items.chars().collect::<HashSet<_>>())
+        .reduce(|a, b| a.intersection(&b).copied().collect())
+        .expect("there should be more than one set")
         .into_iter()
         .exactly_one()
         .expect("there should be exactly one item in the intersection")
