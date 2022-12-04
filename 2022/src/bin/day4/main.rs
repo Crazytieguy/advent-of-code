@@ -1,5 +1,5 @@
 use nom::{
-    character::complete::{self, line_ending},
+    character::complete::{self, line_ending, u32},
     multi::separated_list1,
     sequence::separated_pair,
     IResult, Parser,
@@ -8,25 +8,23 @@ use std::{error::Error, ops::RangeInclusive};
 
 const DATA: &str = include_str!("data.txt");
 
-type Parsed = Vec<(RangeInclusive<u32>, RangeInclusive<u32>)>;
+type RangesPair = (RangeInclusive<u32>, RangeInclusive<u32>);
+type Parsed = Vec<RangesPair>;
 
 fn parse(data: &'static str) -> IResult<&'static str, Parsed> {
-    let pair_to_range = |(a, b)| a..=b;
+    let hyphen_separated_numbers = || separated_pair(u32, complete::char('-'), u32);
+    let range = || hyphen_separated_numbers().map(|(a, b)| a..=b);
     separated_list1(
         line_ending,
-        separated_pair(
-            separated_pair(complete::u32, complete::char('-'), complete::u32).map(pair_to_range),
-            complete::char(','),
-            separated_pair(complete::u32, complete::char('-'), complete::u32).map(pair_to_range),
-        ),
+        separated_pair(range(), complete::char(','), range()),
     )(data)
 }
 
-fn one_range_contains_the_other((a, b): &&(RangeInclusive<u32>, RangeInclusive<u32>)) -> bool {
-    a.contains(b.start()) && a.contains(b.end()) || b.contains(a.start()) & b.contains(a.end())
+fn one_range_contains_the_other((a, b): &&RangesPair) -> bool {
+    a.contains(b.start()) && a.contains(b.end()) || b.contains(a.start()) && b.contains(a.end())
 }
 
-fn ranges_overlap((a, b): &&(RangeInclusive<u32>, RangeInclusive<u32>)) -> bool {
+fn ranges_overlap((a, b): &&RangesPair) -> bool {
     a.contains(b.start()) || a.contains(b.end()) || b.contains(a.start()) || b.contains(a.end())
 }
 
