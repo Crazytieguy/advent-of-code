@@ -1,5 +1,5 @@
 use nom::{
-    character::complete::{self, line_ending, u32},
+    character::complete::{char, line_ending, u32},
     multi::separated_list1,
     sequence::separated_pair,
     IResult, Parser,
@@ -12,12 +12,9 @@ type RangesPair = (RangeInclusive<u32>, RangeInclusive<u32>);
 type Parsed = Vec<RangesPair>;
 
 fn parse(data: &'static str) -> IResult<&'static str, Parsed> {
-    let hyphen_separated_numbers = || separated_pair(u32, complete::char('-'), u32);
+    let hyphen_separated_numbers = || separated_pair(u32, char('-'), u32);
     let range = || hyphen_separated_numbers().map(|(a, b)| a..=b);
-    separated_list1(
-        line_ending,
-        separated_pair(range(), complete::char(','), range()),
-    )(data)
+    separated_list1(line_ending, separated_pair(range(), char(','), range()))(data)
 }
 
 fn one_range_contains_the_other((a, b): &&RangesPair) -> bool {
