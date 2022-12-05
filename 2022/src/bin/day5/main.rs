@@ -1,9 +1,10 @@
+use itertools::Itertools;
 use nom::{
     branch::alt,
-    bytes::complete::tag,
-    character::complete::{char, line_ending, one_of, space0, u8},
-    multi::{many1_count, separated_list1},
-    sequence::{delimited, pair, separated_pair, tuple},
+    bytes::complete::{tag, take_until},
+    character::complete::{char, line_ending, multispace0, one_of, u8},
+    multi::separated_list1,
+    sequence::{delimited, separated_pair, tuple},
     Parser,
 };
 use std::error::Error;
@@ -31,26 +32,22 @@ fn parse_crate(input: &str) -> IResult<Option<char>> {
     ))(input)
 }
 
-fn parse_crates_row(input: &str) -> IResult<Vec<Option<char>>> {
-    separated_list1(char(' '), parse_crate)(input)
-}
-
-fn parse_stack_numbers(input: &str) -> IResult<usize> {
-    many1_count(delimited(space0, u8, space0))(input)
-}
-
 fn parse_stacks(input: &str) -> IResult<Stacks> {
-    let (input, (rows, num_stacks)) = separated_pair(
-        separated_list1(line_ending, parse_crates_row),
-        line_ending,
-        parse_stack_numbers,
-    )(input)?;
-    let mut stacks = vec![vec![]; num_stacks];
-    for row in rows {
-        for (slot, stack) in row.into_iter().zip(stacks.iter_mut()) {
-            if let Some(crate_) = slot {
-                stack.push(crate_)
+    let (input, initial_state) = take_until("\n\n")(input)?;
+    let mut stacks = vec![];
+    for mut line in initial_state.lines().dropping_back(1) {
+        for i in 0.. {
+            let (rest, c) = parse_crate(line)?;
+            if stacks.len() == i {
+                stacks.push(vec![]);
             }
+            if let Some(c) = c {
+                stacks[i].push(c);
+            }
+            if rest.is_empty() {
+                break;
+            }
+            (line, _) = char(' ')(rest)?;
         }
     }
     stacks.iter_mut().for_each(|s| s.reverse());
@@ -67,7 +64,7 @@ fn parse_instruction(input: &str) -> IResult<Instruction> {
 fn parse(data: &str) -> IResult<Parsed> {
     separated_pair(
         parse_stacks,
-        pair(line_ending, line_ending),
+        multispace0,
         separated_list1(line_ending, parse_instruction),
     )(data)
 }
@@ -83,19 +80,18 @@ fn get_top_crates(stacks: Stacks) -> String {
         .collect()
 }
 
-fn solve(stacks: &Stacks, instructions: &[Instruction], reverse_when_moving: bool) -> String {
+fn solve(stacks: &Stacks, instructions: &[Instruction], reverse_order: bool) -> String {
     let mut stacks = stacks.clone();
     let mut temp_stack = vec![];
     for &Instruction { amount, from, to } in instructions {
         let (amount, from, to) = (amount as usize, from as usize, to as usize);
-        let range = stacks[from].len() - amount..;
-        let crates_to_move = stacks[from].drain(range);
-        if reverse_when_moving {
-            temp_stack.extend(crates_to_move.rev());
+        let at = stacks[from].len() - amount;
+        temp_stack.extend(stacks[from].drain(at..));
+        if reverse_order {
+            stacks[to].extend(temp_stack.drain(..).rev());
         } else {
-            temp_stack.extend(crates_to_move);
+            stacks[to].append(&mut temp_stack);
         }
-        stacks[to].append(&mut temp_stack);
     }
     get_top_crates(stacks)
 }
