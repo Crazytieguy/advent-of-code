@@ -4,9 +4,11 @@ use nom::{
     character::complete::{char, line_ending, one_of, space0, u8},
     multi::{many1_count, separated_list1},
     sequence::{delimited, pair, separated_pair, tuple},
-    IResult, Parser,
+    Parser,
 };
 use std::error::Error;
+
+type OutResult = std::result::Result<(), Box<dyn Error>>;
 
 const DATA: &str = include_str!("data.txt");
 
@@ -20,22 +22,24 @@ type Stacks = Vec<Vec<char>>;
 
 type Parsed = (Stacks, Vec<Instruction>);
 
-fn parse_crate(input: &str) -> IResult<&str, Option<char>> {
+type IResult<'a, T> = nom::IResult<&'a str, T>;
+
+fn parse_crate(input: &str) -> IResult<Option<char>> {
     alt((
         delimited(char('['), one_of("ABCDEFGHIJKLMNOPQRSTUVWXYZ"), char(']')).map(Some),
         tag("   ").map(|_| None),
     ))(input)
 }
 
-fn parse_crates_row(input: &str) -> IResult<&str, Vec<Option<char>>> {
+fn parse_crates_row(input: &str) -> IResult<Vec<Option<char>>> {
     separated_list1(char(' '), parse_crate)(input)
 }
 
-fn parse_stack_numbers(input: &str) -> IResult<&str, usize> {
+fn parse_stack_numbers(input: &str) -> IResult<usize> {
     many1_count(delimited(space0, u8, space0))(input)
 }
 
-fn parse_stacks(input: &str) -> IResult<&str, Stacks> {
+fn parse_stacks(input: &str) -> IResult<Stacks> {
     let (input, (rows, num_stacks)) = separated_pair(
         separated_list1(line_ending, parse_crates_row),
         line_ending,
@@ -53,14 +57,14 @@ fn parse_stacks(input: &str) -> IResult<&str, Stacks> {
     Ok((input, stacks))
 }
 
-fn parse_instruction(input: &str) -> IResult<&str, Instruction> {
+fn parse_instruction(input: &str) -> IResult<Instruction> {
     let (input, (_, amount, _, from, _, to)) =
         tuple((tag("move "), u8, tag(" from "), u8, tag(" to "), u8))(input)?;
     let (from, to) = (from - 1, to - 1);
     Ok((input, Instruction { amount, from, to }))
 }
 
-fn parse(data: &'static str) -> IResult<&'static str, Parsed> {
+fn parse(data: &str) -> IResult<Parsed> {
     separated_pair(
         parse_stacks,
         pair(line_ending, line_ending),
@@ -110,21 +114,21 @@ mod tests {
     const SAMPLE_DATA: &str = include_str!("sample.txt");
 
     #[test]
-    fn test_a() -> Result<(), Box<dyn Error>> {
+    fn test_a() -> OutResult {
         assert_eq!(part_a(&parse(SAMPLE_DATA)?.1), "CMZ");
         println!("part a: {}", part_a(&parse(DATA)?.1));
         Ok(())
     }
 
     #[test]
-    fn test_b() -> Result<(), Box<dyn Error>> {
+    fn test_b() -> OutResult {
         assert_eq!(part_b(&parse(SAMPLE_DATA)?.1), "MCD");
         println!("part b: {}", part_b(&parse(DATA)?.1));
         Ok(())
     }
 }
 
-fn main() -> Result<(), Box<dyn Error>> {
+fn main() -> OutResult {
     let parsed = parse(DATA)?.1;
     println!("part a: {}", part_a(&parsed));
     println!("part b: {}", part_b(&parsed));
