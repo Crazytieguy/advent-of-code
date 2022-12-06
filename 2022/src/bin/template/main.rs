@@ -3,7 +3,6 @@ use std::error::Error;
 const DATA: &str = include_str!("data.txt");
 
 type OutResult = std::result::Result<(), Box<dyn Error>>;
-
 type IResult<'a, T> = nom::IResult<&'a str, T>;
 
 type Parsed<'a> = &'a str;
