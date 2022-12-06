@@ -1,29 +1,35 @@
 use std::cmp::Reverse;
+use std::error::Error;
 
 use itertools::Itertools;
+use nom::character::complete::{line_ending, u32};
+use nom::multi::{fold_many1, separated_list1};
+use nom_supreme::ParserExt;
 
 const DATA: &str = include_str!("data.txt");
 
-fn parse(data: &'static str) -> Vec<Vec<usize>> {
-    data.split("\n\n")
-        .map(|inventory| inventory.lines().map(|l| l.parse().unwrap()).collect())
-        .collect()
+type OutResult = std::result::Result<(), Box<dyn Error>>;
+type IResult<'a, T> = nom::IResult<&'a str, T>;
+
+type Parsed = Vec<usize>;
+
+fn parse(data: &'static str) -> IResult<Parsed> {
+    separated_list1(
+        line_ending,
+        fold_many1(
+            u32.terminated(line_ending),
+            || 0,
+            |total, item| total + item as usize,
+        ),
+    )(data)
 }
 
-fn part_a(data: &'static str) -> usize {
-    let inventories = parse(data);
-    inventories
-        .into_iter()
-        .map(|inventory| inventory.into_iter().sum())
-        .max()
-        .unwrap()
+fn part_a(data: &Parsed) -> usize {
+    data.iter().copied().max().expect("At least one elf")
 }
 
-fn part_b(data: &'static str) -> usize {
-    let inventories = parse(data);
-    inventories
-        .into_iter()
-        .map(|inventory| inventory.into_iter().sum::<usize>())
+fn part_b(data: &Parsed) -> usize {
+    data.iter()
         .sorted_unstable_by_key(|&cals| Reverse(cals))
         .take(3)
         .sum()
@@ -35,19 +41,23 @@ mod tests {
     const SAMPLE_DATA: &str = include_str!("sample.txt");
 
     #[test]
-    fn test_a() {
-        assert_eq!(part_a(SAMPLE_DATA), 24000);
-        println!("part a: {}", part_a(DATA));
+    fn test_a() -> OutResult {
+        assert_eq!(part_a(&parse(SAMPLE_DATA)?.1), 24000);
+        println!("part a: {}", part_a(&parse(DATA)?.1));
+        Ok(())
     }
 
     #[test]
-    fn test_b() {
-        assert_eq!(part_b(SAMPLE_DATA), 45000);
-        println!("part b: {}", part_b(DATA));
+    fn test_b() -> OutResult {
+        assert_eq!(part_b(&parse(SAMPLE_DATA)?.1), 45000);
+        println!("part b: {}", part_b(&parse(DATA)?.1));
+        Ok(())
     }
 }
 
-fn main() {
-    println!("part a: {}", part_a(DATA));
-    println!("part b: {}", part_b(DATA));
+fn main() -> OutResult {
+    let parsed = parse(DATA)?.1;
+    println!("part a: {}", part_a(&parsed));
+    println!("part b: {}", part_b(&parsed));
+    Ok(())
 }
