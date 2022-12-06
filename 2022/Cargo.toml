@@ -8,6 +8,7 @@ edition = "2021"
 [dependencies]
 itertools = "0.10.5"
 nom = "7.1.1"
+nom-supreme = "0.8.0"
 serde = { version = "1.0", features = ["derive"] }
 serde_plain = "1.0.1"
 
