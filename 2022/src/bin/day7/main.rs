@@ -1,21 +1,19 @@
-use std::{collections::BTreeMap, error::Error};
-
 use nom::{
     branch::alt,
     bytes::complete::tag,
-    character::complete::{char, line_ending, not_line_ending, u64},
-    multi::{separated_list0, separated_list1},
-    sequence::separated_pair,
+    character::complete::{line_ending, not_line_ending, u32},
+    multi::{fold_many0, fold_many1},
     Parser,
 };
 use nom_supreme::ParserExt;
+use std::{collections::HashMap, error::Error};
 
 const DATA: &str = include_str!("data.txt");
 
 type OutResult = std::result::Result<(), Box<dyn Error>>;
 type IResult<'a, T> = nom::IResult<&'a str, T>;
 
-type Parsed<'a> = BTreeMap<FilePath<'a>, u64>;
+type Parsed<'a> = HashMap<Vec<&'a str>, u32>;
 
 #[derive(Debug, Clone, Copy)]
 enum CDTarget<'a> {
@@ -24,122 +22,86 @@ enum CDTarget<'a> {
     Child(&'a str),
 }
 
-fn parse_cd_target(data: &str) -> IResult<CDTarget> {
-    alt((
-        tag("/").value(CDTarget::Root),
-        tag("..").value(CDTarget::Parent),
-        not_line_ending.map(CDTarget::Child),
-    ))(data)
-}
-
 #[derive(Debug, Clone, Copy)]
-enum Output<'a> {
-    Dir(&'a str),
-    File { name: &'a str, size: u64 },
-}
-
-fn parse_ls_output(data: &str) -> IResult<Output> {
-    alt((
-        tag("dir ").precedes(not_line_ending).map(Output::Dir),
-        separated_pair(u64, char(' '), not_line_ending)
-            .map(|(size, name)| Output::File { name, size }),
-    ))(data)
-}
-
-#[derive(Debug, Clone)]
 enum Command<'a> {
-    LS(Vec<Output<'a>>),
+    LS(u32),
     CD(CDTarget<'a>),
 }
 
-fn parse_command(data: &str) -> IResult<Command> {
-    alt((
-        tag("ls\n")
-            .precedes(separated_list0(line_ending, parse_ls_output))
-            .map(Command::LS),
-        tag("cd ").precedes(parse_cd_target).map(Command::CD),
-    ))
-    .preceded_by(tag("$ "))
-    .parse(data)
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
-struct FilePath<'a> {
-    path: Vec<&'a str>,
-    name: &'a str,
-}
-
-fn commands_to_file_system(data: Vec<Command>) -> Parsed {
-    let mut current_dir = vec![];
-    let mut file_system = BTreeMap::new();
-    for command in data {
-        match command {
-            Command::LS(outputs) => {
-                for output in outputs {
-                    if let Output::File { name, size } = output {
-                        file_system.insert(
-                            FilePath {
-                                path: current_dir.clone(),
-                                name,
-                            },
-                            size,
-                        );
-                    }
-                }
-            }
-            Command::CD(target) => match target {
-                CDTarget::Root => current_dir.clear(),
-                CDTarget::Parent => {
-                    current_dir.pop();
-                }
-                CDTarget::Child(name) => current_dir.push(name),
-            },
-        }
-    }
-    file_system
-}
-
-fn parse(data: &str) -> IResult<Parsed> {
-    separated_list1(line_ending, parse_command)
-        .map(commands_to_file_system)
+fn parse_cd(data: &str) -> IResult<Command> {
+    tag("cd ")
+        .precedes(alt((
+            tag("/").value(CDTarget::Root),
+            tag("..").value(CDTarget::Parent),
+            not_line_ending.map(CDTarget::Child),
+        )))
+        .map(Command::CD)
+        .terminated(line_ending.opt())
         .parse(data)
 }
 
-fn directory_sizes<'a>(data: &'a Parsed) -> BTreeMap<&'a [&'a str], u64> {
-    let mut total_sizes = BTreeMap::new();
-    for (file_path, size) in data {
-        for i in 0..=file_path.path.len() {
-            let path = &file_path.path[..i];
-            *total_sizes.entry(path).or_insert(0) += size;
-        }
-    }
-    total_sizes
+fn parse_ls_output_line(data: &str) -> IResult<u32> {
+    u32.or(tag("dir").value(0))
+        .terminated(not_line_ending.and(line_ending.opt()))
+        .parse(data)
 }
 
-fn part_a(data: &Parsed) -> u64 {
-    let total_sizes = directory_sizes(data);
-    total_sizes
-        .into_values()
-        .filter(|&size| size < 100000)
-        .sum()
+fn parse_ls(data: &str) -> IResult<Command> {
+    tag("ls\n")
+        .precedes(fold_many0(parse_ls_output_line, || 0, |acc, cur| acc + cur))
+        .map(Command::LS)
+        .parse(data)
 }
 
-const TOTAL_DISK_SPACE: u64 = 70000000;
-const NEEDED_DISK_SPACE: u64 = 30000000;
+fn parse_command(data: &str) -> IResult<Command> {
+    tag("$ ").precedes(alt((parse_cd, parse_ls))).parse(data)
+}
 
-fn part_b(data: &Parsed) -> u64 {
-    let total_sizes = directory_sizes(data);
-    let &root_directory_size = total_sizes
-        .values()
-        .next()
-        .expect("There should be at least one file");
-    let minumim_directory_size_to_delete =
-        (root_directory_size + NEEDED_DISK_SPACE).saturating_sub(TOTAL_DISK_SPACE);
-    total_sizes
-        .into_values()
-        .filter(|&size| size >= minumim_directory_size_to_delete)
+fn parse(data: &str) -> IResult<Parsed> {
+    let mut current_dir = vec![];
+    fold_many1(
+        parse_command,
+        HashMap::new,
+        move |mut directory_sizes, command| {
+            match command {
+                Command::LS(file_sizes) => {
+                    for i in 0..=current_dir.len() {
+                        let path = &current_dir[..i];
+                        if let Some(size) = directory_sizes.get_mut(path) {
+                            *size += file_sizes;
+                        } else {
+                            directory_sizes.insert(path.to_vec(), file_sizes);
+                        }
+                    }
+                }
+                Command::CD(target) => match target {
+                    CDTarget::Root => current_dir.clear(),
+                    CDTarget::Parent => {
+                        current_dir.pop();
+                    }
+                    CDTarget::Child(name) => current_dir.push(name),
+                },
+            }
+            directory_sizes
+        },
+    )(data)
+}
+
+fn part_a(data: &Parsed) -> u32 {
+    data.values().copied().filter(|&size| size < 100000).sum()
+}
+
+const TOTAL_DISK_SPACE: u32 = 70000000;
+const NEEDED_DISK_SPACE: u32 = 30000000;
+
+fn part_b(data: &Parsed) -> u32 {
+    let root_directory_size = data[&vec![]];
+    let need_to_free = (root_directory_size + NEEDED_DISK_SPACE).saturating_sub(TOTAL_DISK_SPACE);
+    data.values()
+        .copied()
+        .filter(|&size| size >= need_to_free)
         .min()
-        .expect("At least one directory should be large enough to delete")
+        .expect("At least one directory should be larger than the missing space")
 }
 
 #[cfg(test)]
