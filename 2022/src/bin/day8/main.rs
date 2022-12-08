@@ -10,11 +10,11 @@ fn parse(data: &str) -> Vec<&[u8]> {
 
 fn find_visible_trees(
     visible: &mut HashSet<(usize, usize)>,
-    data: impl Iterator<Item = (usize, impl Iterator<Item = (usize, u8)>)>,
+    trees: impl Iterator<Item = (usize, impl Iterator<Item = (usize, u8)>)>,
     row_length: usize,
 ) {
     let mut max_height_vertical = vec![0; row_length];
-    for (i, row) in data {
+    for (i, row) in trees {
         let mut max_height_horizontal = 0;
         for (j, tree) in row {
             if tree > max_height_horizontal || tree > max_height_vertical[j] {
