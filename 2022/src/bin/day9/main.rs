@@ -45,12 +45,13 @@ fn follow_knot(leader: Point, follower: Point) -> Point {
 }
 
 fn reposition_head(head: Point, direction: Direction) -> Point {
-    match direction {
-        Direction::R => (head.0 + 1, head.1),
-        Direction::U => (head.0, head.1 + 1),
-        Direction::L => (head.0 - 1, head.1),
-        Direction::D => (head.0, head.1 - 1),
-    }
+    let diff = match direction {
+        Direction::R => (1, 0),
+        Direction::U => (0, 1),
+        Direction::L => (-1, 0),
+        Direction::D => (0, -1),
+    };
+    (head.0 + diff.0, head.1 + diff.1)
 }
 
 fn solve<const N: usize>(data: &Parsed) -> usize {
