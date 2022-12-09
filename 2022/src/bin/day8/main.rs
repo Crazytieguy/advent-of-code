@@ -23,13 +23,13 @@ fn iter_tree_directions<'a>(
                 tree,
                 (
                     // to the right
-                    data[i][j + 1..].iter().copied(),
+                    row[j + 1..].iter().copied(),
                     // to the left
-                    data[i][..j].iter().rev().copied(),
+                    row[..j].iter().rev().copied(),
                     // to the bottom
-                    data[i + 1..].iter().map(move |row| row[j]),
+                    data[i + 1..].iter().map(move |r| r[j]),
                     // to the top
-                    data[..i].iter().rev().map(move |row| row[j]),
+                    data[..i].iter().rev().map(move |r| r[j]),
                 ),
             )
         })
