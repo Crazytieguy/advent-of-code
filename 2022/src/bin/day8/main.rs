@@ -1,75 +1,66 @@
-use std::{collections::HashSet, error::Error};
-
 const DATA: &str = include_str!("data.txt");
-
-type OutResult = std::result::Result<(), Box<dyn Error>>;
 
 fn parse(data: &str) -> Vec<&[u8]> {
     data.lines().map(|line| line.as_bytes()).collect()
 }
 
-fn find_visible_trees(
-    visible: &mut HashSet<(usize, usize)>,
-    trees: impl Iterator<Item = (usize, impl Iterator<Item = (usize, u8)>)>,
-    row_length: usize,
-) {
-    let mut max_height_vertical = vec![0; row_length];
-    for (i, row) in trees {
-        let mut max_height_horizontal = 0;
-        for (j, tree) in row {
-            if tree > max_height_horizontal || tree > max_height_vertical[j] {
-                visible.insert((i, j));
-            }
-            max_height_horizontal = max_height_horizontal.max(tree);
-            max_height_vertical[j] = max_height_vertical[j].max(tree);
-        }
-    }
+fn iter_tree_directions<'a>(
+    data: &'a [&'a [u8]],
+) -> impl Iterator<
+    Item = (
+        u8,
+        (
+            impl ExactSizeIterator<Item = u8> + 'a,
+            impl ExactSizeIterator<Item = u8> + 'a,
+            impl ExactSizeIterator<Item = u8> + 'a,
+            impl ExactSizeIterator<Item = u8> + 'a,
+        ),
+    ),
+> + 'a {
+    data.iter().enumerate().flat_map(move |(i, &row)| {
+        row.iter().enumerate().map(move |(j, &tree)| {
+            (
+                tree,
+                (
+                    // to the right
+                    data[i][j + 1..].iter().copied(),
+                    // to the left
+                    data[i][..j].iter().rev().copied(),
+                    // to the bottom
+                    data[i + 1..].iter().map(move |row| row[j]),
+                    // to the top
+                    data[..i].iter().rev().map(move |row| row[j]),
+                ),
+            )
+        })
+    })
 }
 
 fn part_a(data: &[&[u8]]) -> usize {
-    let mut visible = HashSet::new();
-
-    // iterate from top left
-    find_visible_trees(
-        &mut visible,
-        data.iter()
-            .map(|row| row.iter().copied().enumerate())
-            .enumerate(),
-        data[0].len(),
-    );
-
-    // iterate from bottom right
-    find_visible_trees(
-        &mut visible,
-        data.iter()
-            .map(|row| row.iter().copied().enumerate().rev())
-            .enumerate()
-            .rev(),
-        data[0].len(),
-    );
-
-    visible.len()
+    iter_tree_directions(data)
+        .map(|(tree, mut directions)| {
+            let tree_is_higher = |other_tree| tree > other_tree;
+            directions.0.all(tree_is_higher)
+                || directions.1.all(tree_is_higher)
+                || directions.2.all(tree_is_higher)
+                || directions.3.all(tree_is_higher)
+        })
+        .filter(|&visible| visible)
+        .count()
 }
 
-fn count_visible_trees_from(mut trees: impl ExactSizeIterator<Item = u8>, tree: u8) -> usize {
+fn count_trees_visible(tree: u8, mut trees: impl ExactSizeIterator<Item = u8>) -> usize {
     let num_trees = trees.len();
     trees.position(|t| t >= tree).map_or(num_trees, |p| p + 1)
 }
 
 fn part_b(data: &[&[u8]]) -> usize {
-    data.iter()
-        .enumerate()
-        .flat_map(|(i, row)| {
-            row.iter().enumerate().map(move |(j, &tree)| {
-                // to the right
-                count_visible_trees_from(row[j + 1..].iter().copied(), tree)
-                // to the left
-                * count_visible_trees_from(row[..j].iter().rev().copied(), tree)
-                // to the bottom
-                * count_visible_trees_from(data[i + 1..].iter().map(|row| row[j]), tree)
-                // to the top
-                * count_visible_trees_from(data[..i].iter().rev().map(|row| row[j]), tree)
-            })
+    iter_tree_directions(data)
+        .map(|(tree, directions)| {
+            count_trees_visible(tree, directions.0)
+                * count_trees_visible(tree, directions.1)
+                * count_trees_visible(tree, directions.2)
+                * count_trees_visible(tree, directions.3)
         })
         .max()
         .expect("At least one tree")
@@ -81,23 +72,20 @@ mod tests {
     const SAMPLE_DATA: &str = include_str!("sample.txt");
 
     #[test]
-    fn test_a() -> OutResult {
+    fn test_a() {
         assert_eq!(part_a(&parse(SAMPLE_DATA)), 21);
         println!("part a: {}", part_a(&parse(DATA)));
-        Ok(())
     }
 
     #[test]
-    fn test_b() -> OutResult {
+    fn test_b() {
         assert_eq!(part_b(&parse(SAMPLE_DATA)), 8);
         println!("part b: {}", part_b(&parse(DATA)));
-        Ok(())
     }
 }
 
-fn main() -> OutResult {
+fn main() {
     let parsed = parse(DATA);
     println!("part a: {}", part_a(&parsed));
     println!("part b: {}", part_b(&parsed));
-    Ok(())
 }
