@@ -51,7 +51,9 @@ fn part_a(data: &[&[u8]]) -> usize {
 
 fn count_trees_visible(tree: u8, mut trees: impl ExactSizeIterator<Item = u8>) -> usize {
     let num_trees = trees.len();
-    trees.position(|t| t >= tree).map_or(num_trees, |p| p + 1)
+    trees
+        .position(|other_tree| other_tree >= tree)
+        .map_or(num_trees, |pos| pos + 1)
 }
 
 fn part_b(data: &[&[u8]]) -> usize {
