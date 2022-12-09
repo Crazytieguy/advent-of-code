@@ -52,14 +52,12 @@ fn follow_knot(leader: Point, follower: &mut Point) {
 }
 
 fn reposition_head(direction: Direction, head: &mut Point) {
-    let diff = match direction {
-        Right => (1, 0),
-        Up => (0, 1),
-        Left => (-1, 0),
-        Down => (0, -1),
-    };
-    head.0 += diff.0;
-    head.1 += diff.1;
+    match direction {
+        Right => head.0 += 1,
+        Up => head.1 += 1,
+        Left => head.0 -= 1,
+        Down => head.1 -= 1,
+    }
 }
 
 fn solve<const N: usize>(data: &Parsed) -> usize {
