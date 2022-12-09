@@ -1,6 +1,6 @@
-use std::{collections::HashSet, error::Error};
+use std::error::Error;
 
-use itertools::repeat_n;
+use itertools::{repeat_n, Itertools};
 use nom::{
     bytes::complete::take,
     character::complete::{char, line_ending, u8},
@@ -62,8 +62,8 @@ fn solve<const N: usize>(data: &Parsed) -> usize {
             (0..N - 1).for_each(|i| points[i + 1] = follow_knot(points[i], points[i + 1]));
             points[N - 1]
         })
-        .collect::<HashSet<Point>>()
-        .len()
+        .unique()
+        .count()
 }
 
 fn part_a(data: &Parsed) -> usize {
