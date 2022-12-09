@@ -2,27 +2,24 @@ use std::error::Error;
 
 use itertools::{repeat_n, Itertools};
 use nom::{
-    character::complete::{alpha1, char, line_ending, u8},
+    branch::alt,
+    character::complete::{char, line_ending, u8},
     multi::separated_list1,
     sequence::separated_pair,
 };
 use nom_supreme::ParserExt;
-use serde::Deserialize;
+use Direction::*;
 
 const DATA: &str = include_str!("data.txt");
 
 type OutResult = std::result::Result<(), Box<dyn Error>>;
 type IResult<'a, T> = nom::IResult<&'a str, T>;
 
-#[derive(Debug, Clone, Copy, Deserialize)]
+#[derive(Debug, Clone, Copy)]
 enum Direction {
-    #[serde(rename = "R")]
     Right,
-    #[serde(rename = "U")]
     Up,
-    #[serde(rename = "L")]
     Left,
-    #[serde(rename = "D")]
     Down,
 }
 
@@ -31,7 +28,16 @@ type Parsed = Vec<(Direction, u8)>;
 fn parse(data: &str) -> IResult<Parsed> {
     separated_list1(
         line_ending,
-        separated_pair(alpha1.map_res(serde_plain::from_str), char(' '), u8),
+        separated_pair(
+            alt((
+                char('R').value(Right),
+                char('U').value(Up),
+                char('L').value(Left),
+                char('D').value(Down),
+            )),
+            char(' '),
+            u8,
+        ),
     )(data)
 }
 
@@ -46,7 +52,6 @@ fn follow_knot(leader: Point, follower: &mut Point) {
 }
 
 fn reposition_head(direction: Direction, head: &mut Point) {
-    use Direction::*;
     let diff = match direction {
         Right => (1, 0),
         Up => (0, 1),

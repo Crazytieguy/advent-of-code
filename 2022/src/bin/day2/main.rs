@@ -1,24 +1,23 @@
 use nom::{
-    bytes::complete::take,
+    branch::alt,
     character::complete::{char, line_ending},
-    combinator::map_res,
     multi::separated_list1,
     sequence::separated_pair,
     IResult,
 };
-use serde::Deserialize;
+use nom_supreme::ParserExt;
 use std::error::Error;
 
 const DATA: &str = include_str!("data.txt");
 
-#[derive(Debug, Clone, Copy, Deserialize)]
+#[derive(Debug, Clone, Copy)]
 enum Left {
     A,
     B,
     C,
 }
 
-#[derive(Debug, Clone, Copy, Deserialize)]
+#[derive(Debug, Clone, Copy)]
 enum Right {
     X,
     Y,
@@ -31,9 +30,17 @@ fn parse(data: &'static str) -> IResult<&'static str, Parsed> {
     separated_list1(
         line_ending,
         separated_pair(
-            map_res(take(1usize), serde_plain::from_str),
+            alt((
+                char('A').value(Left::A),
+                char('B').value(Left::B),
+                char('C').value(Left::C),
+            )),
             char(' '),
-            map_res(take(1usize), serde_plain::from_str),
+            alt((
+                char('X').value(Right::X),
+                char('Y').value(Right::Y),
+                char('Z').value(Right::Z),
+            )),
         ),
     )(data)
 }
