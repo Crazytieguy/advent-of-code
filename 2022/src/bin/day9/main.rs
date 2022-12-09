@@ -2,8 +2,7 @@ use std::error::Error;
 
 use itertools::{repeat_n, Itertools};
 use nom::{
-    bytes::complete::take,
-    character::complete::{char, line_ending, u8},
+    character::complete::{alpha1, char, line_ending, u8},
     multi::separated_list1,
     sequence::separated_pair,
 };
@@ -17,10 +16,14 @@ type IResult<'a, T> = nom::IResult<&'a str, T>;
 
 #[derive(Debug, Clone, Copy, Deserialize)]
 enum Direction {
-    R,
-    U,
-    L,
-    D,
+    #[serde(rename = "R")]
+    Right,
+    #[serde(rename = "U")]
+    Up,
+    #[serde(rename = "L")]
+    Left,
+    #[serde(rename = "D")]
+    Down,
 }
 
 type Parsed = Vec<(Direction, u8)>;
@@ -28,30 +31,30 @@ type Parsed = Vec<(Direction, u8)>;
 fn parse(data: &str) -> IResult<Parsed> {
     separated_list1(
         line_ending,
-        separated_pair(take(1usize).map_res(serde_plain::from_str), char(' '), u8),
+        separated_pair(alpha1.map_res(serde_plain::from_str), char(' '), u8),
     )(data)
 }
 
 type Point = (i16, i16);
 
-fn follow_knot(leader: Point, follower: Point) -> Point {
+fn follow_knot(leader: Point, follower: &mut Point) {
     let diff = (leader.0 - follower.0, leader.1 - follower.1);
-    let touching = diff.0.abs() < 2 && diff.1.abs() < 2;
-    if touching {
-        follower
-    } else {
-        (follower.0 + diff.0.signum(), follower.1 + diff.1.signum())
+    if diff.0.abs() > 1 || diff.1.abs() > 1 {
+        follower.0 += diff.0.signum();
+        follower.1 += diff.1.signum();
     }
 }
 
-fn reposition_head(head: Point, direction: Direction) -> Point {
+fn reposition_head(direction: Direction, head: &mut Point) {
+    use Direction::*;
     let diff = match direction {
-        Direction::R => (1, 0),
-        Direction::U => (0, 1),
-        Direction::L => (-1, 0),
-        Direction::D => (0, -1),
+        Right => (1, 0),
+        Up => (0, 1),
+        Left => (-1, 0),
+        Down => (0, -1),
     };
-    (head.0 + diff.0, head.1 + diff.1)
+    head.0 += diff.0;
+    head.1 += diff.1;
 }
 
 fn solve<const N: usize>(data: &Parsed) -> usize {
@@ -59,8 +62,8 @@ fn solve<const N: usize>(data: &Parsed) -> usize {
     data.iter()
         .flat_map(|&(direction, amount)| repeat_n(direction, amount as usize))
         .map(|direction| {
-            points[0] = reposition_head(points[0], direction);
-            (0..N - 1).for_each(|i| points[i + 1] = follow_knot(points[i], points[i + 1]));
+            reposition_head(direction, &mut points[0]);
+            (0..N - 1).for_each(|i| follow_knot(points[i], &mut points[i + 1]));
             points[N - 1]
         })
         .unique()
