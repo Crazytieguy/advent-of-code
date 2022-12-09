@@ -1,5 +1,6 @@
 use std::{collections::HashSet, error::Error};
 
+use itertools::repeat_n;
 use nom::{
     bytes::complete::take,
     character::complete::{char, line_ending, u8},
@@ -52,31 +53,25 @@ fn reposition_head(head: Point, direction: Direction) -> Point {
     }
 }
 
-fn part_a(data: &Parsed) -> usize {
-    let mut head = (0, 0);
-    let mut tail = (0, 0);
+fn solve<const N: usize>(data: &Parsed) -> usize {
+    let mut points = [(0, 0); N];
     data.iter()
-        .flat_map(|&(direction, amount)| (0..amount).map(move |_| direction))
+        .flat_map(|&(direction, amount)| repeat_n(direction, amount as usize))
         .map(|direction| {
-            head = reposition_head(head, direction);
-            tail = follow_knot(head, tail);
-            tail
+            points[0] = reposition_head(points[0], direction);
+            (0..N - 1).for_each(|i| points[i + 1] = follow_knot(points[i], points[i + 1]));
+            points[N - 1]
         })
         .collect::<HashSet<Point>>()
         .len()
 }
 
+fn part_a(data: &Parsed) -> usize {
+    solve::<2>(data)
+}
+
 fn part_b(data: &Parsed) -> usize {
-    let mut points = [(0, 0); 10];
-    data.iter()
-        .flat_map(|&(direction, amount)| (0..amount).map(move |_| direction))
-        .map(|direction| {
-            points[0] = reposition_head(points[0], direction);
-            (0..9).for_each(|i| points[i + 1] = follow_knot(points[i], points[i + 1]));
-            points[9]
-        })
-        .collect::<HashSet<Point>>()
-        .len()
+    solve::<10>(data)
 }
 
 #[cfg(test)]
