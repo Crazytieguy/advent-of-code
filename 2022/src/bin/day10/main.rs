@@ -1,10 +1,14 @@
-use std::error::Error;
-
+use itertools::{repeat_n, Itertools};
 use nom::{
-    branch::alt, bytes::complete::tag, character::complete::line_ending, multi::separated_list1,
+    branch::alt,
+    bytes::complete::tag,
+    character::complete::{i64, line_ending},
+    multi::separated_list1,
     Parser,
 };
 use nom_supreme::ParserExt;
+use std::{error::Error, iter};
+use Operation::*;
 
 const DATA: &str = include_str!("data.txt");
 
@@ -18,55 +22,48 @@ enum Operation {
 }
 
 fn parse_operation(input: &str) -> IResult<Operation> {
-    alt((
-        tag("addx ")
-            .precedes(nom::character::complete::i64)
-            .map(Operation::Add),
-        tag("noop").value(Operation::Noop),
-    ))
-    .parse(input)
+    alt((tag("addx ").precedes(i64).map(Add), tag("noop").value(Noop)))(input)
 }
 
 type Parsed = Vec<Operation>;
 
 fn parse(data: &str) -> IResult<Parsed> {
-    separated_list1(line_ending, parse_operation).parse(data)
+    separated_list1(line_ending, parse_operation)(data)
 }
 
-fn iter_cycle_reg_x(data: &Parsed) -> impl Iterator<Item = (usize, i64)> + '_ {
+fn iter_register(data: &Parsed) -> impl Iterator<Item = i64> + '_ {
     data.iter()
-        .scan(1, |reg_x, op| {
-            Some(match op {
-                Operation::Add(x) => {
-                    *reg_x += x;
-                    [Some(*reg_x - x), Some(*reg_x - x)]
-                }
-                Operation::Noop => [Some(*reg_x), None],
-            })
+        .scan(1, |register, op| {
+            Some(repeat_n(
+                *register, // dereference before mutating
+                match op {
+                    Add(x) => {
+                        *register += x;
+                        2
+                    }
+                    Noop => 1,
+                },
+            ))
         })
         .flatten()
-        .flatten()
-        .enumerate()
 }
 
 fn part_a(data: &Parsed) -> i64 {
-    iter_cycle_reg_x(data)
-        .map(|(i, reg_x)| (i + 1, reg_x))
-        .filter(|(i, _)| [20, 60, 100, 140, 180, 220].contains(i))
-        .map(|(i, reg_x)| i as i64 * reg_x)
+    iter_register(data)
+        .zip(1..)
+        .filter(|(_, cycle)| [20, 60, 100, 140, 180, 220].contains(cycle))
+        .map(|(reg_x, cycle)| reg_x * cycle)
         .sum()
 }
 
 fn part_b(data: &Parsed) -> String {
-    iter_cycle_reg_x(data)
-        .map(|(i, reg_x)| {
-            let horizontal_pos = i as i64 % 40;
-            match ((horizontal_pos - reg_x).abs() <= 1, horizontal_pos == 39) {
-                (true, true) => "#\n",
-                (true, false) => "#",
-                (false, true) => ".\n",
-                (false, false) => ".",
-            }
+    iter_register(data)
+        .chunks(40)
+        .into_iter()
+        .flat_map(|row| {
+            row.zip(0..)
+                .map(|(x, pos)| if x.abs_diff(pos) <= 1 { '#' } else { '.' })
+                .chain(iter::once('\n'))
         })
         .collect()
 }
