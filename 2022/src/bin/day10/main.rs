@@ -2,7 +2,7 @@ use itertools::{repeat_n, Itertools};
 use nom::{
     branch::alt,
     bytes::complete::tag,
-    character::complete::{i64, line_ending},
+    character::complete::{i32, line_ending},
     multi::separated_list1,
     Parser,
 };
@@ -17,12 +17,12 @@ type IResult<'a, T> = nom::IResult<&'a str, T>;
 
 #[derive(Debug, Clone, Copy)]
 enum Operation {
-    Add(i64),
     Noop,
+    Add(i32),
 }
 
 fn parse_operation(input: &str) -> IResult<Operation> {
-    alt((tag("addx ").precedes(i64).map(Add), tag("noop").value(Noop)))(input)
+    alt((tag("noop").value(Noop), tag("addx ").precedes(i32).map(Add)))(input)
 }
 
 type Parsed = Vec<Operation>;
@@ -31,24 +31,24 @@ fn parse(data: &str) -> IResult<Parsed> {
     separated_list1(line_ending, parse_operation)(data)
 }
 
-fn iter_register(data: &Parsed) -> impl Iterator<Item = i64> + '_ {
+fn iter_register(data: &Parsed) -> impl Iterator<Item = i32> + '_ {
     data.iter()
         .scan(1, |register, op| {
             Some(repeat_n(
                 *register, // dereference before mutating
                 match op {
+                    Noop => 1,
                     Add(x) => {
                         *register += x;
                         2
                     }
-                    Noop => 1,
                 },
             ))
         })
         .flatten()
 }
 
-fn part_a(data: &Parsed) -> i64 {
+fn part_a(data: &Parsed) -> i32 {
     iter_register(data)
         .zip(1..)
         .filter(|(_, cycle)| [20, 60, 100, 140, 180, 220].contains(cycle))
