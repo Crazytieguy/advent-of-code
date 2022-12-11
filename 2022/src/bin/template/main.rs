@@ -8,17 +8,15 @@ type IResult<'a, T> = nom::IResult<&'a str, T>;
 type Parsed<'a> = &'a str;
 
 fn parse(data: &str) -> IResult<Parsed> {
-    Ok(("", data))
+    todo!("{data:?}")
 }
 
 fn part_a(data: &Parsed) -> usize {
-    println!("{data:?}");
-    0
+    todo!("{data:?}")
 }
 
 fn part_b(data: &Parsed) -> usize {
-    println!("{data:?}");
-    0
+    todo!("{data:?}")
 }
 
 #[cfg(test)]
