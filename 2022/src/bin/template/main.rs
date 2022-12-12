@@ -32,6 +32,7 @@ mod tests {
     }
 
     #[test]
+    #[ignore]
     fn test_b() -> OutResult {
         assert_eq!(part_b(&parse(SAMPLE_DATA)?.1), 0);
         println!("part b: {}", part_b(&parse(DATA)?.1));
