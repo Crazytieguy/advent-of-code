@@ -1,115 +1,75 @@
-use std::{cmp::Reverse, collections::BinaryHeap, error::Error};
+use std::{collections::VecDeque, error::Error};
+
+use itertools::Itertools;
 
 const DATA: &str = include_str!("data.txt");
 
 type OutResult = std::result::Result<(), Box<dyn Error>>;
 
 type Position = (usize, usize);
-type HeightMap = Vec<Vec<u8>>;
-type Parsed = (Position, Position, HeightMap);
+type HeightMap<'a> = Vec<&'a [u8]>;
+type Parsed<'a> = (Position, Position, HeightMap<'a>);
 
 fn parse(data: &str) -> Parsed {
-    let mut starting_position = (0, 0);
-    let mut ending_position = (0, 0);
-    let height_map = data
-        .lines()
-        .enumerate()
-        .map(|(x, row)| {
-            row.bytes()
-                .enumerate()
-                .map(|(y, b)| match b {
-                    b'S' => {
-                        starting_position = (x, y);
-                        b'a'
-                    }
-                    b'E' => {
-                        ending_position = (x, y);
-                        b'z'
-                    }
-                    _ => b,
-                })
-                .collect()
-        })
-        .collect();
-    (starting_position, ending_position, height_map)
+    let height_map = data.lines().map(|row| row.as_bytes()).collect_vec();
+    let iter_positions = || (0..height_map.len()).cartesian_product(0..height_map[0].len());
+    let start = iter_positions()
+        .find(|&(x, y)| height_map[x][y] == b'S')
+        .expect("There should be an 'S' character in the input");
+    let end = iter_positions()
+        .find(|&(x, y)| height_map[x][y] == b'E')
+        .expect("There should be an 'E' character in the input");
+    (start, end, height_map)
 }
 
-fn part_a((start, end, height_map): &Parsed) -> usize {
-    let mut minimum_steps_to = vec![vec![None::<usize>; height_map[0].len()]; height_map.len()];
-    let mut queue = BinaryHeap::new();
-    queue.push((Reverse(0), *start));
-    while let Some((Reverse(steps), (x, y))) = queue.pop() {
-        if (x, y) == *end {
+fn normalize_height(mark: u8) -> u8 {
+    match mark {
+        b'S' => b'a',
+        b'E' => b'z',
+        h => h,
+    }
+}
+
+fn reverse_bfs(
+    best_reception: Position,
+    height_map: &HeightMap,
+    stop_condition: impl Fn(Position) -> bool,
+) -> usize {
+    let (num_rows, num_columns) = (height_map.len(), height_map[0].len());
+    let height = |(x, y): Position| normalize_height(height_map[x][y]);
+    let mut seen = vec![vec![false; num_columns]; num_rows];
+    let mut queue = VecDeque::from([(0, best_reception)]);
+
+    while let Some((steps, (x, y))) = queue.pop_front() {
+        if seen[x][y] {
+            continue;
+        }
+        if stop_condition((x, y)) {
             return steps;
         }
-        if let Some(minimum_steps) = minimum_steps_to[x][y] {
-            if steps >= minimum_steps {
-                continue;
-            }
-        }
-        minimum_steps_to[x][y] = Some(steps);
-        let height = height_map[x][y];
-        let neighbors = [
-            if y < height_map[0].len() - 1 {
-                Some((x, y + 1))
-            } else {
-                None
-            },
-            if y > 0 { Some((x, y - 1)) } else { None },
-            if x < height_map.len() - 1 {
-                Some((x + 1, y))
-            } else {
-                None
-            },
-            if x > 0 { Some((x - 1, y)) } else { None },
-        ];
-        for (x, y) in neighbors.iter().flatten().copied() {
-            if height_map[x][y] <= height + 1 {
-                queue.push((Reverse(steps + 1), (x, y)));
-            }
-        }
+        seen[x][y] = true;
+
+        let checked_2d_diff = |(dx, dy)| {
+            let x = x.checked_add_signed(dx).filter(|&x| x < num_rows);
+            let y = y.checked_add_signed(dy).filter(|&y| y < num_columns);
+            x.zip(y)
+        };
+
+        [(-1, 0), (1, 0), (0, -1), (0, 1)]
+            .into_iter()
+            .filter_map(checked_2d_diff)
+            .filter(|&neighbor| height(neighbor) >= height((x, y)) - 1)
+            .for_each(|neighbor| queue.push_back((steps + 1, neighbor)));
     }
     unreachable!("no path found")
 }
 
+fn part_a((start, end, height_map): &Parsed) -> usize {
+    reverse_bfs(*end, height_map, |position| position == *start)
+}
+
 fn part_b((_start, end, height_map): &Parsed) -> usize {
-    let mut minimum_steps_to = vec![vec![None::<usize>; height_map[0].len()]; height_map.len()];
-    let mut queue = BinaryHeap::new();
-    queue.push((Reverse(0), *end));
-    let mut best = usize::MAX;
-    while let Some((Reverse(steps), (x, y))) = queue.pop() {
-        let height = height_map[x][y];
-        if height == b'a' {
-            best = best.min(steps);
-            continue;
-        }
-        if let Some(minimum_steps) = minimum_steps_to[x][y] {
-            if steps >= minimum_steps {
-                continue;
-            }
-        }
-        minimum_steps_to[x][y] = Some(steps);
-        let neighbors = [
-            if y < height_map[0].len() - 1 {
-                Some((x, y + 1))
-            } else {
-                None
-            },
-            if y > 0 { Some((x, y - 1)) } else { None },
-            if x < height_map.len() - 1 {
-                Some((x + 1, y))
-            } else {
-                None
-            },
-            if x > 0 { Some((x - 1, y)) } else { None },
-        ];
-        for (x, y) in neighbors.iter().flatten().copied() {
-            if height <= height_map[x][y] + 1 {
-                queue.push((Reverse(steps + 1), (x, y)));
-            }
-        }
-    }
-    best
+    reverse_bfs(*end, height_map, |(x, y)| height_map[x][y] == b'a')
 }
 
 #[cfg(test)]
