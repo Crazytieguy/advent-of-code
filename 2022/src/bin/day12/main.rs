@@ -1,10 +1,8 @@
-use std::{collections::VecDeque, error::Error};
+use std::collections::VecDeque;
 
 use itertools::Itertools;
 
 const DATA: &str = include_str!("data.txt");
-
-type OutResult = std::result::Result<(), Box<dyn Error>>;
 
 type Position = (usize, usize);
 type HeightMap<'a> = Vec<&'a [u8]>;
@@ -78,23 +76,20 @@ mod tests {
     const SAMPLE_DATA: &str = include_str!("sample.txt");
 
     #[test]
-    fn test_a() -> OutResult {
+    fn test_a() {
         assert_eq!(part_a(&parse(SAMPLE_DATA)), 31);
         println!("part a: {}", part_a(&parse(DATA)));
-        Ok(())
     }
 
     #[test]
-    fn test_b() -> OutResult {
+    fn test_b() {
         assert_eq!(part_b(&parse(SAMPLE_DATA)), 29);
         println!("part b: {}", part_b(&parse(DATA)));
-        Ok(())
     }
 }
 
-fn main() -> OutResult {
+fn main() {
     let parsed = parse(DATA);
     println!("part a: {}", part_a(&parsed));
     println!("part b: {}", part_b(&parsed));
-    Ok(())
 }
