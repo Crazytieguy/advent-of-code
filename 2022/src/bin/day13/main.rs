@@ -6,7 +6,7 @@ use nom::{
     sequence::{delimited, pair, separated_pair},
     Parser,
 };
-use std::error::Error;
+use std::{cmp::Ordering, error::Error};
 use Value::*;
 
 const DATA: &str = include_str!("data.txt");
@@ -22,38 +22,28 @@ enum Value {
     List(Vec<Value>),
 }
 
-impl PartialEq for Value {
-    fn eq(&self, other: &Self) -> bool {
-        match (self, other) {
-            (Integer(a), Integer(b)) => a == b,
-            (List(a), List(b)) => a == b,
-            (Integer(a), list) => &List(vec![Integer(*a)]) == list,
-            (list, Integer(b)) => list == &List(vec![Integer(*b)]),
-        }
-    }
-}
-
-impl Eq for Value {}
-
-impl PartialOrd for Value {
-    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
-        match (self, other) {
-            (Integer(a), Integer(b)) => a.partial_cmp(b),
-            (List(a), List(b)) => a.partial_cmp(b),
-            (Integer(a), list) => List(vec![Integer(*a)]).partial_cmp(list),
-            (list, Integer(b)) => list.partial_cmp(&List(vec![Integer(*b)])),
-        }
-    }
-}
-
 impl Ord for Value {
-    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+    fn cmp(&self, other: &Self) -> Ordering {
         match (self, other) {
             (Integer(a), Integer(b)) => a.cmp(b),
             (List(a), List(b)) => a.cmp(b),
             (Integer(a), list) => List(vec![Integer(*a)]).cmp(list),
             (list, Integer(b)) => list.cmp(&List(vec![Integer(*b)])),
         }
+    }
+}
+
+impl PartialEq for Value {
+    fn eq(&self, other: &Self) -> bool {
+        matches!(self.cmp(other), Ordering::Equal)
+    }
+}
+
+impl Eq for Value {}
+
+impl PartialOrd for Value {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
     }
 }
 
