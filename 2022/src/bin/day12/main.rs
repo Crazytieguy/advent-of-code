@@ -1,5 +1,6 @@
+use std::collections::VecDeque;
+
 use itertools::Itertools;
-use pathfinding::directed::bfs::bfs;
 
 const DATA: &str = include_str!("data.txt");
 
@@ -43,12 +44,12 @@ fn parse(data: &str) -> Parsed {
 fn neighbors(height_map: &HeightMap, (x, y): Position) -> impl Iterator<Item = Position> + '_ {
     let checked_add_signed_2d =
         move |(dx, dy)| x.checked_add_signed(dx).zip(y.checked_add_signed(dy));
-    let current_height = height_map[x][y];
+    let is_high_enough = move |&height| height >= height_map[x][y] - 1;
     let is_valid_neighbor = move |&(x, y): &Position| {
         height_map
             .get(x)
             .and_then(|row| row.get(y))
-            .map_or(false, |&height| height >= current_height - 1)
+            .map_or(false, is_high_enough)
     };
     [(-1, 0), (1, 0), (0, -1), (0, 1)]
         .into_iter()
@@ -56,23 +57,35 @@ fn neighbors(height_map: &HeightMap, (x, y): Position) -> impl Iterator<Item = P
         .filter(is_valid_neighbor)
 }
 
-fn solve(
+fn bfs(
     Parsed {
         end, height_map, ..
     }: &Parsed,
-    success: impl FnMut(&Position) -> bool,
+    success: impl Fn(&Position) -> bool,
 ) -> usize {
-    bfs(end, |&pos| neighbors(height_map, pos), success)
-        .map(|shortest_path| shortest_path.len() - 1)
-        .expect("should be able to reach S from E")
+    let mut seen = vec![vec![false; height_map[0].len()]; height_map.len()];
+    let mut queue = VecDeque::from([(*end, 0)]);
+    while let Some((pos, steps)) = queue.pop_front() {
+        if success(&pos) {
+            return steps;
+        }
+        if seen[pos.0][pos.1] {
+            continue;
+        }
+        seen[pos.0][pos.1] = true;
+        for neighbor in neighbors(height_map, pos) {
+            queue.push_back((neighbor, steps + 1));
+        }
+    }
+    unreachable!("should always find a path")
 }
 
 fn part_a(parsed: &Parsed) -> usize {
-    solve(parsed, |&pos| pos == parsed.start)
+    bfs(parsed, |&pos| pos == parsed.start)
 }
 
 fn part_b(parsed: &Parsed) -> usize {
-    solve(parsed, |&(x, y)| parsed.height_map[x][y] == b'a')
+    bfs(parsed, |&(x, y)| parsed.height_map[x][y] == b'a')
 }
 
 #[cfg(test)]
