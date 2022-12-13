@@ -77,23 +77,15 @@ fn part_a(data: &Parsed) -> usize {
 fn part_b(data: &Parsed) -> usize {
     let divider_a = List(vec![List(vec![Integer(2)])]);
     let divider_b = List(vec![List(vec![Integer(6)])]);
-    let mut all_packets = data
+    let all_packets = data
         .iter()
         .cloned()
         .flat_map(|(a, b)| [a, b])
         .chain([divider_a.clone(), divider_b.clone()])
+        .sorted_unstable()
         .collect_vec();
-    all_packets.sort();
-    all_packets
-        .iter()
-        .position(|v| v == &divider_a)
-        .map(|i| i + 1)
-        .unwrap()
-        * all_packets
-            .iter()
-            .position(|v| v == &divider_b)
-            .map(|i| i + 1)
-            .unwrap()
+    all_packets.partition_point(|v| v <= &divider_a)
+        * all_packets.partition_point(|v| v <= &divider_b)
 }
 
 #[cfg(test)]
