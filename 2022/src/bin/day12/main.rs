@@ -1,73 +1,78 @@
-use std::collections::VecDeque;
-
 use itertools::Itertools;
+use pathfinding::directed::bfs::bfs;
 
 const DATA: &str = include_str!("data.txt");
 
 type Position = (usize, usize);
-type HeightMap<'a> = Vec<&'a [u8]>;
-type Parsed<'a> = (Position, Position, HeightMap<'a>);
+type HeightMap = Vec<Vec<u8>>;
+struct Parsed {
+    start: Position,
+    end: Position,
+    height_map: HeightMap,
+}
 
 fn parse(data: &str) -> Parsed {
-    let height_map = data.lines().map(|row| row.as_bytes()).collect_vec();
-    let iter_positions = || (0..height_map.len()).cartesian_product(0..height_map[0].len());
-    let start = iter_positions()
-        .find(|&(x, y)| height_map[x][y] == b'S')
-        .expect("There should be an 'S' character in the input");
-    let end = iter_positions()
-        .find(|&(x, y)| height_map[x][y] == b'E')
-        .expect("There should be an 'E' character in the input");
-    (start, end, height_map)
-}
+    let mut height_map = data
+        .lines()
+        .map(|row| row.as_bytes().to_vec())
+        .collect_vec();
 
-fn normalize_height(mark: u8) -> u8 {
-    match mark {
-        b'S' => b'a',
-        b'E' => b'z',
-        h => h,
+    let mut find_position_and_assign = |from, to| {
+        height_map
+            .iter_mut()
+            .enumerate()
+            .find_map(|(x, row)| {
+                row.iter_mut()
+                    .enumerate()
+                    .find(|(_, &mut height)| height == from)
+                    .map(|(y, height)| {
+                        *height = to;
+                        (x, y)
+                    })
+            })
+            .expect("The character should be present in the input")
+    };
+
+    Parsed {
+        start: find_position_and_assign(b'S', b'a'),
+        end: find_position_and_assign(b'E', b'z'),
+        height_map,
     }
 }
 
-fn reverse_bfs(
-    best_reception: Position,
-    height_map: &HeightMap,
-    stop_condition: impl Fn(Position) -> bool,
+fn neighbors(height_map: &HeightMap, (x, y): Position) -> impl Iterator<Item = Position> + '_ {
+    let checked_add_signed_2d =
+        move |(dx, dy)| x.checked_add_signed(dx).zip(y.checked_add_signed(dy));
+    let current_height = height_map[x][y];
+    let is_valid_neighbor = move |&(x, y): &Position| {
+        height_map
+            .get(x)
+            .and_then(|row| row.get(y))
+            .map_or(false, |&height| height >= current_height - 1)
+    };
+    [(-1, 0), (1, 0), (0, -1), (0, 1)]
+        .into_iter()
+        .filter_map(checked_add_signed_2d)
+        .filter(is_valid_neighbor)
+}
+
+fn solve(
+    Parsed {
+        end, height_map, ..
+    }: &Parsed,
+    success: impl FnMut(&Position) -> bool,
 ) -> usize {
-    let (num_rows, num_columns) = (height_map.len(), height_map[0].len());
-    let height = |(x, y): Position| normalize_height(height_map[x][y]);
-    let mut seen = vec![vec![false; num_columns]; num_rows];
-    let mut queue = VecDeque::from([(0, best_reception)]);
-
-    while let Some((steps, (x, y))) = queue.pop_front() {
-        if seen[x][y] {
-            continue;
-        }
-        if stop_condition((x, y)) {
-            return steps;
-        }
-        seen[x][y] = true;
-
-        let checked_2d_diff = |(dx, dy)| {
-            let x = x.checked_add_signed(dx).filter(|&x| x < num_rows);
-            let y = y.checked_add_signed(dy).filter(|&y| y < num_columns);
-            x.zip(y)
-        };
-
-        [(-1, 0), (1, 0), (0, -1), (0, 1)]
-            .into_iter()
-            .filter_map(checked_2d_diff)
-            .filter(|&neighbor| height(neighbor) >= height((x, y)) - 1)
-            .for_each(|neighbor| queue.push_back((steps + 1, neighbor)));
-    }
-    unreachable!("no path found")
+    bfs(end, |&pos| neighbors(height_map, pos), success)
+        .map(|shortest_path| shortest_path.len() - 1)
+        .expect("should be able to reach S from E")
 }
 
-fn part_a((start, end, height_map): &Parsed) -> usize {
-    reverse_bfs(*end, height_map, |position| position == *start)
+fn part_a(parsed: &Parsed) -> usize {
+    solve(parsed, |&pos| pos == parsed.start)
 }
 
-fn part_b((_start, end, height_map): &Parsed) -> usize {
-    reverse_bfs(*end, height_map, |(x, y)| height_map[x][y] == b'a')
+fn part_b(parsed: &Parsed) -> usize {
+    solve(parsed, |&(x, y)| parsed.height_map[x][y] == b'a')
 }
 
 #[cfg(test)]
