@@ -34,46 +34,40 @@ fn parse(data: &str) -> IResult<Parsed> {
     Ok(("", rocks))
 }
 
-fn find_resting_spot(taken_coords: &Parsed, max_y: u8) -> (u16, u8) {
-    let mut x = 500;
-    for y in 1..=max_y {
-        if let Some(new_x) = [x, x - 1, x + 1]
-            .iter()
-            .find(|&&x| !taken_coords.contains(&(x, y)))
-        {
-            x = *new_x;
-        } else {
-            return (x, y - 1);
+fn drop_sand<const SOLID_FLOOR: bool>(taken_coords: &mut Parsed, floor: u8, x: u16, y: u8) -> bool {
+    if y == floor {
+        return true;
+    }
+    if taken_coords.contains(&(x, y)) {
+        return false;
+    }
+    for x in [x, x - 1, x + 1] {
+        if drop_sand::<SOLID_FLOOR>(taken_coords, floor, x, y + 1) && !SOLID_FLOOR {
+            return true;
         }
     }
-    (x, max_y)
+    taken_coords.insert((x, y));
+    false
 }
 
-fn solve(data: &Parsed, stop_condition: impl Fn(u8, u8) -> bool) -> usize {
+fn solve<const INFINITY_BELLOW: bool>(data: &Parsed) -> usize {
     let num_rocks = data.len();
     let max_y = data
         .iter()
         .map(|(_, y)| y)
         .max()
-        .expect("At least one rock")
-        + 1;
+        .expect("At least one rock");
     let mut taken_coords = data.clone();
-    loop {
-        let (x, y) = find_resting_spot(&taken_coords, max_y);
-        if stop_condition(y, max_y) {
-            break;
-        }
-        taken_coords.insert((x, y));
-    }
+    drop_sand::<INFINITY_BELLOW>(&mut taken_coords, max_y + 2, 500, 0);
     taken_coords.len() - num_rocks
 }
 
 fn part_a(data: &Parsed) -> usize {
-    solve(data, |y, max_y| y == max_y)
+    solve::<false>(data)
 }
 
 fn part_b(data: &Parsed) -> usize {
-    solve(data, |y, _| y == 0) + 1
+    solve::<true>(data)
 }
 
 #[cfg(test)]
