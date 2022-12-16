@@ -1,4 +1,4 @@
-use std::error::Error;
+use std::{error::Error, ops::RangeInclusive};
 
 use itertools::Itertools;
 use nom::{
@@ -38,37 +38,50 @@ fn parse_pair(input: &str) -> IResult<Pair> {
 }
 
 fn parse(data: &str) -> IResult<Parsed> {
-    let (input, mut pairs) = separated_list1(line_ending, parse_pair)(data)?;
-    pairs.sort_by_key(|&Pair { sensor, .. }| sensor.0);
-    Ok((input, pairs))
+    separated_list1(line_ending, parse_pair)(data)
 }
 
-fn manhattan_distance((x1, y1): (i32, i32), (x2, y2): (i32, i32)) -> i32 {
-    (x1 - x2).abs() + (y1 - y2).abs()
+impl Pair {
+    fn covered_xs(&self, row: i32) -> Option<RangeInclusive<i32>> {
+        let manhattan_distance =
+            (self.sensor.0 - self.beacon.0).abs() + (self.sensor.1 - self.beacon.1).abs();
+        let x_offset = manhattan_distance - (self.sensor.1 - row).abs();
+        Some(self.sensor.0 - x_offset..=self.sensor.0 + x_offset).filter(|r| !r.is_empty())
+    }
 }
 
-fn part_a(data: &Parsed, interesting_row: i32) -> usize {
-    data.iter()
-        .flat_map(|&Pair { sensor, beacon }| {
-            let covered_distance = manhattan_distance(sensor, beacon);
-            let distance_from_interesting_row = (sensor.1 - interesting_row).abs();
-            let allowed_x_offset = covered_distance - distance_from_interesting_row;
-            (sensor.0 - allowed_x_offset..=sensor.0 + allowed_x_offset).filter(move |&x| {
-                (sensor.1 != interesting_row || x != sensor.0)
-                    && (beacon.1 != interesting_row || x != beacon.0)
-            })
+fn part_a(data: &Parsed, interesting_row: i32) -> i32 {
+    let count_covered_xs = data
+        .iter()
+        .flat_map(|pair| pair.covered_xs(interesting_row))
+        .sorted_by_key(|covered_xs| *covered_xs.start())
+        .fold((0, i32::MIN), |(count, end), covered_xs| {
+            let count_from = (*covered_xs.start()).max(end + 1);
+            let added_count = 0.max(*covered_xs.end() + 1 - count_from);
+            (count + added_count, end.max(*covered_xs.end()))
         })
+        .0;
+    let blocked_xs = data
+        .iter()
+        .flat_map(|&Pair { sensor, beacon }| [sensor, beacon])
+        .filter(|&(_, y)| y == interesting_row)
         .unique()
-        .count()
+        .count();
+    count_covered_xs - blocked_xs as i32
 }
 
 fn part_b(data: &Parsed, max_coord: i32) -> i64 {
+    let sorted_pairs = {
+        let mut pairs = data.clone();
+        pairs.sort_by_key(|pair| pair.sensor.0);
+        pairs
+    };
+
     for y in 0..=max_coord {
         let mut x = 0;
-        for &Pair { sensor, beacon } in data {
-            let covered_distance = manhattan_distance(sensor, beacon);
-            if manhattan_distance(sensor, (x, y)) <= covered_distance {
-                x = 1 + sensor.0 + covered_distance - (y - sensor.1).abs();
+        for covered_xs in sorted_pairs.iter().flat_map(|pair| pair.covered_xs(y)) {
+            if covered_xs.contains(&x) {
+                x = covered_xs.end() + 1;
             }
         }
         if x <= max_coord {
