@@ -63,30 +63,24 @@ fn parse(data: &str) -> IResult<Parsed> {
         .filter(|&(_, &(name, flow, _))| name == "AA" || flow > 0)
         .map(|(i, _)| i)
         .collect_vec();
-
-    let mut flow_rates = vec![0; interesting_valve_indices.len()];
-    for (i, &idx) in interesting_valve_indices.iter().enumerate() {
-        flow_rates[i] = rows[idx].1;
-    }
-    let mut shortest_path_lengths =
-        vec![vec![0; interesting_valve_indices.len()]; interesting_valve_indices.len()];
-    for (i, &i_idx) in interesting_valve_indices.iter().enumerate() {
-        for (j, &j_idx) in interesting_valve_indices.iter().enumerate() {
-            shortest_path_lengths[i][j] = dist[i_idx][j_idx];
-        }
-    }
-
-    Ok((
-        input,
-        (
-            flow_rates,
-            shortest_path_lengths,
+    let flow_rates = interesting_valve_indices
+        .iter()
+        .map(|&i| rows[i].1)
+        .collect();
+    let shortest_path_lengths = interesting_valve_indices
+        .iter()
+        .map(|&i| {
             interesting_valve_indices
                 .iter()
-                .position(|&i| rows[i].0 == "AA")
-                .unwrap(),
-        ),
-    ))
+                .map(|&j| dist[i][j])
+                .collect()
+        })
+        .collect();
+    let starting_node = interesting_valve_indices
+        .iter()
+        .position(|&i| rows[i].0 == "AA")
+        .expect("a valve called AA");
+    Ok((input, (flow_rates, shortest_path_lengths, starting_node)))
 }
 
 #[derive(Default, Debug, Clone, Copy)]
