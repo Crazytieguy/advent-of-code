@@ -30,17 +30,18 @@ fn parse_row(data: &str) -> IResult<(&str, u8, Vec<&str>)> {
     ))(data)
 }
 
-fn parse(data: &str) -> IResult<Parsed> {
-    let (input, rows) = separated_list1(line_ending, parse_row)(data)?;
-    let valve_name_to_idx_flow: HashMap<&str, _> = rows
+// simplified copy of petgraph's implementation
+fn floyd_warshall(rows: &[(&str, u8, Vec<&str>)]) -> Vec<Vec<u8>> {
+    let valve_name_to_idx: HashMap<&str, _> = rows
         .iter()
         .enumerate()
-        .map(|(i, &(name, flow, _))| (name, (i, flow)))
+        .map(|(i, &(name, _, _))| (name, i))
         .collect();
+
     let mut dist = vec![vec![u8::MAX; rows.len()]; rows.len()];
     for (i, (_, _, tunnels)) in rows.iter().enumerate() {
         for tunnel in tunnels {
-            let (j, _) = valve_name_to_idx_flow[tunnel];
+            let j = valve_name_to_idx[tunnel];
             dist[i][j] = 1;
         }
     }
@@ -57,29 +58,40 @@ fn parse(data: &str) -> IResult<Parsed> {
             }
         }
     }
+    dist
+}
+
+fn parse(data: &str) -> IResult<Parsed> {
+    let (input, rows) = separated_list1(line_ending, parse_row)(data)?;
+    let shortest_path_lengths_uncompressed = floyd_warshall(&rows);
+
     let interesting_valve_indices = rows
         .iter()
         .enumerate()
         .filter(|&(_, &(name, flow, _))| name == "AA" || flow > 0)
         .map(|(i, _)| i)
         .collect_vec();
+
     let flow_rates = interesting_valve_indices
         .iter()
         .map(|&i| rows[i].1)
         .collect();
+
     let shortest_path_lengths = interesting_valve_indices
         .iter()
         .map(|&i| {
             interesting_valve_indices
                 .iter()
-                .map(|&j| dist[i][j])
+                .map(|&j| shortest_path_lengths_uncompressed[i][j])
                 .collect()
         })
         .collect();
+
     let starting_node = interesting_valve_indices
         .iter()
         .position(|&i| rows[i].0 == "AA")
         .expect("a valve called AA");
+
     Ok((input, (flow_rates, shortest_path_lengths, starting_node)))
 }
 
