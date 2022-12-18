@@ -1,3 +1,4 @@
+use itertools::Itertools;
 use nom::{
     bytes::complete::{tag, take},
     character::complete::{line_ending, u8},
@@ -7,7 +8,7 @@ use nom::{
 };
 use nom_supreme::ParserExt;
 use petgraph::{algo::floyd_warshall, graph::NodeIndex, Graph};
-use std::{collections::HashMap, error::Error};
+use std::{cmp::Reverse, collections::HashMap, error::Error};
 use tinyvec::ArrayVec;
 
 const DATA: &str = include_str!("data.txt");
@@ -15,8 +16,8 @@ const DATA: &str = include_str!("data.txt");
 type OutResult = std::result::Result<(), Box<dyn Error>>;
 type IResult<'a, T> = nom::IResult<&'a str, T>;
 
-type FlowRates = ArrayVec<[u8; 16]>;
-type ShortestPathLengths = ArrayVec<[ArrayVec<[u8; 16]>; 16]>;
+type FlowRates = Vec<u8>;
+type ShortestPathLengths = Vec<Vec<u8>>;
 
 type Parsed = (FlowRates, ShortestPathLengths, usize);
 
@@ -52,14 +53,14 @@ fn parse(data: &str) -> IResult<Parsed> {
         .map(|(i, idx)| (idx, i))
         .collect();
 
-    let mut flow_rates = ArrayVec::from_array_len([0; 16], graph_indexes_to_regular_indexes.len());
+    let mut flow_rates = vec![0; graph_indexes_to_regular_indexes.len()];
     for (&idx, &i) in &graph_indexes_to_regular_indexes {
         flow_rates[i] = graph[idx];
     }
-    let mut shortest_path_lengths = ArrayVec::from_array_len(
-        [ArrayVec::from_array_len([0; 16], graph_indexes_to_regular_indexes.len()); 16],
-        graph_indexes_to_regular_indexes.len(),
-    );
+    let mut shortest_path_lengths = vec![
+        vec![0; graph_indexes_to_regular_indexes.len()];
+        graph_indexes_to_regular_indexes.len()
+    ];
 
     for ((from, to), distance) in shortest_paths_map {
         if let (Some(from), Some(to)) = (
@@ -82,14 +83,14 @@ fn parse(data: &str) -> IResult<Parsed> {
 
 #[derive(Default, Debug, Clone, Copy)]
 struct VisitorState {
-    going_to: usize,
+    going_to: u8,
     will_arrive_in: u8,
 }
 
 #[derive(Default, Debug, Clone, Copy)]
 struct State {
-    visitors: ArrayVec<[VisitorState; 2]>,
-    visited: ArrayVec<[bool; 16]>,
+    visitors: [VisitorState; 2],
+    visited: u16,
     pressure_released: u16,
     current_flow: u16,
     minutes_remaining: u8,
@@ -98,6 +99,10 @@ struct State {
 /// Attempt to follow the 'branch and bound' algorithm from wikipedia:
 /// https://en.wikipedia.org/wiki/Branch_and_bound
 impl State {
+    fn visited(&self, i: usize) -> bool {
+        self.visited & (1 << i) != 0
+    }
+
     fn solution(&self) -> Option<u16> {
         if self
             .visitors
@@ -114,7 +119,7 @@ impl State {
     /// to visit the valves in order of descending flow rate.
     fn bound(mut self, flow_rates: &FlowRates) -> u16 {
         let mut remaining_flow_rate_indices: ArrayVec<[usize; 16]> = (0..flow_rates.len())
-            .filter(|&i| !self.visited[i] && !self.visitors.iter().any(|v| v.going_to == i))
+            .filter(|&i| !self.visited(i) && !self.visitors.iter().any(|v| v.going_to == i as u8))
             .collect();
         remaining_flow_rate_indices.sort_unstable_by_key(|&i| flow_rates[i]);
         while self.minutes_remaining > 0 {
@@ -125,9 +130,9 @@ impl State {
                     visitor.will_arrive_in -= 1;
                     continue;
                 }
-                self.current_flow += flow_rates[visitor.going_to] as u16;
+                self.current_flow += flow_rates[visitor.going_to as usize] as u16;
                 if let Some(i) = remaining_flow_rate_indices.pop() {
-                    visitor.going_to = i;
+                    visitor.going_to = i as u8;
                     visitor.will_arrive_in = 1;
                 } else {
                     visitor.will_arrive_in = u8::MAX;
@@ -155,22 +160,25 @@ impl State {
                 continue;
             }
             branches.iter_mut().for_each(|state| {
-                state.visited[visitor.going_to] = true;
-                state.current_flow += flow_rates[visitor.going_to] as u16;
+                state.visited |= 1 << visitor.going_to;
+                state.current_flow += flow_rates[visitor.going_to as usize] as u16;
             });
             branches = branches
                 .iter()
                 .flat_map(|&state| {
-                    shortest_path_lengths[visitor.going_to]
+                    shortest_path_lengths[visitor.going_to as usize]
                         .iter()
                         .enumerate()
                         .filter(move |&(destination, _)| {
-                            !state.visited[destination]
-                                && !state.visitors.iter().any(|v| v.going_to == destination)
+                            !state.visited(destination)
+                                && !state
+                                    .visitors
+                                    .iter()
+                                    .any(|v| v.going_to == destination as u8)
                         })
                         .map(move |(destination, &distance)| {
                             let mut next_state = state;
-                            next_state.visitors[visitor_idx].going_to = destination;
+                            next_state.visitors[visitor_idx].going_to = destination as u8;
                             next_state.visitors[visitor_idx].will_arrive_in = distance;
                             next_state
                         })
@@ -199,8 +207,15 @@ fn branch_and_bound(
         *best = solution.max(*best);
         return;
     }
-    for branch in state.branch(flow_rates, shortest_path_lengths) {
-        if branch.bound(flow_rates) > *best {
+    let bound_branch_pairs = state
+        .branch(flow_rates, shortest_path_lengths)
+        .into_iter()
+        .map(|state| (state.bound(flow_rates), state))
+        .filter(|(bound, _)| bound > best)
+        .sorted_unstable_by_key(|(bound, _)| Reverse(*bound))
+        .collect_vec();
+    for (bound, branch) in bound_branch_pairs {
+        if bound > *best {
             branch_and_bound(flow_rates, shortest_path_lengths, branch, best);
         }
     }
@@ -212,14 +227,17 @@ fn part_a((flow_rates, shortest_paths, starting_idx): &Parsed) -> u16 {
         flow_rates,
         shortest_paths,
         State {
-            visitors: ArrayVec::from_array_len(
-                [VisitorState {
-                    going_to: *starting_idx,
+            visitors: [
+                VisitorState {
+                    going_to: *starting_idx as u8,
                     will_arrive_in: 0,
-                }; 2],
-                1,
-            ),
-            visited: ArrayVec::from_array_len([false; 16], flow_rates.len()),
+                },
+                VisitorState {
+                    going_to: *starting_idx as u8,
+                    will_arrive_in: u8::MAX,
+                },
+            ],
+            visited: 0,
             pressure_released: 0,
             current_flow: 0,
             minutes_remaining: 30,
@@ -235,14 +253,17 @@ fn part_b((flow_rates, shortest_paths, starting_idx): &Parsed) -> u16 {
         flow_rates,
         shortest_paths,
         State {
-            visitors: ArrayVec::from_array_len(
-                [VisitorState {
-                    going_to: *starting_idx,
+            visitors: [
+                VisitorState {
+                    going_to: *starting_idx as u8,
                     will_arrive_in: 0,
-                }; 2],
-                2,
-            ),
-            visited: ArrayVec::from_array_len([false; 16], flow_rates.len()),
+                },
+                VisitorState {
+                    going_to: *starting_idx as u8,
+                    will_arrive_in: 0,
+                },
+            ],
+            visited: 0,
             pressure_released: 0,
             current_flow: 0,
             minutes_remaining: 26,
