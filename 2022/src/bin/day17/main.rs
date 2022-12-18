@@ -39,37 +39,42 @@ use Cell::*;
 
 fn gen_rocks() -> impl Iterator<Item = Vec<[Cell; 7]>> {
     let rocks = vec![
-        // ####
-        vec![[NA, NA, AA, AA, AA, AA, NA]],
-        // .#.
-        // ###
-        // .#.
         vec![
+            // ####
+            [NA, NA, AA, AA, AA, AA, NA],
+        ],
+        vec![
+            // .#.
+            // ###
+            // .#.
             [NA, NA, NA, BB, NA, NA, NA],
             [NA, NA, BB, BB, BB, NA, NA],
             [NA, NA, NA, BB, NA, NA, NA],
         ],
-        // ..#
-        // ..#
-        // ###
         vec![
+            // ..#
+            // ..#
+            // ###
             [NA, NA, NA, NA, CC, NA, NA],
             [NA, NA, NA, NA, CC, NA, NA],
             [NA, NA, CC, CC, CC, NA, NA],
         ],
-        // #
-        // #
-        // #
-        // #
         vec![
+            // #
+            // #
+            // #
+            // #
             [NA, NA, DD, NA, NA, NA, NA],
             [NA, NA, DD, NA, NA, NA, NA],
             [NA, NA, DD, NA, NA, NA, NA],
             [NA, NA, DD, NA, NA, NA, NA],
         ],
-        // ##
-        // ##
-        vec![[NA, NA, EE, EE, NA, NA, NA], [NA, NA, EE, EE, NA, NA, NA]],
+        vec![
+            // ##
+            // ##
+            [NA, NA, EE, EE, NA, NA, NA],
+            [NA, NA, EE, EE, NA, NA, NA],
+        ],
     ];
     rocks.into_iter().cycle()
 }
@@ -79,7 +84,7 @@ fn simulate(air_directions: &Parsed, num_rocks: usize) -> Vec<[Cell; 7]> {
     let mut air_directions = air_directions.iter().cycle();
     for mut rock in gen_rocks().take(num_rocks) {
         let mut rock_top = chamber.len() + 3 + rock.len();
-        let rock_top = loop {
+        loop {
             rock_top -= 1;
             let &dir = air_directions.next().unwrap();
             let air_push_successful = rock
@@ -116,7 +121,7 @@ fn simulate(air_directions: &Parsed, num_rocks: usize) -> Vec<[Cell; 7]> {
                 });
             }
             if rock_top < rock.len() {
-                break rock_top;
+                break;
             }
             let move_down_successful = rock.iter().enumerate().all(|(row_idx, row)| {
                 if let Some(chamber_row) = chamber.get(rock_top - row_idx - 1) {
@@ -128,9 +133,9 @@ fn simulate(air_directions: &Parsed, num_rocks: usize) -> Vec<[Cell; 7]> {
                 }
             });
             if !move_down_successful {
-                break rock_top;
+                break;
             }
-        };
+        }
         chamber.resize(chamber.len().max(rock_top + 1), [NA; 7]);
         for (row_idx, row) in rock.into_iter().enumerate() {
             for (x, cell) in row.iter().enumerate() {
@@ -164,7 +169,7 @@ fn part_b(data: &Parsed) -> u64 {
         .enumerate()
         .tuple_combinations()
         .find(|((_, a), (_, b))| a == b)
-        .map(|((a, _), (b, _))| (a, b - a))
+        .map(|((i, _), (j, _))| (i, j - i))
         .expect("There should be a pattern!");
 
     let rocks_before_pattern = count_rocks_in_chamber_slice(&chamber[..pattern_start]);
