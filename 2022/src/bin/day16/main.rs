@@ -7,7 +7,6 @@ use nom::{
     Parser,
 };
 use nom_supreme::ParserExt;
-use petgraph::{algo::floyd_warshall, graph::NodeIndex, Graph};
 use std::{cmp::Reverse, collections::HashMap, error::Error};
 use tinyvec::ArrayVec;
 
@@ -33,41 +32,47 @@ fn parse_row(data: &str) -> IResult<(&str, u8, Vec<&str>)> {
 
 fn parse(data: &str) -> IResult<Parsed> {
     let (input, rows) = separated_list1(line_ending, parse_row)(data)?;
-    let mut graph = Graph::<u8, ()>::new();
-    let valve_name_to_idx: HashMap<&str, _> = rows
+    let valve_name_to_idx_flow: HashMap<&str, _> = rows
         .iter()
-        .map(|&(name, flow, _)| (name, graph.add_node(flow)))
+        .enumerate()
+        .map(|(i, &(name, flow, _))| (name, (i, flow)))
         .collect();
-    for (name, _, leads_to) in rows {
-        let from = valve_name_to_idx[name];
-        for to in leads_to {
-            graph.add_edge(from, valve_name_to_idx[to], ());
+    let mut dist = vec![vec![u8::MAX; rows.len()]; rows.len()];
+    for (i, (_, _, tunnels)) in rows.iter().enumerate() {
+        for tunnel in tunnels {
+            let (j, _) = valve_name_to_idx_flow[tunnel];
+            dist[i][j] = 1;
         }
     }
-    let starting_valve = valve_name_to_idx["AA"];
-    let shortest_paths_map = floyd_warshall(&graph, |_| 1).expect("no negative weights");
-    let graph_indexes_to_regular_indexes: HashMap<NodeIndex, usize> = graph
-        .node_indices()
-        .filter(|&i| i == starting_valve || graph[i] > 0)
-        .enumerate()
-        .map(|(i, idx)| (idx, i))
-        .collect();
-
-    let mut flow_rates = vec![0; graph_indexes_to_regular_indexes.len()];
-    for (&idx, &i) in &graph_indexes_to_regular_indexes {
-        flow_rates[i] = graph[idx];
+    (0..dist.len()).for_each(|i| {
+        dist[i][i] = 0;
+    });
+    for k in 0..dist.len() {
+        for i in 0..dist.len() {
+            for j in 0..dist.len() {
+                let (result, overflow) = dist[i][k].overflowing_add(dist[k][j]);
+                if !overflow && dist[i][j] > result {
+                    dist[i][j] = result;
+                }
+            }
+        }
     }
-    let mut shortest_path_lengths = vec![
-        vec![0; graph_indexes_to_regular_indexes.len()];
-        graph_indexes_to_regular_indexes.len()
-    ];
+    let interesting_valve_indices = rows
+        .iter()
+        .enumerate()
+        .filter(|&(_, &(name, flow, _))| name == "AA" || flow > 0)
+        .map(|(i, _)| i)
+        .collect_vec();
 
-    for ((from, to), distance) in shortest_paths_map {
-        if let (Some(from), Some(to)) = (
-            graph_indexes_to_regular_indexes.get(&from),
-            graph_indexes_to_regular_indexes.get(&to),
-        ) {
-            shortest_path_lengths[*from][*to] = distance;
+    let mut flow_rates = vec![0; interesting_valve_indices.len()];
+    for (i, &idx) in interesting_valve_indices.iter().enumerate() {
+        flow_rates[i] = rows[idx].1;
+    }
+    let mut shortest_path_lengths =
+        vec![vec![0; interesting_valve_indices.len()]; interesting_valve_indices.len()];
+    for (i, &i_idx) in interesting_valve_indices.iter().enumerate() {
+        for (j, &j_idx) in interesting_valve_indices.iter().enumerate() {
+            shortest_path_lengths[i][j] = dist[i_idx][j_idx];
         }
     }
 
@@ -76,7 +81,10 @@ fn parse(data: &str) -> IResult<Parsed> {
         (
             flow_rates,
             shortest_path_lengths,
-            graph_indexes_to_regular_indexes[&starting_valve],
+            interesting_valve_indices
+                .iter()
+                .position(|&i| rows[i].0 == "AA")
+                .unwrap(),
         ),
     ))
 }
