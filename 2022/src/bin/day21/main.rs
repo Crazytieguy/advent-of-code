@@ -26,17 +26,6 @@ enum Operator {
     Divide,
 }
 
-impl Operator {
-    fn eval(self, left: i64, right: i64) -> i64 {
-        match self {
-            Add => left + right,
-            Subtract => left - right,
-            Multiply => left * right,
-            Divide => left / right,
-        }
-    }
-}
-
 fn operator(input: &str) -> IResult<Operator> {
     alt((
         tag(" + ").value(Add),
@@ -67,6 +56,17 @@ fn parse(data: &str) -> IResult<Parsed> {
     separated_list1(line_ending, monkey)
         .map(|monkeys| monkeys.into_iter().collect())
         .parse(data)
+}
+
+impl Operator {
+    fn eval(self, left: i64, right: i64) -> i64 {
+        match self {
+            Add => left + right,
+            Subtract => left - right,
+            Multiply => left * right,
+            Divide => left / right,
+        }
+    }
 }
 
 fn eval(monkeys: &Parsed, monkey: &str) -> i64 {
@@ -125,21 +125,20 @@ fn fill_knowns<'a>(
 fn part_b(data: &Parsed) -> i64 {
     let mut knowns = HashMap::new();
     fill_knowns(&mut knowns, data, "root");
-
-    let (mut unknown, mut unknown_should_eq) = ("root", 0);
+    let (mut unknown, mut result, mut correction) = ("root", 0, -1);
     while unknown != "humn" {
-        (unknown, unknown_should_eq) = match data[unknown] {
-            Operation((left, op, right)) => match (knowns.get(&left), knowns.get(&right)) {
-                (None, Some(&val)) if unknown == "root" => (left, val),
-                (Some(&val), None) if unknown == "root" => (right, val),
-                (None, Some(&val)) => (left, op.solve_for_left(unknown_should_eq, val)),
-                (Some(&val), None) => (right, op.solve_for_right(unknown_should_eq, val)),
-                _ => panic!("exactly one side of {unknown} should be known"),
-            },
-            Number(_) => panic!("{unknown} should not be a number"),
-        }
+        let Operation((left, op, right)) = data[unknown] else {
+            panic!("{unknown} should be an operation")
+        };
+        (unknown, result) = match (knowns.get(&left), knowns.get(&right)) {
+            (None, Some(&val)) => (left, op.solve_for_left(result, val)),
+            (Some(&val), None) => (right, op.solve_for_right(result, val)),
+            _ => panic!("exactly one child of {unknown} should be known"),
+        };
+        result *= correction;
+        correction = 1;
     }
-    unknown_should_eq
+    result
 }
 
 #[cfg(test)]
