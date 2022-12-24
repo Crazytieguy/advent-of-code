@@ -2,7 +2,7 @@ use std::error::Error;
 
 use itertools::{iterate, Itertools};
 use nom::{
-    character::complete::{i32, line_ending},
+    character::complete::{i64, line_ending},
     multi::separated_list1,
 };
 
@@ -11,17 +11,14 @@ const DATA: &str = include_str!("data.txt");
 type OutResult = std::result::Result<(), Box<dyn Error>>;
 type IResult<'a, T> = nom::IResult<&'a str, T>;
 
-type Parsed = Vec<i32>;
+type Parsed = Vec<i64>;
 
 fn parse(data: &str) -> IResult<Parsed> {
-    separated_list1(line_ending, i32)(data)
+    separated_list1(line_ending, i64)(data)
 }
 
 fn solve(data: &Parsed, decryption_key: i64, iterations: usize) -> i64 {
-    let numbers = data
-        .iter()
-        .map(|&x| x as i64 * decryption_key)
-        .collect_vec();
+    let numbers = data.iter().map(|&x| x * decryption_key).collect_vec();
     let mut prev = (0..numbers.len() as u16).collect_vec();
     let mut next = prev.clone();
     prev.rotate_right(1);
