@@ -1,6 +1,6 @@
 use std::error::Error;
 
-use itertools::Itertools;
+use itertools::{iterate, Itertools};
 use nom::{
     character::complete::{i32, line_ending},
     multi::separated_list1,
@@ -17,68 +17,55 @@ fn parse(data: &str) -> IResult<Parsed> {
     separated_list1(line_ending, i32)(data)
 }
 
-fn part_a(data: &Parsed) -> i32 {
-    let mut reorder = data.iter().map(|&x| (x, false)).collect_vec();
-    let mut index = 0;
-    while index < data.len() {
-        if reorder[index].1 {
-            index += 1;
-            continue;
-        }
-        let mut num = reorder.remove(index);
-        num.1 = true;
-        let new_index = (index as i32 + num.0).rem_euclid(reorder.len() as i32);
-        reorder.insert(new_index as usize, num);
-    }
-    let zero_index = reorder
+fn solve(data: &Parsed, decryption_key: i64, iterations: usize) -> i64 {
+    let numbers = data
         .iter()
-        .position(|&(x, _)| x == 0)
-        .expect("an element with value 0");
-    dbg!(zero_index);
-    (zero_index..)
+        .map(|&x| x as i64 * decryption_key)
+        .collect_vec();
+    let mut prev = (0..numbers.len() as u16).collect_vec();
+    let mut next = prev.clone();
+    prev.rotate_right(1);
+    next.rotate_left(1);
+    for _ in 0..iterations {
+        for (cur, &n) in numbers.iter().enumerate() {
+            let amount_to_move = n.rem_euclid(numbers.len() as i64 - 1) as usize;
+
+            // remove cur from the list
+            let (cur_prev, cur_next) = (prev[cur], next[cur]);
+            prev[cur_next as usize] = cur_prev;
+            next[cur_prev as usize] = cur_next;
+
+            // find the node to insert cur after
+            let target = iterate(cur_prev, |&cur| next[cur as usize])
+                .nth(amount_to_move)
+                .unwrap();
+
+            // insert cur after target
+            let target_next = next[target as usize];
+            prev[cur] = target;
+            next[target as usize] = cur as u16;
+            prev[target_next as usize] = cur as u16;
+            next[cur] = target_next;
+        }
+    }
+    let zero_index = numbers
+        .iter()
+        .position(|&x| x == 0)
+        .expect("an element with value 0") as u16;
+    iterate(zero_index, |&cur| next[cur as usize])
         .step_by(1000)
         .skip(1)
         .take(3)
-        .map(|i| reorder[i % reorder.len()].0)
-        .inspect(|n| {
-            dbg!(*n);
-        })
+        .map(|i| numbers[i as usize])
         .sum()
 }
 
+fn part_a(data: &Parsed) -> i64 {
+    solve(data, 1, 1)
+}
+
 fn part_b(data: &Parsed) -> i64 {
-    let numbers = data.iter().map(|&x| x as i64 * 811589153).collect_vec();
-    let mut positions = (0..numbers.len()).collect_vec();
-    for _ in 0..10 {
-        for (i, &n) in numbers.iter().enumerate() {
-            let cur_position = positions[i];
-            let new_position =
-                (cur_position as i64 + n).rem_euclid(numbers.len() as i64 - 1) as usize;
-            positions.iter_mut().for_each(|p| {
-                if *p > cur_position && *p <= new_position {
-                    *p -= 1
-                }
-                if *p < cur_position && *p >= new_position {
-                    *p += 1
-                }
-            });
-            positions[i] = new_position;
-        }
-    }
-    let mut ordered_numbers = vec![0; numbers.len()];
-    for (i, &p) in positions.iter().enumerate() {
-        ordered_numbers[p] = numbers[i];
-    }
-    let zero_index = ordered_numbers
-        .iter()
-        .position(|&x| x == 0)
-        .expect("an element with value 0");
-    (zero_index..)
-        .step_by(1000)
-        .skip(1)
-        .take(3)
-        .map(|i| ordered_numbers[i % ordered_numbers.len()])
-        .sum()
+    solve(data, 811589153, 10)
 }
 
 #[cfg(test)]
@@ -87,7 +74,6 @@ mod tests {
     const SAMPLE_DATA: &str = include_str!("sample.txt");
 
     #[test]
-    #[ignore]
     fn test_a() -> OutResult {
         assert_eq!(part_a(&parse(SAMPLE_DATA)?.1), 3);
         println!("part a: {}", part_a(&parse(DATA)?.1));
