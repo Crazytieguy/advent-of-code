@@ -43,13 +43,10 @@ const ONE_OBSIDIAN: Resources = Resources {
 
 impl Resources {
     fn checked_sub(self, rhs: Self) -> Option<Self> {
-        let ore = self.ore.checked_sub(rhs.ore)?;
-        let clay = self.clay.checked_sub(rhs.clay)?;
-        let obsidian = self.obsidian.checked_sub(rhs.obsidian)?;
         Some(Self {
-            ore,
-            clay,
-            obsidian,
+            ore: self.ore.checked_sub(rhs.ore)?,
+            clay: self.clay.checked_sub(rhs.clay)?,
+            obsidian: self.obsidian.checked_sub(rhs.obsidian)?,
         })
     }
 }
@@ -90,38 +87,24 @@ struct Blueprint {
 fn blueprint(input: &str) -> IResult<Blueprint> {
     let (input, id) = delimited(tag("Blueprint "), u8, tag(": "))(input)?;
     let (input, ore_robot_cost) = delimited(tag("Each ore robot costs "), u8, tag(" ore. "))
-        .map(|ore| Resources {
-            ore,
-            ..Default::default()
-        })
+        .map(|ore| ONE_ORE * ore)
         .parse(input)?;
     let (input, clay_robot_cost) = delimited(tag("Each clay robot costs "), u8, tag(" ore. "))
-        .map(|ore| Resources {
-            ore,
-            ..Default::default()
-        })
+        .map(|ore| ONE_ORE * ore)
         .parse(input)?;
     let (input, obsidian_robot_cost) = delimited(
         tag("Each obsidian robot costs "),
         separated_pair(u8, tag(" ore and "), u8),
         tag(" clay. "),
     )
-    .map(|(ore, clay)| Resources {
-        ore,
-        clay,
-        ..Default::default()
-    })
+    .map(|(ore, clay)| ONE_ORE * ore + ONE_CLAY * clay)
     .parse(input)?;
     let (input, geode_robot_cost) = delimited(
         tag("Each geode robot costs "),
         separated_pair(u8, tag(" ore and "), u8),
         tag(" obsidian."),
     )
-    .map(|(ore, obsidian)| Resources {
-        ore,
-        obsidian,
-        ..Default::default()
-    })
+    .map(|(ore, obsidian)| ONE_ORE * ore + ONE_OBSIDIAN * obsidian)
     .parse(input)?;
     Ok((
         input,
@@ -158,11 +141,6 @@ impl State {
     }
 
     fn chose_robot(self, cost: Resources, robot: Resources) -> Option<Self> {
-        if cost.clay > 0 && self.resources_rate.clay == 0
-            || cost.obsidian > 0 && self.resources_rate.obsidian == 0
-        {
-            return None;
-        }
         (1..self.minutes_remaining).rev().zip(0..).find_map(
             |(minutes_remaining, minutes_passed)| {
                 let resources = self.resources + self.resources_rate * minutes_passed;
@@ -182,22 +160,24 @@ impl State {
             .ore
             .max(blueprint.obsidian_robot_cost.ore)
             .max(blueprint.geode_robot_cost.ore);
-        let obsidian_robot_viable =
-            self.resources_rate.obsidian < blueprint.geode_robot_cost.obsidian;
-        let clay_robot_viable = self.resources_rate.clay < blueprint.obsidian_robot_cost.clay;
         let ore_robot_viable = self.resources_rate.ore < max_ore_cost;
+        let clay_robot_viable = self.resources_rate.clay < blueprint.obsidian_robot_cost.clay;
+        let obsidian_robot_viable = self.resources_rate.obsidian
+            < blueprint.geode_robot_cost.obsidian
+            && self.resources_rate.clay > 0;
+        let geode_robot_viable = self.resources_rate.obsidian > 0;
         [
-            Some(
+            ore_robot_viable.then(|| self.chose_robot(blueprint.ore_robot_cost, ONE_ORE)),
+            clay_robot_viable.then(|| self.chose_robot(blueprint.clay_robot_cost, ONE_CLAY)),
+            obsidian_robot_viable
+                .then(|| self.chose_robot(blueprint.obsidian_robot_cost, ONE_OBSIDIAN)),
+            geode_robot_viable.then(|| {
                 self.chose_robot(blueprint.geode_robot_cost, Default::default())
                     .map(|state| Self {
                         geodes_secured: state.geodes_secured + state.minutes_remaining,
                         ..state
-                    }),
-            ),
-            (obsidian_robot_viable)
-                .then(|| self.chose_robot(blueprint.obsidian_robot_cost, ONE_OBSIDIAN)),
-            (clay_robot_viable).then(|| self.chose_robot(blueprint.clay_robot_cost, ONE_CLAY)),
-            (ore_robot_viable).then(|| self.chose_robot(blueprint.ore_robot_cost, ONE_ORE)),
+                    })
+            }),
         ]
         .into_iter()
         .flatten()
@@ -207,37 +187,34 @@ impl State {
     // we have unlimited ore and clay, and prefer building geode robots when possible
     fn bound(self, blueprint: &Blueprint) -> u8 {
         let geode_cost = blueprint.geode_robot_cost.obsidian;
-        (0..self.minutes_remaining)
-            .rev()
-            .fold(
-                (
-                    self.resources.obsidian,
-                    self.resources_rate.obsidian,
-                    self.geodes_secured,
-                ),
-                |(obsidian, rate, geodes), minutes_remaining| {
-                    if obsidian >= geode_cost {
-                        (
-                            obsidian + rate - geode_cost,
-                            rate,
-                            geodes.saturating_add(minutes_remaining),
-                        )
-                    } else {
-                        (obsidian + rate, rate + 1, geodes)
-                    }
-                },
-            )
-            .2
+        let (_, _, geodes) = (0..self.minutes_remaining).rev().fold(
+            (
+                self.resources.obsidian,
+                self.resources_rate.obsidian,
+                self.geodes_secured,
+            ),
+            |(obsidian, rate, geodes), minutes_remaining| {
+                if obsidian >= geode_cost {
+                    (
+                        obsidian + rate - geode_cost,
+                        rate,
+                        geodes.saturating_add(minutes_remaining),
+                    )
+                } else {
+                    (obsidian + rate, rate + 1, geodes)
+                }
+            },
+        );
+        geodes
     }
 }
 
 fn branch_and_bound(blueprint: &Blueprint, state: State, best: &mut u8) {
     *best = state.geodes_secured.max(*best);
-    if state.bound(blueprint) <= *best {
-        return;
-    }
     for state in state.branch(blueprint) {
-        branch_and_bound(blueprint, state, best);
+        if state.bound(blueprint) > *best {
+            branch_and_bound(blueprint, state, best);
+        }
     }
 }
 
