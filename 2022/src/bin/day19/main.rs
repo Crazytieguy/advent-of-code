@@ -42,10 +42,10 @@ const ONE_OBSIDIAN: Resources = Resources {
 };
 
 impl Resources {
-    fn checked_sub(self, other: Self) -> Option<Self> {
-        let ore = self.ore.checked_sub(other.ore)?;
-        let clay = self.clay.checked_sub(other.clay)?;
-        let obsidian = self.obsidian.checked_sub(other.obsidian)?;
+    fn checked_sub(self, rhs: Self) -> Option<Self> {
+        let ore = self.ore.checked_sub(rhs.ore)?;
+        let clay = self.clay.checked_sub(rhs.clay)?;
+        let obsidian = self.obsidian.checked_sub(rhs.obsidian)?;
         Some(Self {
             ore,
             clay,
@@ -57,11 +57,11 @@ impl Resources {
 impl Add for Resources {
     type Output = Self;
 
-    fn add(self, other: Self) -> Self {
+    fn add(self, rhs: Self) -> Self {
         Self {
-            ore: self.ore + other.ore,
-            clay: self.clay + other.clay,
-            obsidian: self.obsidian + other.obsidian,
+            ore: self.ore.saturating_add(rhs.ore),
+            clay: self.clay.saturating_add(rhs.clay),
+            obsidian: self.obsidian.saturating_add(rhs.obsidian),
         }
     }
 }
@@ -158,99 +158,98 @@ impl State {
     }
 
     fn branch(self, blueprint: &Blueprint) -> impl Iterator<Item = Self> + '_ {
-        [
-            if self.resources_rate.obsidian == 0 {
-                None
-            } else {
-                (1..self.minutes_remaining).rev().zip(0..).find_map(
-                    |(minutes_remaining, minutes_passed)| {
-                        let resources = self.resources + self.resources_rate * minutes_passed;
-                        resources
-                            .checked_sub(blueprint.geode_robot_cost)
-                            .map(|resources| State {
-                                minutes_remaining,
-                                geodes_secured: self.geodes_secured + minutes_remaining,
-                                resources: resources + self.resources_rate,
-                                ..self
-                            })
-                    },
-                )
-            },
-            if self.resources_rate.clay == 0
-                || self.resources_rate.obsidian == blueprint.geode_robot_cost.obsidian
-            {
-                None
-            } else {
-                (1..self.minutes_remaining).rev().zip(0..).find_map(
-                    |(minutes_remaining, minutes_passed)| {
-                        let resources = self.resources + self.resources_rate * minutes_passed;
-                        resources
-                            .checked_sub(blueprint.obsidian_robot_cost)
-                            .map(|resources| State {
-                                minutes_remaining,
-                                resources: resources + self.resources_rate,
-                                resources_rate: self.resources_rate + ONE_OBSIDIAN,
-                                ..self
-                            })
-                    },
-                )
-            },
-            if self.resources_rate.clay == blueprint.obsidian_robot_cost.clay {
-                None
-            } else {
-                (1..self.minutes_remaining).rev().zip(0..).find_map(
-                    |(minutes_remaining, minutes_passed)| {
-                        let resources = self.resources + self.resources_rate * minutes_passed;
-                        resources
-                            .checked_sub(blueprint.clay_robot_cost)
-                            .map(|resources| State {
-                                minutes_remaining,
-                                resources: resources + self.resources_rate,
-                                resources_rate: self.resources_rate + ONE_CLAY,
-                                ..self
-                            })
-                    },
-                )
-            },
-            if self.resources_rate.ore
-                == blueprint
-                    .ore_robot_cost
-                    .ore
-                    .max(blueprint.clay_robot_cost.ore)
-                    .max(blueprint.obsidian_robot_cost.ore)
-                    .max(blueprint.geode_robot_cost.ore)
-            {
-                None
-            } else {
-                (1..self.minutes_remaining).rev().zip(0..).find_map(
-                    |(minutes_remaining, minutes_passed)| {
-                        let resources = self.resources + self.resources_rate * minutes_passed;
-                        resources
-                            .checked_sub(blueprint.ore_robot_cost)
-                            .map(|resources| State {
-                                minutes_remaining,
-                                resources: resources + self.resources_rate,
-                                resources_rate: self.resources_rate + ONE_ORE,
-                                ..self
-                            })
-                    },
-                )
-            },
-        ]
-        .into_iter()
-        .flatten()
+        let iter_resources = || {
+            (1..self.minutes_remaining)
+                .rev()
+                .zip(0..)
+                .map(|(minutes_remaining, minutes_passed)| {
+                    (
+                        minutes_remaining,
+                        self.resources + self.resources_rate * minutes_passed,
+                    )
+                })
+        };
+        let mut res = [None; 4];
+        if self.resources_rate.obsidian != 0 {
+            res[0] = iter_resources().find_map(|(minutes_remaining, resources)| {
+                resources
+                    .checked_sub(blueprint.geode_robot_cost)
+                    .map(|resources| State {
+                        minutes_remaining,
+                        geodes_secured: self.geodes_secured + minutes_remaining,
+                        resources: resources + self.resources_rate,
+                        ..self
+                    })
+            })
+        }
+        if self.resources_rate.clay != 0
+            && self.resources_rate.obsidian != blueprint.geode_robot_cost.obsidian
+        {
+            res[1] = iter_resources().find_map(|(minutes_remaining, resources)| {
+                resources
+                    .checked_sub(blueprint.obsidian_robot_cost)
+                    .map(|resources| State {
+                        minutes_remaining,
+                        resources: resources + self.resources_rate,
+                        resources_rate: self.resources_rate + ONE_OBSIDIAN,
+                        ..self
+                    })
+            })
+        }
+        if self.resources_rate.clay != blueprint.obsidian_robot_cost.clay {
+            res[2] = iter_resources().find_map(|(minutes_remaining, resources)| {
+                resources
+                    .checked_sub(blueprint.clay_robot_cost)
+                    .map(|resources| State {
+                        minutes_remaining,
+                        resources: resources + self.resources_rate,
+                        resources_rate: self.resources_rate + ONE_CLAY,
+                        ..self
+                    })
+            })
+        }
+        if self.resources_rate.ore
+            != blueprint
+                .ore_robot_cost
+                .ore
+                .max(blueprint.clay_robot_cost.ore)
+                .max(blueprint.obsidian_robot_cost.ore)
+                .max(blueprint.geode_robot_cost.ore)
+        {
+            res[3] = iter_resources().find_map(|(minutes_remaining, resources)| {
+                resources
+                    .checked_sub(blueprint.ore_robot_cost)
+                    .map(|resources| State {
+                        minutes_remaining,
+                        resources: resources + self.resources_rate,
+                        resources_rate: self.resources_rate + ONE_ORE,
+                        ..self
+                    })
+            })
+        }
+        res.into_iter().flatten()
     }
 
-    fn bound(self) -> u8 {
-        (1..self.minutes_remaining)
-            .chain([self.geodes_secured])
-            .fold(0, |acc, cur| acc.saturating_add(cur))
+    // we have unlimited ore and clay, and prefer building geode robots when possible
+    fn bound(mut self, blueprint: &Blueprint) -> u8 {
+        while self.minutes_remaining > 0 {
+            self.minutes_remaining -= 1;
+            if self.resources.obsidian >= blueprint.geode_robot_cost.obsidian {
+                self.resources.obsidian -= blueprint.geode_robot_cost.obsidian;
+                self.geodes_secured += self.minutes_remaining;
+                self.resources.obsidian += self.resources_rate.obsidian;
+            } else {
+                self.resources.obsidian += self.resources_rate.obsidian;
+                self.resources_rate.obsidian += 1;
+            }
+        }
+        self.geodes_secured
     }
 }
 
 fn branch_and_bound(blueprint: &Blueprint, state: State, best: &mut u8) {
     *best = state.geodes_secured.max(*best);
-    if state.bound() <= *best {
+    if state.bound(blueprint) <= *best {
         return;
     }
     for state in state.branch(blueprint) {
