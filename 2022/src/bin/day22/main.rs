@@ -1,7 +1,7 @@
 #![feature(exclusive_range_pattern)]
 use std::error::Error;
 
-use itertools::Itertools;
+use itertools::iterate;
 use nom::{
     branch::alt,
     character::complete::{char, u32},
@@ -54,7 +54,7 @@ fn parse(data: &str) -> IResult<Parsed> {
         .by_ref()
         .take_while(|line| !line.is_empty())
         .map(str::as_bytes)
-        .collect_vec();
+        .collect();
     let path = lines
         .next()
         .expect("there should be a path after the empty line");
@@ -63,92 +63,72 @@ fn parse(data: &str) -> IResult<Parsed> {
         .map(|(rest, moves)| (rest, (grid, moves)))
 }
 
-fn down(grid: &[&[u8]], x: usize, y: usize, dy: usize) -> usize {
-    grid.iter()
-        .enumerate()
-        .cycle()
-        .skip(y)
-        .filter(|&(_, row)| row.get(x).filter(|&&c| c != b' ').is_some())
-        .take(dy + 1)
-        .take_while(|&(_, row)| row[x] != b'#')
-        .last()
-        .unwrap()
-        .0
+#[derive(Debug, Clone, Copy)]
+struct State {
+    x: usize,
+    y: usize,
+    direction: Direction,
 }
 
-fn up(grid: &[&[u8]], x: usize, y: usize, dy: usize) -> usize {
-    grid.iter()
-        .enumerate()
-        .rev()
-        .cycle()
-        .skip(grid.len() - y - 1)
-        .filter(|&(_, row)| row.get(x).filter(|&&c| c != b' ').is_some())
-        .take(dy + 1)
-        .take_while(|&(_, row)| row[x] != b'#')
-        .last()
-        .unwrap()
-        .0
+fn move_one_2d<const X: usize, const Y: usize>(&State { x, y, direction }: &State) -> State {
+    match direction {
+        Right => State {
+            x: (x + 1) % X,
+            y,
+            direction,
+        },
+        Down => State {
+            x,
+            y: (y + 1) % Y,
+            direction,
+        },
+        Left => State {
+            x: x.checked_sub(1).unwrap_or(X - 1),
+            y,
+            direction,
+        },
+        Up => State {
+            x,
+            y: y.checked_sub(1).unwrap_or(Y - 1),
+            direction,
+        },
+    }
 }
 
-fn right(grid: &[&[u8]], x: usize, y: usize, dx: usize) -> usize {
-    grid[y]
-        .iter()
-        .enumerate()
-        .cycle()
-        .skip(x)
-        .filter(|&(_, &c)| c != b' ')
-        .take(dx + 1)
-        .take_while(|&(_, &c)| c != b'#')
-        .last()
-        .unwrap()
-        .0
-}
-
-fn left(grid: &[&[u8]], x: usize, y: usize, dx: usize) -> usize {
-    grid[y]
-        .iter()
-        .enumerate()
-        .rev()
-        .cycle()
-        .skip(grid[y].len() - x - 1)
-        .filter(|&(_, &c)| c != b' ')
-        .take(dx + 1)
-        .take_while(|&(_, &c)| c != b'#')
-        .last()
-        .unwrap()
-        .0
-}
-
-fn part_a((grid, path): &Parsed) -> usize {
-    let mut y = 0;
-    let mut x = grid[0].iter().position(|&c| c == b'.').unwrap();
-    let mut direction = Right;
-    for &m in path {
-        match m {
-            Turn(Clockwise) => {
-                direction = match direction {
+fn solve((grid, path): &Parsed, move_one: fn(&State) -> State) -> usize {
+    let State { x, y, direction } = path.iter().fold(
+        State {
+            y: 0,
+            x: grid[0].iter().position(|&c| c == b'.').unwrap(),
+            direction: Right,
+        },
+        |state, &m| match m {
+            Turn(Clockwise) => State {
+                direction: match state.direction {
                     Up => Right,
                     Right => Down,
                     Down => Left,
                     Left => Up,
-                }
-            }
-            Turn(CounterClockwise) => {
-                direction = match direction {
+                },
+                ..state
+            },
+            Turn(CounterClockwise) => State {
+                direction: match state.direction {
                     Up => Left,
                     Left => Down,
                     Down => Right,
                     Right => Up,
-                }
-            }
-            Forward(n) => match direction {
-                Up => y = up(grid, x, y, n),
-                Down => y = down(grid, x, y, n),
-                Left => x = left(grid, x, y, n),
-                Right => x = right(grid, x, y, n),
+                },
+                ..state
             },
-        }
-    }
+            Forward(n) => iterate(state, move_one)
+                .filter(|s| *grid[s.y].get(s.x).unwrap_or(&b' ') != b' ')
+                .take(n + 1)
+                .take_while(|s| grid[s.y][s.x] == b'.')
+                .last()
+                .unwrap(),
+        },
+    );
     let row_number = y + 1;
     let column_number = x + 1;
     let facing_number = match direction {
@@ -160,14 +140,7 @@ fn part_a((grid, path): &Parsed) -> usize {
     1000 * row_number + 4 * column_number + facing_number
 }
 
-#[derive(Debug, Clone, Copy)]
-struct State {
-    x: usize,
-    y: usize,
-    direction: Direction,
-}
-
-fn move_one_cube(State { x, y, direction }: State) -> State {
+fn move_one_cube(&State { x, y, direction }: &State) -> State {
     match direction {
         Right => match (x, y) {
             (149, 0..50) => State {
@@ -270,58 +243,12 @@ fn move_one_cube(State { x, y, direction }: State) -> State {
     }
 }
 
-fn part_b((grid, path): &Parsed, move_one: fn(State) -> State) -> usize {
-    let mut state = State {
-        y: 0,
-        x: grid[0].iter().position(|&c| c == b'.').unwrap(),
-        direction: Right,
-    };
-    for &m in path {
-        match m {
-            Turn(Clockwise) => {
-                state.direction = match state.direction {
-                    Up => Right,
-                    Right => Down,
-                    Down => Left,
-                    Left => Up,
-                }
-            }
-            Turn(CounterClockwise) => {
-                state.direction = match state.direction {
-                    Up => Left,
-                    Left => Down,
-                    Down => Right,
-                    Right => Up,
-                }
-            }
-            Forward(n) => {
-                for _ in 0..n {
-                    let next_state = move_one(state);
-                    if grid[next_state.y][next_state.x] == b'#' {
-                        break;
-                    }
-                    state = next_state;
-                }
-            }
-        }
-    }
-    let row_number = state.y + 1;
-    let column_number = state.x + 1;
-    let facing_number = match state.direction {
-        Right => 0,
-        Down => 1,
-        Left => 2,
-        Up => 3,
-    };
-    1000 * row_number + 4 * column_number + facing_number
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
     const SAMPLE_DATA: &str = include_str!("sample.txt");
 
-    fn move_one_sample_cube(State { x, y, direction }: State) -> State {
+    fn move_one_sample_cube(&State { x, y, direction }: &State) -> State {
         match direction {
             Right => match (x, y) {
                 (11, 0..4) => State {
@@ -425,24 +352,26 @@ mod tests {
     }
 
     #[test]
-    #[ignore]
     fn test_a() -> OutResult {
-        assert_eq!(part_a(&parse(SAMPLE_DATA)?.1), 6032);
-        println!("part a: {}", part_a(&parse(DATA)?.1));
+        assert_eq!(solve(&parse(SAMPLE_DATA)?.1, move_one_2d::<16, 12>), 6032);
+        println!(
+            "part a: {}",
+            solve(&parse(DATA)?.1, move_one_2d::<150, 200>)
+        );
         Ok(())
     }
 
     #[test]
     fn test_b() -> OutResult {
-        assert_eq!(part_b(&parse(SAMPLE_DATA)?.1, move_one_sample_cube), 5031);
-        println!("part b: {}", part_b(&parse(DATA)?.1, move_one_cube));
+        assert_eq!(solve(&parse(SAMPLE_DATA)?.1, move_one_sample_cube), 5031);
+        println!("part b: {}", solve(&parse(DATA)?.1, move_one_cube));
         Ok(())
     }
 }
 
 fn main() -> OutResult {
     let parsed = parse(DATA)?.1;
-    println!("part a: {}", part_a(&parsed));
-    println!("part b: {}", part_b(&parsed, move_one_cube));
+    println!("part a: {}", solve(&parsed, move_one_2d::<150, 200>));
+    println!("part b: {}", solve(&parsed, move_one_cube));
     Ok(())
 }
