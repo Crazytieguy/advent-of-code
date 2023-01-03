@@ -1,3 +1,4 @@
+#![feature(anonymous_lifetime_in_impl_trait)]
 use itertools::Itertools;
 use std::collections::HashSet;
 
@@ -11,7 +12,7 @@ fn priority(item: char) -> usize {
     }
 }
 
-fn intersecting_item(group: impl IntoIterator<Item = &'static str>) -> char {
+fn intersecting_item(group: impl IntoIterator<Item = &str>) -> char {
     group
         .into_iter()
         .map(|items| items.chars().collect::<HashSet<_>>())
@@ -22,7 +23,7 @@ fn intersecting_item(group: impl IntoIterator<Item = &'static str>) -> char {
         .expect("there should be exactly one item in the intersection")
 }
 
-fn part_a(data: &'static str) -> usize {
+fn part_a(data: &str) -> usize {
     data.lines()
         .map(|line| line.split_at(line.len() / 2))
         .map(|(left, right)| intersecting_item([left, right]))
@@ -30,7 +31,7 @@ fn part_a(data: &'static str) -> usize {
         .sum()
 }
 
-fn part_b(data: &'static str) -> usize {
+fn part_b(data: &str) -> usize {
     data.lines()
         .chunks(3)
         .into_iter()
