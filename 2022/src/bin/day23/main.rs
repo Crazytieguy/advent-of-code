@@ -32,19 +32,13 @@ fn run_simulation(elve_positions: &mut HashSet<(i16, i16)>, max_rounds: usize) -
     let mut propositions = HashMap::new();
     for round in 1..=max_rounds {
         for &(row, col) in elve_positions.iter() {
-            if directions
-                .into_iter()
-                .flatten()
-                .all(|(drow, dcol)| !elve_positions.contains(&(drow + row, dcol + col)))
-            {
+            let is_available = |(drow, dcol)| !elve_positions.contains(&(drow + row, dcol + col));
+            if directions.into_iter().flatten().all(is_available) {
                 // elve doesn't need to move
                 continue;
             }
             for direction in directions {
-                if direction
-                    .into_iter()
-                    .all(|(drow, dcol)| !elve_positions.contains(&(drow + row, dcol + col)))
-                {
+                if direction.into_iter().all(is_available) {
                     // elve chooses this direction
                     let (drow, dcol) = direction[1];
                     let key = (row + drow, col + dcol);
