@@ -63,82 +63,63 @@ fn parse(data: &str) -> (Vec<Blizzard>, Position) {
 }
 
 impl Position {
-    fn checked_right(self, bounds: Position) -> Option<Self> {
-        if self.col == bounds.col - 2 || self.row == 0 {
-            None
-        } else {
-            Some(Position {
-                col: self.col + 1,
-                ..self
-            })
-        }
+    fn with_row(self, row: u8) -> Self {
+        Position { row, ..self }
     }
 
-    fn wrapping_right(self, bounds: Position) -> Self {
-        self.checked_right(bounds)
-            .unwrap_or(Position { col: 1, ..self })
+    fn with_col(self, col: u8) -> Self {
+        Position { col, ..self }
+    }
+
+    fn checked_right(self, bounds: Position) -> Option<Self> {
+        if self.row == 0 || self.col == bounds.col - 2 {
+            None
+        } else {
+            Some(self.with_col(self.col + 1))
+        }
     }
 
     fn checked_left(self, bounds: Position) -> Option<Self> {
         if self.col == 1 || self.row == bounds.row - 1 {
             None
         } else {
-            Some(Position {
-                col: self.col - 1,
-                ..self
-            })
+            Some(self.with_col(self.col - 1))
         }
-    }
-
-    fn wrapping_left(self, bounds: Position) -> Self {
-        self.checked_left(bounds).unwrap_or(Position {
-            col: bounds.col - 2,
-            ..self
-        })
     }
 
     fn checked_up(self, _bounds: Position) -> Option<Self> {
-        match self.row {
-            0 => None,
-            1 if self.col == 1 => Some(Position { row: 0, ..self }),
-            1 => None,
-            _ => Some(Position {
-                row: self.row - 1,
-                ..self
-            }),
+        if self.row == 0 || (self.row == 1 && self.col != 1) {
+            None
+        } else {
+            Some(self.with_row(self.row - 1))
         }
-    }
-
-    fn wrapping_up(self, bounds: Position) -> Self {
-        self.checked_up(bounds).unwrap_or(Position {
-            row: bounds.row - 2,
-            ..self
-        })
     }
 
     fn checked_down(self, bounds: Position) -> Option<Self> {
-        if self.row == bounds.row - 1 {
+        if self.row == bounds.row - 1 || (self.row == bounds.row - 2 && self.col != bounds.col - 2)
+        {
             None
-        } else if self.row == bounds.row - 2 {
-            if self.col == bounds.col - 2 {
-                Some(Position {
-                    row: bounds.row - 1,
-                    ..self
-                })
-            } else {
-                None
-            }
         } else {
-            Some(Position {
-                row: self.row + 1,
-                ..self
-            })
+            Some(self.with_row(self.row + 1))
         }
     }
 
+    fn wrapping_right(self, bounds: Position) -> Self {
+        self.checked_right(bounds).unwrap_or(self.with_col(1))
+    }
+
+    fn wrapping_left(self, bounds: Position) -> Self {
+        self.checked_left(bounds)
+            .unwrap_or(self.with_col(bounds.col - 2))
+    }
+
+    fn wrapping_up(self, bounds: Position) -> Self {
+        self.checked_up(bounds)
+            .unwrap_or(self.with_row(bounds.row - 2))
+    }
+
     fn wrapping_down(self, bounds: Position) -> Self {
-        self.checked_down(bounds)
-            .unwrap_or(Position { row: 1, ..self })
+        self.checked_down(bounds).unwrap_or(self.with_row(1))
     }
 }
 
