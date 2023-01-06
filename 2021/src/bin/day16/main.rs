@@ -74,7 +74,7 @@ fn parse_bits(bits: &mut IntoIter<bool>) -> ParseOutcome {
         5 => (sub_values[0] > sub_values[1]) as usize,
         6 => (sub_values[0] < sub_values[1]) as usize,
         7 => (sub_values[0] == sub_values[1]) as usize,
-        _ => panic!("{} is not a valid type id", type_id),
+        _ => panic!("{type_id} is not a valid type id"),
     };
 
     ParseOutcome { version_sum, value }

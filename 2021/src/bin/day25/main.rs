@@ -46,7 +46,7 @@ fn print_grid(grid: &Array2<Option<SeaCucumber>>) {
                 .collect_vec()
         })
         .collect();
-    println!("{}", s)
+    println!("{s}")
 }
 
 fn step_direction(grid: &mut Array2<Option<SeaCucumber>>, direction: SeaCucumber) -> bool {

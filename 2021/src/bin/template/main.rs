@@ -6,7 +6,7 @@ fn main() {
 }
 
 fn parse(data: &'static str) {
-    println!("{}", data)
+    println!("{data}")
 }
 
 fn part_a(data: &'static str) -> usize {
