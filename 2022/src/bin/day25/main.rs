@@ -12,8 +12,6 @@ const DATA: &str = include_str!("data.txt");
 type OutResult = std::result::Result<(), Box<dyn Error>>;
 type IResult<'a, T> = nom::IResult<&'a str, T>;
 
-type Parsed = i64;
-
 fn snafu_digit(input: &str) -> IResult<i64> {
     alt((
         char('2').value(2),
@@ -28,34 +26,35 @@ fn snafu(input: &str) -> IResult<i64> {
     fold_many1(snafu_digit, || 0, |acc, cur| acc * 5 + cur)(input)
 }
 
-fn parse(data: &str) -> IResult<Parsed> {
+fn parse(data: &str) -> IResult<i64> {
     fold_many1(snafu.terminated(line_ending), || 0, |acc, cur| acc + cur)(data)
 }
 
-fn to_snafu(mut number: i64) -> String {
-    let mut result = String::new();
-    while number != 0 {
-        result.push(match number % 5 {
+fn to_snafu(number: i64) -> String {
+    itertools::unfold(number, |number| {
+        if *number == 0 {
+            return None;
+        }
+        let digit_value = (((*number % 5) + 2) % 5) - 2;
+        *number -= digit_value;
+        *number /= 5;
+        Some(match digit_value {
+            -2 => '=',
+            -1 => '-',
             0 => '0',
             1 => '1',
             2 => '2',
-            3 => {
-                number += 5;
-                '='
-            }
-            4 => {
-                number += 5;
-                '-'
-            }
             _ => unreachable!(),
-        });
-        number /= 5;
-    }
-    result.chars().rev().collect()
+        })
+    })
+    .collect::<String>()
+    .chars()
+    .rev()
+    .collect()
 }
 
-fn solution(data: &Parsed) -> String {
-    to_snafu(*data)
+fn solution(data: i64) -> String {
+    to_snafu(data)
 }
 
 #[cfg(test)]
@@ -65,14 +64,14 @@ mod tests {
 
     #[test]
     fn test() -> OutResult {
-        assert_eq!(solution(&parse(SAMPLE_DATA)?.1), "2=-1=0");
-        println!("solution: {}", solution(&parse(DATA)?.1));
+        assert_eq!(solution(parse(SAMPLE_DATA)?.1), "2=-1=0");
+        println!("solution: {}", solution(parse(DATA)?.1));
         Ok(())
     }
 }
 
 fn main() -> OutResult {
     let parsed = parse(DATA)?.1;
-    println!("solution: {}", solution(&parsed));
+    println!("solution: {}", solution(parsed));
     Ok(())
 }
