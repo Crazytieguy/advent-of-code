@@ -18,24 +18,17 @@ fn mask(width: usize) -> u128 {
     (1 << width) - 1
 }
 
-fn rotate_start(row: &mut u128, width: usize) {
-    *row = (*row >> 1) | ((*row & 1) << (width - 1));
-    *row &= mask(width);
-}
-
-fn rotate_end(row: &mut u128, width: usize) {
-    *row = (*row << 1) | (*row >> (width - 1));
-    *row &= mask(width);
-}
-
 impl Blizzards {
     fn update(&mut self, width: usize) {
         self.up.rotate_left(1);
         self.down.rotate_right(1);
-        self.left
-            .iter_mut()
-            .for_each(|row| rotate_start(row, width));
-        self.right.iter_mut().for_each(|row| rotate_end(row, width));
+        self.left.iter_mut().for_each(|row| {
+            *row = (*row >> 1) | ((*row & 1) << (width - 1));
+        });
+        self.right.iter_mut().for_each(|row| {
+            *row = (*row << 1) | (*row >> (width - 1));
+            *row &= mask(width);
+        });
     }
 }
 
@@ -73,14 +66,17 @@ fn parse(data: &str) -> (Blizzards, usize) {
     )
 }
 
-fn adjacent_positions(positions: &[u128], width: usize) -> Vec<u128> {
-    izip!(
+fn adjacent_positions<const HEIGHT: usize>(positions: &[u128], width: usize) -> [u128; HEIGHT] {
+    let mut new_positions = [0; HEIGHT];
+    for (row, above, cur, bellow) in izip!(
+        &mut new_positions,
         [0].iter().chain(positions),
         positions,
-        positions[1..].iter().chain([0].iter())
-    )
-    .map(|(&above, &cur, &below)| (cur | cur << 1 | cur >> 1 | above | below) & mask(width))
-    .collect()
+        positions.iter().skip(1).chain([0].iter())
+    ) {
+        *row = (cur | cur << 1 | cur >> 1 | above | bellow) & mask(width);
+    }
+    new_positions
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -91,18 +87,19 @@ enum Destination {
 
 use Destination::*;
 
-fn simulate_shortest_path(
+fn simulate_shortest_path<const HEIGHT: usize>(
     blizzards: &mut Blizzards,
     width: usize,
     destination: Destination,
 ) -> usize {
-    let mut positions = vec![0; blizzards.right.len()];
+    assert_eq!(HEIGHT, blizzards.right.len());
+    let mut positions = [0; HEIGHT];
     for minute in 1.. {
         blizzards.update(width);
         positions = adjacent_positions(&positions, width);
         match destination {
             Exit => positions[0] |= 1,
-            Entrance => *positions.last_mut().unwrap() |= 1 << (width - 1),
+            Entrance => positions[HEIGHT - 1] |= 1 << (width - 1),
         }
         for (p, up, down, left, right) in izip!(
             &mut positions,
@@ -113,7 +110,7 @@ fn simulate_shortest_path(
         ) {
             *p &= !(up | down | left | right);
         }
-        if matches!(destination, Exit) && positions.last().unwrap() >> (width - 1) == 1
+        if matches!(destination, Exit) && positions[HEIGHT - 1] >> (width - 1) == 1
             || matches!(destination, Entrance) && positions[0] & 1 == 1
         {
             blizzards.update(width);
@@ -123,14 +120,18 @@ fn simulate_shortest_path(
     unreachable!()
 }
 
-fn part_a(blizzards: &mut Blizzards, width: usize) -> usize {
-    simulate_shortest_path(blizzards, width, Exit)
+fn part_a<const HEIGHT: usize>(blizzards: &mut Blizzards, width: usize) -> usize {
+    simulate_shortest_path::<HEIGHT>(blizzards, width, Exit)
 }
 
-fn part_b(blizzards: &mut Blizzards, width: usize, part_a_ans: usize) -> usize {
+fn part_b<const HEIGHT: usize>(
+    blizzards: &mut Blizzards,
+    width: usize,
+    part_a_ans: usize,
+) -> usize {
     part_a_ans
-        + simulate_shortest_path(blizzards, width, Entrance)
-        + simulate_shortest_path(blizzards, width, Exit)
+        + simulate_shortest_path::<HEIGHT>(blizzards, width, Entrance)
+        + simulate_shortest_path::<HEIGHT>(blizzards, width, Exit)
 }
 
 #[cfg(test)]
@@ -141,15 +142,15 @@ mod tests {
     #[test]
     fn test_a() -> OutResult {
         let (mut blizzards, width) = parse(SAMPLE_DATA);
-        assert_eq!(part_a(&mut blizzards, width), 18);
+        assert_eq!(part_a::<4>(&mut blizzards, width), 18);
         Ok(())
     }
 
     #[test]
     fn test_b() -> OutResult {
         let (mut blizzards, width) = parse(SAMPLE_DATA);
-        let a = part_a(&mut blizzards, width);
-        assert_eq!(part_b(&mut blizzards, width, a), 54);
+        let a = part_a::<4>(&mut blizzards, width);
+        assert_eq!(part_b::<4>(&mut blizzards, width, a), 54);
         Ok(())
     }
 }
@@ -157,9 +158,9 @@ mod tests {
 fn main() -> OutResult {
     let (mut blizzards, width) = parse(DATA);
     let start = std::time::Instant::now();
-    let a = part_a(&mut blizzards, width);
+    let a = part_a::<25>(&mut blizzards, width);
     println!("part a: {a}");
-    let b = part_b(&mut blizzards, width, a);
+    let b = part_b::<25>(&mut blizzards, width, a);
     println!("part b: {b}");
     println!("{:?}", start.elapsed());
     Ok(())
