@@ -1,185 +1,123 @@
-use std::{collections::HashSet, error::Error};
+use std::error::Error;
 
+use bitvec::prelude::BitArray;
 use itertools::Itertools;
-use Direction::*;
 
 const DATA: &str = include_str!("data.txt");
 
 type OutResult = std::result::Result<(), Box<dyn Error>>;
 
-#[derive(Debug, Clone, Copy)]
-enum Direction {
-    Up,
-    Down,
-    Left,
-    Right,
+type BitGrid = [BitArray<[u64; 2]>; 25];
+
+#[derive(Debug, Default, Clone, Copy)]
+struct Blizzards {
+    up: BitGrid,
+    down: BitGrid,
+    left: BitGrid,
+    right: BitGrid,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-struct Position {
-    row: u8,
-    col: u8,
+impl Blizzards {
+    fn update(&mut self, height: usize, width: usize) {
+        self.up[..height].rotate_left(1);
+        self.down[..height].rotate_right(1);
+        self.left
+            .iter_mut()
+            .for_each(|row| row[..width].rotate_left(1));
+        self.right
+            .iter_mut()
+            .for_each(|row| row[..width].rotate_right(1));
+    }
 }
 
-#[derive(Debug, Clone, Copy)]
-struct Blizzard {
-    direction: Direction,
-    position: Position,
-}
-
-fn parse(data: &str) -> (Vec<Blizzard>, Position) {
+fn parse(data: &str) -> (Blizzards, usize, usize) {
     let lines = data.lines().collect_vec();
-    let height = lines.len() as u8;
-    let width = lines[0].len() as u8;
-    let blizzards = lines
+    let height = lines.len() - 2;
+    let width = lines[0].len() - 2;
+    let mut blizzards = Blizzards::default();
+    lines
         .into_iter()
+        .filter(|line| &line[2..3] != "#")
         .enumerate()
-        .flat_map(|(row, line)| {
-            line.chars().enumerate().filter_map(move |(col, c)| {
-                let direction = match c {
-                    '>' => Right,
-                    '<' => Left,
-                    'v' => Down,
-                    '^' => Up,
-                    _ => return None,
-                };
-                Some(Blizzard {
-                    direction,
-                    position: Position {
-                        row: row as u8,
-                        col: col as u8,
-                    },
+        .for_each(|(row, line)| {
+            line.chars()
+                .filter(|&c| c != '#')
+                .enumerate()
+                .for_each(|(col, c)| {
+                    match c {
+                        '>' => blizzards.right[row].set(col, true),
+                        '<' => blizzards.left[row].set(col, true),
+                        '^' => blizzards.up[row].set(col, true),
+                        'v' => blizzards.down[row].set(col, true),
+                        _ => {}
+                    };
                 })
-            })
-        })
-        .collect();
-    (
-        blizzards,
-        Position {
-            row: height,
-            col: width,
-        },
-    )
+        });
+    (blizzards, height, width)
 }
 
-impl Position {
-    fn with_row(self, row: u8) -> Self {
-        Position { row, ..self }
-    }
-
-    fn with_col(self, col: u8) -> Self {
-        Position { col, ..self }
-    }
-
-    fn checked_right(self, bounds: Position) -> Option<Self> {
-        if self.row == 0 || self.col == bounds.col - 2 {
-            None
-        } else {
-            Some(self.with_col(self.col + 1))
+fn adjacent_positions(positions: &BitGrid, height: usize, width: usize) -> BitGrid {
+    let mut next_positions = *positions;
+    for row in 0..height {
+        next_positions[row][1..width] |= &positions[row][0..width - 1];
+        next_positions[row][0..width - 1] |= &positions[row][1..width];
+        if row > 0 {
+            next_positions[row] |= &positions[row - 1];
+        }
+        if row < height - 1 {
+            next_positions[row] |= &positions[row + 1];
         }
     }
-
-    fn checked_left(self, bounds: Position) -> Option<Self> {
-        if self.col == 1 || self.row == bounds.row - 1 {
-            None
-        } else {
-            Some(self.with_col(self.col - 1))
-        }
-    }
-
-    fn checked_up(self, _bounds: Position) -> Option<Self> {
-        if self.row == 0 || (self.row == 1 && self.col != 1) {
-            None
-        } else {
-            Some(self.with_row(self.row - 1))
-        }
-    }
-
-    fn checked_down(self, bounds: Position) -> Option<Self> {
-        if self.row == bounds.row - 1 || (self.row == bounds.row - 2 && self.col != bounds.col - 2)
-        {
-            None
-        } else {
-            Some(self.with_row(self.row + 1))
-        }
-    }
-
-    fn wrapping_right(self, bounds: Position) -> Self {
-        self.checked_right(bounds).unwrap_or(self.with_col(1))
-    }
-
-    fn wrapping_left(self, bounds: Position) -> Self {
-        self.checked_left(bounds)
-            .unwrap_or(self.with_col(bounds.col - 2))
-    }
-
-    fn wrapping_up(self, bounds: Position) -> Self {
-        self.checked_up(bounds)
-            .unwrap_or(self.with_row(bounds.row - 2))
-    }
-
-    fn wrapping_down(self, bounds: Position) -> Self {
-        self.checked_down(bounds).unwrap_or(self.with_row(1))
-    }
+    next_positions
 }
 
+#[derive(Debug, Clone, Copy)]
+enum Destination {
+    Exit,
+    Entrance,
+}
+
+use Destination::*;
+
+#[allow(clippy::needless_range_loop)]
 fn simulate_shortest_path(
-    blizzards: &mut [Blizzard],
-    &bounds: &Position,
-    start: Position,
-    goal: Position,
+    blizzards: &mut Blizzards,
+    height: usize,
+    width: usize,
+    destination: Destination,
 ) -> usize {
-    let mut positions = HashSet::from([start]);
+    let mut positions = BitGrid::default();
     for minute in 1.. {
-        positions = positions
-            .into_iter()
-            .flat_map(|p| {
-                [
-                    Some(p),
-                    p.checked_down(bounds),
-                    p.checked_up(bounds),
-                    p.checked_left(bounds),
-                    p.checked_right(bounds),
-                ]
-            })
-            .flatten()
-            .collect();
-        for blizzard in blizzards.iter_mut() {
-            blizzard.position = match blizzard.direction {
-                Up => blizzard.position.wrapping_up(bounds),
-                Down => blizzard.position.wrapping_down(bounds),
-                Left => blizzard.position.wrapping_left(bounds),
-                Right => blizzard.position.wrapping_right(bounds),
-            };
-            positions.remove(&blizzard.position);
+        blizzards.update(height, width);
+        positions = adjacent_positions(&positions, height, width);
+        match destination {
+            Exit => positions[0].set(0, true),
+            Entrance => positions[height - 1].set(width - 1, true),
         }
-        if positions.contains(&goal) {
-            return minute;
+        for row in 0..height {
+            positions[row] &= &!(blizzards.up[row]
+                | blizzards.down[row]
+                | blizzards.left[row]
+                | blizzards.right[row]);
+        }
+        if matches!(destination, Exit) && positions[height - 1][width - 1]
+            || matches!(destination, Entrance) && positions[0][0]
+        {
+            blizzards.update(height, width);
+            return minute + 1;
         }
     }
     unreachable!()
 }
 
-fn part_a((blizzards, bounds): &(Vec<Blizzard>, Position)) -> usize {
-    let mut blizzards = blizzards.clone();
-    let start = Position { row: 0, col: 1 };
-    let goal = Position {
-        row: bounds.row - 1,
-        col: bounds.col - 2,
-    };
-    simulate_shortest_path(&mut blizzards, bounds, start, goal)
+fn part_a((mut blizzards, height, width): (Blizzards, usize, usize)) -> usize {
+    simulate_shortest_path(&mut blizzards, height, width, Exit)
 }
 
-fn part_b((blizzards, bounds): &(Vec<Blizzard>, Position)) -> usize {
-    let mut blizzards = blizzards.clone();
-    let start = Position { row: 0, col: 1 };
-    let goal = Position {
-        row: bounds.row - 1,
-        col: bounds.col - 2,
-    };
-    simulate_shortest_path(&mut blizzards, bounds, start, goal)
-        + simulate_shortest_path(&mut blizzards, bounds, goal, start)
-        + simulate_shortest_path(&mut blizzards, bounds, start, goal)
+fn part_b((mut blizzards, height, width): (Blizzards, usize, usize)) -> usize {
+    simulate_shortest_path(&mut blizzards, height, width, Exit)
+        + simulate_shortest_path(&mut blizzards, height, width, Entrance)
+        + simulate_shortest_path(&mut blizzards, height, width, Exit)
 }
 
 #[cfg(test)]
@@ -189,22 +127,22 @@ mod tests {
 
     #[test]
     fn test_a() -> OutResult {
-        assert_eq!(part_a(&parse(SAMPLE_DATA)), 18);
-        println!("part a: {}", part_a(&parse(DATA)));
+        assert_eq!(part_a(parse(SAMPLE_DATA)), 18);
+        println!("part a: {}", part_a(parse(DATA)));
         Ok(())
     }
 
     #[test]
     fn test_b() -> OutResult {
-        assert_eq!(part_b(&parse(SAMPLE_DATA)), 54);
-        println!("part b: {}", part_b(&parse(DATA)));
+        assert_eq!(part_b(parse(SAMPLE_DATA)), 54);
+        println!("part b: {}", part_b(parse(DATA)));
         Ok(())
     }
 }
 
 fn main() -> OutResult {
     let parsed = parse(DATA);
-    println!("part a: {}", part_a(&parsed));
-    println!("part b: {}", part_b(&parsed));
+    println!("part a: {}", part_a(parsed));
+    println!("part b: {}", part_b(parsed));
     Ok(())
 }
