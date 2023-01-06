@@ -6,7 +6,6 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-bitvec = "1.0.1"
 itertools = "0.10.5"
 nom = "7.1.1"
 nom-supreme = "0.8.0"
