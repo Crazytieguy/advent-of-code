@@ -21,7 +21,6 @@ impl BasicSolution for Day {
     fn parse(data: &'static str) -> IResult<Self::Parsed> {
         separated_list1(line_ending, monkey)
             .map(|monkeys| monkeys.into_iter().collect())
-            .terminated(line_ending)
             .parse(data)
     }
 

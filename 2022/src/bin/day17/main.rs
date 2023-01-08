@@ -1,12 +1,7 @@
 #![feature(array_windows)]
 use advent_2022::*;
 use itertools::Itertools;
-use nom::{
-    branch::alt,
-    character::complete::{char, line_ending},
-    multi::many1,
-    Parser,
-};
+use nom::{branch::alt, character::complete::char, multi::many1};
 use nom_supreme::ParserExt;
 
 boilerplate!(Day);
@@ -21,9 +16,7 @@ impl BasicSolution for Day {
         many1(alt((
             char('>').value(Direction::Right),
             char('<').value(Direction::Left),
-        )))
-        .terminated(line_ending)
-        .parse(data)
+        )))(data)
     }
 
     fn a(data: Self::Parsed) -> usize {

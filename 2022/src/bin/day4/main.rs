@@ -23,9 +23,7 @@ impl BasicSolution for Day {
             u32.separated_array(char('-'))
                 .map(|[a, b]| a..=b)
                 .separated_array(char(',')),
-        )
-        .terminated(line_ending)
-        .parse(data)
+        )(data)
     }
 
     fn a(data: Self::Parsed) -> Self::Answer {

@@ -19,9 +19,7 @@ impl BasicSolution for Day {
     const SAMPLE_ANSWER_B: Self::TestAnswer = 1707;
 
     fn parse(data: &str) -> IResult<Self::Parsed> {
-        let (input, rows) = separated_list1(line_ending, parse_row)
-            .terminated(line_ending)
-            .parse(data)?;
+        let (input, rows) = separated_list1(line_ending, parse_row)(data)?;
         let shortest_path_lengths_uncompressed = floyd_warshall(&rows);
 
         let interesting_valve_indices = rows

@@ -5,7 +5,6 @@ use nom::{
     character::complete::{char, line_ending, u8},
     multi::separated_list1,
     sequence::separated_pair,
-    Parser,
 };
 use nom_supreme::ParserExt;
 
@@ -18,9 +17,7 @@ impl BasicSolution for Day {
     const SAMPLE_ANSWER_B: Self::TestAnswer = 1;
 
     fn parse(data: &'static str) -> IResult<Self::Parsed> {
-        separated_list1(line_ending, movement)
-            .terminated(line_ending)
-            .parse(data)
+        separated_list1(line_ending, movement)(data)
     }
 
     fn a(data: Self::Parsed) -> Self::Answer {

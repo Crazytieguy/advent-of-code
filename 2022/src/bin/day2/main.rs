@@ -4,7 +4,6 @@ use nom::{
     character::complete::{char, line_ending},
     multi::separated_list1,
     sequence::separated_pair,
-    Parser,
 };
 use nom_supreme::ParserExt;
 
@@ -24,9 +23,7 @@ impl BasicSolution for Day {
                 char(' '),
                 alt((char('X').value(0), char('Y').value(1), char('Z').value(2))),
             ),
-        )
-        .terminated(line_ending)
-        .parse(data)
+        )(data)
     }
 
     fn a(data: Self::Parsed) -> Self::Answer {

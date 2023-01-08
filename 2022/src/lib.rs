@@ -1,5 +1,6 @@
 #![feature(associated_type_defaults)]
-use nom_supreme::final_parser::final_parser;
+use nom::character::complete::line_ending;
+use nom_supreme::{final_parser::final_parser, ParserExt};
 use std::{
     fmt::{Debug, Display},
     time::Instant,
@@ -74,11 +75,11 @@ pub trait Solution: SolutionData {
     fn b_test(data: Self::ParsedTest) -> Self::Answer;
 
     fn final_parse(data: &'static str) -> Result<Self::Parsed, nom::error::Error<&str>> {
-        final_parser(Self::parse)(data)
+        final_parser(Self::parse.terminated(line_ending.opt()))(data)
     }
 
     fn final_parse_test(data: &'static str) -> Result<Self::ParsedTest, nom::error::Error<&str>> {
-        final_parser(Self::parse_test)(data)
+        final_parser(Self::parse_test.terminated(line_ending.opt()))(data)
     }
 
     fn test_a() -> OutResult {

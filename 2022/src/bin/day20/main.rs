@@ -3,9 +3,7 @@ use itertools::{iterate, Itertools};
 use nom::{
     character::complete::{i64, line_ending},
     multi::separated_list1,
-    Parser,
 };
-use nom_supreme::ParserExt;
 
 boilerplate!(Day);
 
@@ -16,9 +14,7 @@ impl Solution for Day {
     const SAMPLE_ANSWER_B: Self::TestAnswer = 1623178306;
 
     fn parse(data: &'static str) -> IResult<Self::Parsed> {
-        separated_list1(line_ending, i64)
-            .terminated(line_ending)
-            .parse(data)
+        separated_list1(line_ending, i64)(data)
     }
 
     fn parse_test(data: &'static str) -> IResult<Self::ParsedTest> {

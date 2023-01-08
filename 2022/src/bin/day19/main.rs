@@ -6,7 +6,6 @@ use nom::{
     sequence::{delimited, separated_pair},
     Parser,
 };
-use nom_supreme::ParserExt;
 use std::ops::{Add, Mul};
 
 boilerplate!(Day);
@@ -18,9 +17,7 @@ impl BasicSolution for Day {
     const SAMPLE_ANSWER_B: Self::TestAnswer = 56 * 62;
 
     fn parse(data: &'static str) -> IResult<Self::Parsed> {
-        separated_list1(line_ending, blueprint)
-            .terminated(line_ending)
-            .parse(data)
+        separated_list1(line_ending, blueprint)(data)
     }
 
     fn a(data: Self::Parsed) -> Self::Answer {

@@ -5,7 +5,6 @@ use nom::{
     sequence::tuple,
     Parser,
 };
-use nom_supreme::ParserExt;
 
 boilerplate!(Day);
 
@@ -49,7 +48,6 @@ type Arr3D<const N: usize> = [[[bool; N]; N]; N];
 
 fn parse<const N: usize>(data: &str) -> IResult<(Vec<Tuple>, Arr3D<N>)> {
     separated_list1(line_ending, parse_cube)
-        .terminated(line_ending)
         .map(|coords| {
             let mut matrix = [[[false; N]; N]; N];
             for &(x, y, z) in &coords {

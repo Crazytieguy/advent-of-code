@@ -5,7 +5,6 @@ use nom::{
     character::complete::{i32, line_ending},
     multi::separated_list1,
     sequence::tuple,
-    Parser,
 };
 use nom_supreme::ParserExt;
 use std::ops::Range;
@@ -19,9 +18,7 @@ impl Solution for Day {
     const SAMPLE_ANSWER_B: Self::TestAnswer = 56_000_011;
 
     fn parse(data: &str) -> IResult<Self::Parsed> {
-        separated_list1(line_ending, pair)
-            .terminated(line_ending)
-            .parse(data)
+        separated_list1(line_ending, pair)(data)
     }
 
     fn parse_test(data: &'static str) -> IResult<Self::ParsedTest> {

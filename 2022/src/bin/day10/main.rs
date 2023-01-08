@@ -26,9 +26,7 @@ impl BasicSolution for Day {
 #######.......#######.......#######.....";
 
     fn parse(data: &'static str) -> IResult<Self::Parsed> {
-        separated_list1(line_ending, parse_operation)
-            .terminated(line_ending)
-            .parse(data)
+        separated_list1(line_ending, parse_operation)(data)
     }
 
     fn a(data: Self::Parsed) -> Self::Answer {
