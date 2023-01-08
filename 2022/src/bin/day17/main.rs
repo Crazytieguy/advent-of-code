@@ -24,14 +24,18 @@ impl BasicSolution for Day {
     }
 
     fn b(data: Self::Parsed) -> usize {
-        let chamber = simulate(&data, 5000);
-        let (pattern_start, pattern_length) = chamber
-            .windows(50)
-            .enumerate()
-            .tuple_combinations()
-            .find(|((_, a), (_, b))| a == b)
-            .map(|((i, _), (j, _))| (i, j - i))
+        let chamber = simulate(&data, 3000);
+        let pattern_length = chamber[..chamber.len() - 100]
+            .windows(100)
+            .rev()
+            .position(|a| a == &chamber[chamber.len() - 100..])
+            .map(|p| p + 100)
             .expect("There should be a pattern!");
+        let pattern_start = chamber
+            .windows(100)
+            .zip(chamber[pattern_length..].windows(100))
+            .position(|(a, b)| a == b)
+            .expect("The pattern should start somewhere");
 
         let rocks_before_pattern = count_rocks_in_chamber_slice(&chamber[..pattern_start]);
 
@@ -41,12 +45,10 @@ impl BasicSolution for Day {
             (1_000_000_000_000 - rocks_before_pattern) / rocks_generated_in_pattern;
         let leftover_rocks =
             (1_000_000_000_000 - rocks_before_pattern) % rocks_generated_in_pattern;
-        let leftover_rocks_height = (0..=pattern_length)
-            .find(|&i| {
-                count_rocks_in_chamber_slice(&chamber[pattern_start..pattern_start + i])
-                    >= leftover_rocks
-            })
-            .expect("There should be a leftover rock height");
+        let leftover_rocks_height = (0..=pattern_length).collect_vec().partition_point(|&i| {
+            count_rocks_in_chamber_slice(&chamber[pattern_start..pattern_start + i])
+                < leftover_rocks
+        });
         // print_chamber(&chamber);
         num_pattern_repetitions * pattern_length + pattern_start + leftover_rocks_height
     }
