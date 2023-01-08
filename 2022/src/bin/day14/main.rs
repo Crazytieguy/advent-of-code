@@ -3,68 +3,68 @@ use itertools::process_results;
 use nom::{
     character::complete::{char, u16, u8},
     sequence::separated_pair,
+    Parser,
 };
-use std::collections::HashSet;
 
 boilerplate!(Day);
 
 impl BasicSolution for Day {
-    type Parsed = HashSet<(u16, u8)>;
+    type Parsed = (BitGrid, usize);
     type Answer = usize;
     const SAMPLE_ANSWER_A: Self::TestAnswer = 24;
     const SAMPLE_ANSWER_B: Self::TestAnswer = 93;
 
     fn parse(data: &str) -> IResult<Self::Parsed> {
-        let mut rocks = HashSet::new();
+        let mut rocks = BitGrid::new();
+        let mut max_y = 0;
         for line in data.lines() {
             process_results(line.split(" -> ").map(parse_coords), |it| {
                 it.map(|(_, xy)| xy).reduce(|(x1, y1), (x2, y2)| {
+                    max_y = max_y.max(y1).max(y2);
                     for x in x1.min(x2)..=x1.max(x2) {
                         for y in y1.min(y2)..=y1.max(y2) {
-                            rocks.insert((x, y));
+                            rocks.insert(x, y);
                         }
                     }
                     (x2, y2)
                 })
             })?;
         }
-        Ok(("", rocks))
+        Ok(("", (rocks, max_y)))
     }
 
-    fn a(data: Self::Parsed) -> Self::Answer {
-        solve::<false>(data)
+    fn a((rocks, max_y): Self::Parsed) -> Self::Answer {
+        solve::<false>(rocks, max_y)
     }
 
-    fn b(data: Self::Parsed) -> Self::Answer {
-        solve::<true>(data)
+    fn b((rocks, max_y): Self::Parsed) -> Self::Answer {
+        solve::<true>(rocks, max_y)
     }
 }
 
-fn solve<const SOLID_FLOOR: bool>(mut taken_coords: HashSet<(u16, u8)>) -> usize {
+#[derive(Debug, Clone)]
+struct BitGrid([[u32; 5]; 320]);
+
+fn solve<const SOLID_FLOOR: bool>(mut taken_coords: BitGrid, max_y: usize) -> usize {
     let num_rocks = taken_coords.len();
-    let max_y = taken_coords
-        .iter()
-        .map(|&(_, y)| y)
-        .max()
-        .expect("At least one rock");
     drop_sand::<SOLID_FLOOR>(&mut taken_coords, max_y + 2, 500, 0);
     taken_coords.len() - num_rocks
 }
 
-fn parse_coords(data: &str) -> IResult<(u16, u8)> {
-    separated_pair(u16, char(','), u8)(data)
+fn parse_coords(data: &str) -> IResult<(usize, usize)> {
+    separated_pair(u16.map(usize::from), char(','), u8.map(usize::from))(data)
 }
 
 fn drop_sand<const SOLID_FLOOR: bool>(
-    taken_coords: &mut HashSet<(u16, u8)>,
-    floor: u8,
-    x: u16,
-    y: u8,
+    taken_coords: &mut BitGrid,
+    floor: usize,
+    x: usize,
+    y: usize,
 ) -> bool {
     if y == floor {
         return true;
     }
-    if taken_coords.contains(&(x, y)) {
+    if taken_coords.contains(x, y) {
         return false;
     }
     for x in [x, x - 1, x + 1] {
@@ -72,6 +72,28 @@ fn drop_sand<const SOLID_FLOOR: bool>(
             return true;
         }
     }
-    taken_coords.insert((x, y));
+    taken_coords.insert(x, y);
     false
+}
+
+impl BitGrid {
+    fn new() -> Self {
+        Self([[0; 5]; 320])
+    }
+
+    fn len(&self) -> usize {
+        self.0
+            .into_iter()
+            .flatten()
+            .map(|x| x.count_ones() as usize)
+            .sum()
+    }
+
+    fn insert(&mut self, x: usize, y: usize) {
+        self.0[x + 160 - 500][y / 32] |= 1 << (y % 32);
+    }
+
+    fn contains(&self, x: usize, y: usize) -> bool {
+        self.0[x + 160 - 500][y / 32] & (1 << (y % 32)) != 0
+    }
 }
