@@ -13,10 +13,9 @@ boilerplate!(Day);
 
 impl Solution for Day {
     type Parsed = (Vec<&'static [u8]>, Vec<Move>);
-    type A = usize;
-    type B = usize;
-    const SAMPLE_ANSWER_A: Self::TestA = 6032;
-    const SAMPLE_ANSWER_B: Self::TestB = 5031;
+    type Answer = usize;
+    const SAMPLE_ANSWER_A: Self::TestAnswer = 6032;
+    const SAMPLE_ANSWER_B: Self::TestAnswer = 5031;
 
     fn parse(data: &'static str) -> IResult<Self::Parsed> {
         let mut lines = data.lines();
@@ -37,19 +36,19 @@ impl Solution for Day {
         Self::parse(data)
     }
 
-    fn a(data: Self::Parsed) -> Self::A {
+    fn a(data: Self::Parsed) -> Self::Answer {
         solve(data, move_one_2d::<150, 200>)
     }
 
-    fn a_test(data: Self::ParsedTest) -> Self::TestA {
+    fn a_test(data: Self::ParsedTest) -> Self::TestAnswer {
         solve(data, move_one_2d::<16, 12>)
     }
 
-    fn b(data: Self::Parsed) -> Self::B {
+    fn b(data: Self::Parsed) -> Self::Answer {
         solve(data, move_one_cube)
     }
 
-    fn b_test(data: Self::ParsedTest) -> Self::TestB {
+    fn b_test(data: Self::ParsedTest) -> Self::TestAnswer {
         solve(data, move_one_sample_cube)
     }
 }

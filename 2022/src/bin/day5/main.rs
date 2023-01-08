@@ -18,12 +18,10 @@ boilerplate!(Day);
 
 impl BasicSolution for Day {
     type Parsed = (Stacks, Vec<Instruction>);
-    type A = String;
-    type B = String;
-    type TestA = &'static str;
-    type TestB = &'static str;
-    const SAMPLE_ANSWER_A: Self::TestA = "CMZ";
-    const SAMPLE_ANSWER_B: Self::TestB = "MCD";
+    type Answer = String;
+    type TestAnswer = &'static str;
+    const SAMPLE_ANSWER_A: Self::TestAnswer = "CMZ";
+    const SAMPLE_ANSWER_B: Self::TestAnswer = "MCD";
 
     fn parse(data: &'static str) -> IResult<Self::Parsed> {
         separated_pair(stacks, line_ending, instructions)
@@ -31,11 +29,11 @@ impl BasicSolution for Day {
             .parse(data)
     }
 
-    fn a((stacks, instructions): Self::Parsed) -> Self::A {
+    fn a((stacks, instructions): Self::Parsed) -> Self::Answer {
         solve::<true>(stacks, &instructions)
     }
 
-    fn b((stacks, instructions): Self::Parsed) -> Self::B {
+    fn b((stacks, instructions): Self::Parsed) -> Self::Answer {
         solve::<false>(stacks, &instructions)
     }
 }

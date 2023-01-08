@@ -5,20 +5,19 @@ boilerplate!(Day);
 
 impl BasicSolution for Day {
     type Parsed = &'static str;
-    type A = usize;
-    type B = usize;
-    const SAMPLE_ANSWER_A: Self::TestA = 7;
-    const SAMPLE_ANSWER_B: Self::TestB = 19;
+    type Answer = usize;
+    const SAMPLE_ANSWER_A: Self::TestAnswer = 7;
+    const SAMPLE_ANSWER_B: Self::TestAnswer = 19;
 
     fn parse(data: &'static str) -> IResult<Self::Parsed> {
         Ok(("", data))
     }
 
-    fn a(data: Self::Parsed) -> Self::A {
+    fn a(data: Self::Parsed) -> Self::Answer {
         solve::<4>(data)
     }
 
-    fn b(data: Self::Parsed) -> Self::B {
+    fn b(data: Self::Parsed) -> Self::Answer {
         solve::<14>(data)
     }
 }

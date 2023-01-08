@@ -13,10 +13,9 @@ boilerplate!(Day);
 
 impl BasicSolution for Day {
     type Parsed = Vec<RangesPair>;
-    type A = usize;
-    type B = usize;
-    const SAMPLE_ANSWER_A: Self::TestA = 2;
-    const SAMPLE_ANSWER_B: Self::TestB = 4;
+    type Answer = usize;
+    const SAMPLE_ANSWER_A: Self::TestAnswer = 2;
+    const SAMPLE_ANSWER_B: Self::TestAnswer = 4;
 
     fn parse(data: &'static str) -> IResult<Self::Parsed> {
         separated_list1(
@@ -29,13 +28,13 @@ impl BasicSolution for Day {
         .parse(data)
     }
 
-    fn a(data: Self::Parsed) -> Self::A {
+    fn a(data: Self::Parsed) -> Self::Answer {
         data.into_iter()
             .filter(one_range_contains_the_other)
             .count()
     }
 
-    fn b(data: Self::Parsed) -> Self::B {
+    fn b(data: Self::Parsed) -> Self::Answer {
         data.into_iter().filter(ranges_overlap).count()
     }
 }

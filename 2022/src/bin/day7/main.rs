@@ -16,10 +16,9 @@ const NEEDED_DISK_SPACE: u32 = 30000000;
 
 impl BasicSolution for Day {
     type Parsed = HashMap<Vec<&'static str>, u32>;
-    type A = u32;
-    type B = u32;
-    const SAMPLE_ANSWER_A: Self::TestA = 95437;
-    const SAMPLE_ANSWER_B: Self::TestB = 24933642;
+    type Answer = u32;
+    const SAMPLE_ANSWER_A: Self::TestAnswer = 95437;
+    const SAMPLE_ANSWER_B: Self::TestAnswer = 24933642;
 
     fn parse(data: &'static str) -> IResult<Self::Parsed> {
         let mut current_dir = vec![];
@@ -33,11 +32,11 @@ impl BasicSolution for Day {
         )(data)
     }
 
-    fn a(data: Self::Parsed) -> Self::A {
+    fn a(data: Self::Parsed) -> Self::Answer {
         data.into_values().filter(|&size| size < 100000).sum()
     }
 
-    fn b(data: Self::Parsed) -> Self::B {
+    fn b(data: Self::Parsed) -> Self::Answer {
         let root_directory_size = data[&vec![]];
         let need_to_free =
             (root_directory_size + NEEDED_DISK_SPACE).saturating_sub(TOTAL_DISK_SPACE);

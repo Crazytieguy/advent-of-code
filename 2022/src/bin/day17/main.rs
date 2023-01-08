@@ -13,10 +13,9 @@ boilerplate!(Day);
 
 impl BasicSolution for Day {
     type Parsed = Vec<Direction>;
-    type A = usize;
-    type B = usize;
-    const SAMPLE_ANSWER_A: Self::TestA = 3068;
-    const SAMPLE_ANSWER_B: Self::TestB = 1_514_285_714_288;
+    type Answer = usize;
+    const SAMPLE_ANSWER_A: Self::TestAnswer = 3068;
+    const SAMPLE_ANSWER_B: Self::TestAnswer = 1_514_285_714_288;
 
     fn parse(data: &str) -> IResult<Self::Parsed> {
         many1(alt((

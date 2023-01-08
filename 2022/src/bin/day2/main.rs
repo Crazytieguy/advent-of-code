@@ -12,10 +12,9 @@ boilerplate!(Day);
 
 impl BasicSolution for Day {
     type Parsed = Vec<(i8, i8)>;
-    type A = u32;
-    type B = u32;
-    const SAMPLE_ANSWER_A: Self::TestA = 15;
-    const SAMPLE_ANSWER_B: Self::TestB = 12;
+    type Answer = u32;
+    const SAMPLE_ANSWER_A: Self::TestAnswer = 15;
+    const SAMPLE_ANSWER_B: Self::TestAnswer = 12;
 
     fn parse(data: &str) -> IResult<Self::Parsed> {
         separated_list1(
@@ -30,7 +29,7 @@ impl BasicSolution for Day {
         .parse(data)
     }
 
-    fn a(data: Self::Parsed) -> Self::A {
+    fn a(data: Self::Parsed) -> Self::Answer {
         data.into_iter()
             .map(|(opponent_choice, own_choice)| {
                 let result_score = match (own_choice - opponent_choice).rem_euclid(3) {
@@ -45,7 +44,7 @@ impl BasicSolution for Day {
             .sum()
     }
 
-    fn b(data: Self::Parsed) -> Self::B {
+    fn b(data: Self::Parsed) -> Self::Answer {
         data.into_iter()
             .map(|(opponent_choice, result)| {
                 let choice_score = (opponent_choice + result - 1).rem_euclid(3) as u32 + 1;

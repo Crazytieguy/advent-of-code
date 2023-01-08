@@ -14,10 +14,9 @@ boilerplate!(Day);
 
 impl Solution for Day {
     type Parsed = Vec<Pair>;
-    type A = usize;
-    type B = i64;
-    const SAMPLE_ANSWER_A: Self::TestA = 26;
-    const SAMPLE_ANSWER_B: Self::TestB = 56_000_011;
+    type Answer = i64;
+    const SAMPLE_ANSWER_A: Self::TestAnswer = 26;
+    const SAMPLE_ANSWER_B: Self::TestAnswer = 56_000_011;
 
     fn parse(data: &str) -> IResult<Self::Parsed> {
         separated_list1(line_ending, pair)
@@ -29,19 +28,19 @@ impl Solution for Day {
         Self::parse(data)
     }
 
-    fn a(data: Self::Parsed) -> Self::A {
-        solve_a::<2_000_000>(data)
+    fn a(data: Self::Parsed) -> Self::Answer {
+        solve_a::<2_000_000>(data) as i64
     }
 
-    fn a_test(data: Self::Parsed) -> Self::A {
-        solve_a::<10>(data)
+    fn a_test(data: Self::Parsed) -> Self::Answer {
+        solve_a::<10>(data) as i64
     }
 
-    fn b(data: Self::Parsed) -> Self::B {
+    fn b(data: Self::Parsed) -> Self::Answer {
         solve_b::<4_000_000>(data)
     }
 
-    fn b_test(data: Self::Parsed) -> Self::B {
+    fn b_test(data: Self::Parsed) -> Self::Answer {
         solve_b::<20>(data)
     }
 }

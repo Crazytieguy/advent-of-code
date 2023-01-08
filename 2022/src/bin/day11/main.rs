@@ -15,20 +15,19 @@ boilerplate!(Day);
 
 impl BasicSolution for Day {
     type Parsed = Vec<Monkey>;
-    type A = u64;
-    type B = u64;
-    const SAMPLE_ANSWER_A: Self::TestA = 10605;
-    const SAMPLE_ANSWER_B: Self::TestB = 2713310158;
+    type Answer = u64;
+    const SAMPLE_ANSWER_A: Self::TestAnswer = 10605;
+    const SAMPLE_ANSWER_B: Self::TestAnswer = 2713310158;
 
     fn parse(data: &'static str) -> IResult<Self::Parsed> {
         separated_list1(line_ending, monkey)(data)
     }
 
-    fn a(mut monkeys: Self::Parsed) -> Self::A {
+    fn a(mut monkeys: Self::Parsed) -> Self::Answer {
         stuff_slinging_simian_shenanigans(&mut monkeys, 20, |n| n / 3)
     }
 
-    fn b(mut monkeys: Self::Parsed) -> Self::B {
+    fn b(mut monkeys: Self::Parsed) -> Self::Answer {
         let least_common_denominator: u64 = monkeys.iter().map(|m| m.test).product();
         stuff_slinging_simian_shenanigans(&mut monkeys, 10000, |n| n % least_common_denominator)
     }

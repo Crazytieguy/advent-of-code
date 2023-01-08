@@ -14,10 +14,9 @@ boilerplate!(Day);
 
 impl BasicSolution for Day {
     type Parsed = (FlowRates, ShortestPathLengths, FlowRateIndices, usize);
-    type A = u16;
-    type B = u16;
-    const SAMPLE_ANSWER_A: Self::TestA = 1651;
-    const SAMPLE_ANSWER_B: Self::TestB = 1707;
+    type Answer = u16;
+    const SAMPLE_ANSWER_A: Self::TestAnswer = 1651;
+    const SAMPLE_ANSWER_B: Self::TestAnswer = 1707;
 
     fn parse(data: &str) -> IResult<Self::Parsed> {
         let (input, rows) = separated_list1(line_ending, parse_row)

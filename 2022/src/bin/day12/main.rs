@@ -6,10 +6,9 @@ boilerplate!(Day);
 
 impl BasicSolution for Day {
     type Parsed = Input;
-    type A = u32;
-    type B = u32;
-    const SAMPLE_ANSWER_A: Self::TestA = 31;
-    const SAMPLE_ANSWER_B: Self::TestB = 29;
+    type Answer = u32;
+    const SAMPLE_ANSWER_A: Self::TestAnswer = 31;
+    const SAMPLE_ANSWER_B: Self::TestAnswer = 29;
 
     fn parse(data: &'static str) -> IResult<Self::Parsed> {
         let mut height_map = data
@@ -42,11 +41,11 @@ impl BasicSolution for Day {
         ))
     }
 
-    fn a(data: Self::Parsed) -> Self::A {
+    fn a(data: Self::Parsed) -> Self::Answer {
         bfs(&data, |&pos| pos == data.start)
     }
 
-    fn b(data: Self::Parsed) -> Self::B {
+    fn b(data: Self::Parsed) -> Self::Answer {
         bfs(&data, |&(x, y)| data.height_map[x][y] == b'a')
     }
 }

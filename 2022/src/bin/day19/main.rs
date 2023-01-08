@@ -13,10 +13,9 @@ boilerplate!(Day);
 
 impl BasicSolution for Day {
     type Parsed = Vec<Blueprint>;
-    type A = u32;
-    type B = u32;
-    const SAMPLE_ANSWER_A: Self::TestA = 33;
-    const SAMPLE_ANSWER_B: Self::TestB = 56 * 62;
+    type Answer = u32;
+    const SAMPLE_ANSWER_A: Self::TestAnswer = 33;
+    const SAMPLE_ANSWER_B: Self::TestAnswer = 56 * 62;
 
     fn parse(data: &'static str) -> IResult<Self::Parsed> {
         separated_list1(line_ending, blueprint)
@@ -24,7 +23,7 @@ impl BasicSolution for Day {
             .parse(data)
     }
 
-    fn a(data: Self::Parsed) -> Self::A {
+    fn a(data: Self::Parsed) -> Self::Answer {
         data.iter()
             .map(|blueprint| {
                 let mut best = 0;
@@ -34,7 +33,7 @@ impl BasicSolution for Day {
             .sum()
     }
 
-    fn b(data: Self::Parsed) -> Self::B {
+    fn b(data: Self::Parsed) -> Self::Answer {
         data.iter()
             .take(3)
             .map(|blueprint| {

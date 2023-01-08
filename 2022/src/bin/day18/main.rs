@@ -15,20 +15,19 @@ const TEST_SIZE: usize = 9;
 impl Solution for Day {
     type Parsed = (Vec<Tuple>, Arr3D<SIZE>);
     type ParsedTest = (Vec<Tuple>, Arr3D<TEST_SIZE>);
-    type A = usize;
-    type B = usize;
-    const SAMPLE_ANSWER_A: Self::TestA = 64;
-    const SAMPLE_ANSWER_B: Self::TestB = 58;
+    type Answer = usize;
+    const SAMPLE_ANSWER_A: Self::TestAnswer = 64;
+    const SAMPLE_ANSWER_B: Self::TestAnswer = 58;
 
     fn parse(data: &'static str) -> IResult<Self::Parsed> {
         parse(data)
     }
 
-    fn a(data: Self::Parsed) -> Self::A {
+    fn a(data: Self::Parsed) -> Self::Answer {
         part_a(data)
     }
 
-    fn b(data: Self::Parsed) -> Self::B {
+    fn b(data: Self::Parsed) -> Self::Answer {
         part_b(data)
     }
 
@@ -36,11 +35,11 @@ impl Solution for Day {
         parse(data)
     }
 
-    fn a_test(data: Self::ParsedTest) -> Self::A {
+    fn a_test(data: Self::ParsedTest) -> Self::Answer {
         part_a(data)
     }
 
-    fn b_test(data: Self::ParsedTest) -> Self::B {
+    fn b_test(data: Self::ParsedTest) -> Self::Answer {
         part_b(data)
     }
 }

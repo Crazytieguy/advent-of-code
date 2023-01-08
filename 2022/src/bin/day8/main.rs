@@ -4,16 +4,15 @@ boilerplate!(Day);
 
 impl BasicSolution for Day {
     type Parsed = Vec<&'static [u8]>;
-    type A = usize;
-    type B = usize;
-    const SAMPLE_ANSWER_A: Self::TestA = 21;
-    const SAMPLE_ANSWER_B: Self::TestB = 8;
+    type Answer = usize;
+    const SAMPLE_ANSWER_A: Self::TestAnswer = 21;
+    const SAMPLE_ANSWER_B: Self::TestAnswer = 8;
 
     fn parse(data: &'static str) -> IResult<Self::Parsed> {
         Ok(("", data.lines().map(|line| line.as_bytes()).collect()))
     }
 
-    fn a(data: Self::Parsed) -> Self::A {
+    fn a(data: Self::Parsed) -> Self::Answer {
         iter_tree_directions(&data)
             .map(|(tree, mut directions)| {
                 let tree_is_higher = |other_tree| tree > other_tree;
@@ -26,7 +25,7 @@ impl BasicSolution for Day {
             .count()
     }
 
-    fn b(data: Self::Parsed) -> Self::B {
+    fn b(data: Self::Parsed) -> Self::Answer {
         iter_tree_directions(&data)
             .map(|(tree, directions)| {
                 count_trees_visible(tree, directions.0)

@@ -15,10 +15,9 @@ boilerplate!(Day);
 
 impl BasicSolution for Day {
     type Parsed = Vec<(Value, Value)>;
-    type A = usize;
-    type B = usize;
-    const SAMPLE_ANSWER_A: Self::TestA = 13;
-    const SAMPLE_ANSWER_B: Self::TestB = 140;
+    type Answer = usize;
+    const SAMPLE_ANSWER_A: Self::TestAnswer = 13;
+    const SAMPLE_ANSWER_B: Self::TestAnswer = 140;
 
     fn parse(data: &'static str) -> IResult<Self::Parsed> {
         separated_list1(
@@ -27,7 +26,7 @@ impl BasicSolution for Day {
         )(data)
     }
 
-    fn a(data: Self::Parsed) -> Self::A {
+    fn a(data: Self::Parsed) -> Self::Answer {
         data.into_iter()
             .enumerate()
             .filter(|(_, (a, b))| b >= a)
@@ -35,7 +34,7 @@ impl BasicSolution for Day {
             .sum()
     }
 
-    fn b(data: Self::Parsed) -> Self::B {
+    fn b(data: Self::Parsed) -> Self::Answer {
         let divider_a = List(vec![List(vec![Integer(2)])]);
         let divider_b = List(vec![List(vec![Integer(6)])]);
         let all_packets = data

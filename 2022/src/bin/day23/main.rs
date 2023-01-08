@@ -8,10 +8,9 @@ boilerplate!(Day);
 
 impl BasicSolution for Day {
     type Parsed = HashSet<(i16, i16)>;
-    type A = usize;
-    type B = usize;
-    const SAMPLE_ANSWER_A: Self::TestA = 110;
-    const SAMPLE_ANSWER_B: Self::TestB = 20;
+    type Answer = usize;
+    const SAMPLE_ANSWER_A: Self::TestAnswer = 110;
+    const SAMPLE_ANSWER_B: Self::TestAnswer = 20;
 
     fn parse(data: &str) -> IResult<Self::Parsed> {
         Ok((
@@ -28,13 +27,13 @@ impl BasicSolution for Day {
         ))
     }
 
-    fn a(mut elve_positions: Self::Parsed) -> Self::A {
+    fn a(mut elve_positions: Self::Parsed) -> Self::Answer {
         run_simulation(&mut elve_positions, 10);
         let (rows, cols) = calc_bounds(&elve_positions);
         rows.len() * cols.len() - elve_positions.len()
     }
 
-    fn b(mut elve_positions: Self::Parsed) -> Self::B {
+    fn b(mut elve_positions: Self::Parsed) -> Self::Answer {
         run_simulation(&mut elve_positions, 10000).expect("not done within 10000 rounds")
     }
 }

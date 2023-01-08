@@ -6,10 +6,9 @@ boilerplate!(Day);
 
 impl Solution for Day {
     type Parsed = (Blizzards, usize);
-    type A = usize;
-    type B = usize;
-    const SAMPLE_ANSWER_A: Self::TestA = 18;
-    const SAMPLE_ANSWER_B: Self::TestB = 54;
+    type Answer = usize;
+    const SAMPLE_ANSWER_A: Self::TestAnswer = 18;
+    const SAMPLE_ANSWER_B: Self::TestAnswer = 54;
 
     fn parse(data: &str) -> IResult<Self::Parsed> {
         let width = data.find('\n').expect("no newline") - 2;
@@ -47,19 +46,19 @@ impl Solution for Day {
         Self::parse(data)
     }
 
-    fn a((mut blizzards, width): Self::Parsed) -> Self::A {
+    fn a((mut blizzards, width): Self::Parsed) -> Self::Answer {
         simulate_shortest_path::<25>(&mut blizzards, width, Exit)
     }
 
-    fn a_test((mut blizzards, width): Self::ParsedTest) -> Self::A {
+    fn a_test((mut blizzards, width): Self::ParsedTest) -> Self::Answer {
         simulate_shortest_path::<4>(&mut blizzards, width, Exit)
     }
 
-    fn b((mut blizzards, width): Self::Parsed) -> Self::B {
+    fn b((mut blizzards, width): Self::Parsed) -> Self::Answer {
         simulate_3::<25>(&mut blizzards, width)
     }
 
-    fn b_test((mut blizzards, width): Self::ParsedTest) -> Self::B {
+    fn b_test((mut blizzards, width): Self::ParsedTest) -> Self::Answer {
         simulate_3::<4>(&mut blizzards, width)
     }
 }

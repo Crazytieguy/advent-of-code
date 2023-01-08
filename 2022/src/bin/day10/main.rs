@@ -14,11 +14,10 @@ boilerplate!(Day);
 
 impl BasicSolution for Day {
     type Parsed = Vec<Operation>;
-    type A = i32;
-    type B = String;
-    type TestB = &'static str;
-    const SAMPLE_ANSWER_A: Self::TestA = 13140;
-    const SAMPLE_ANSWER_B: Self::TestB = "
+    type Answer = String;
+    type TestAnswer = &'static str;
+    const SAMPLE_ANSWER_A: Self::TestAnswer = "13140";
+    const SAMPLE_ANSWER_B: Self::TestAnswer = "
 ##..##..##..##..##..##..##..##..##..##..
 ###...###...###...###...###...###...###.
 ####....####....####....####....####....
@@ -32,15 +31,16 @@ impl BasicSolution for Day {
             .parse(data)
     }
 
-    fn a(data: Self::Parsed) -> Self::A {
+    fn a(data: Self::Parsed) -> Self::Answer {
         iter_register(&data)
             .zip(1..)
             .filter(|(_, cycle)| [20, 60, 100, 140, 180, 220].contains(cycle))
             .map(|(reg_x, cycle)| reg_x * cycle)
-            .sum()
+            .sum::<i32>()
+            .to_string()
     }
 
-    fn b(data: Self::Parsed) -> Self::B {
+    fn b(data: Self::Parsed) -> Self::Answer {
         iter_register(&data)
             .chunks(40)
             .into_iter()

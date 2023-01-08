@@ -10,22 +10,21 @@ boilerplate!(Day);
 
 impl BasicSolution for Day {
     type Parsed = i64;
-    type A = String;
-    type B = &'static str;
-    type TestA = &'static str;
-    const SAMPLE_ANSWER_A: Self::TestA = "2=-1=0";
-    const SAMPLE_ANSWER_B: Self::TestB = "";
+    type Answer = String;
+    type TestAnswer = &'static str;
+    const SAMPLE_ANSWER_A: Self::TestAnswer = "2=-1=0";
+    const SAMPLE_ANSWER_B: Self::TestAnswer = "";
 
     fn parse(data: &str) -> IResult<Self::Parsed> {
         fold_many1(snafu.terminated(line_ending), || 0, |acc, cur| acc + cur)(data)
     }
 
-    fn a(data: Self::Parsed) -> Self::A {
+    fn a(data: Self::Parsed) -> Self::Answer {
         to_snafu(data)
     }
 
-    fn b(_data: Self::Parsed) -> Self::B {
-        ""
+    fn b(_data: Self::Parsed) -> Self::Answer {
+        "".into()
     }
 }
 

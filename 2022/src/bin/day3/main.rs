@@ -7,23 +7,22 @@ boilerplate!(Day);
 
 impl BasicSolution for Day {
     type Parsed = Lines<'static>;
-    type A = u32;
-    type B = u32;
-    const SAMPLE_ANSWER_A: Self::TestA = 157;
-    const SAMPLE_ANSWER_B: Self::TestB = 70;
+    type Answer = u32;
+    const SAMPLE_ANSWER_A: Self::TestAnswer = 157;
+    const SAMPLE_ANSWER_B: Self::TestAnswer = 70;
 
     fn parse(data: &'static str) -> IResult<Self::Parsed> {
         Ok(("", data.lines()))
     }
 
-    fn a(data: Self::Parsed) -> Self::A {
+    fn a(data: Self::Parsed) -> Self::Answer {
         data.map(|line| line.split_at(line.len() / 2))
             .map(|(left, right)| intersecting_item([left, right]))
             .map(priority)
             .sum()
     }
 
-    fn b(data: Self::Parsed) -> Self::B {
+    fn b(data: Self::Parsed) -> Self::Answer {
         data.chunks(3)
             .into_iter()
             .map(intersecting_item)

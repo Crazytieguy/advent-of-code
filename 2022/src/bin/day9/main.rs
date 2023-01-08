@@ -13,10 +13,9 @@ boilerplate!(Day);
 
 impl BasicSolution for Day {
     type Parsed = Vec<(Direction, u8)>;
-    type A = usize;
-    type B = usize;
-    const SAMPLE_ANSWER_A: Self::TestA = 13;
-    const SAMPLE_ANSWER_B: Self::TestB = 1;
+    type Answer = usize;
+    const SAMPLE_ANSWER_A: Self::TestAnswer = 13;
+    const SAMPLE_ANSWER_B: Self::TestAnswer = 1;
 
     fn parse(data: &'static str) -> IResult<Self::Parsed> {
         separated_list1(line_ending, movement)
@@ -24,11 +23,11 @@ impl BasicSolution for Day {
             .parse(data)
     }
 
-    fn a(data: Self::Parsed) -> Self::A {
+    fn a(data: Self::Parsed) -> Self::Answer {
         solve::<2>(&data)
     }
 
-    fn b(data: Self::Parsed) -> Self::B {
+    fn b(data: Self::Parsed) -> Self::Answer {
         solve::<10>(&data)
     }
 }

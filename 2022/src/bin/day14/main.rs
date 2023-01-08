@@ -10,10 +10,9 @@ boilerplate!(Day);
 
 impl BasicSolution for Day {
     type Parsed = HashSet<(u16, u8)>;
-    type A = usize;
-    type B = usize;
-    const SAMPLE_ANSWER_A: Self::TestA = 24;
-    const SAMPLE_ANSWER_B: Self::TestB = 93;
+    type Answer = usize;
+    const SAMPLE_ANSWER_A: Self::TestAnswer = 24;
+    const SAMPLE_ANSWER_B: Self::TestAnswer = 93;
 
     fn parse(data: &str) -> IResult<Self::Parsed> {
         let mut rocks = HashSet::new();
@@ -32,11 +31,11 @@ impl BasicSolution for Day {
         Ok(("", rocks))
     }
 
-    fn a(data: Self::Parsed) -> Self::A {
+    fn a(data: Self::Parsed) -> Self::Answer {
         solve::<false>(data)
     }
 
-    fn b(data: Self::Parsed) -> Self::B {
+    fn b(data: Self::Parsed) -> Self::Answer {
         solve::<true>(data)
     }
 }

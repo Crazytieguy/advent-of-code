@@ -14,10 +14,9 @@ boilerplate!(Day);
 
 impl BasicSolution for Day {
     type Parsed = HashMap<&'static str, Expression<'static>>;
-    type A = i64;
-    type B = i64;
-    const SAMPLE_ANSWER_A: Self::TestA = 152;
-    const SAMPLE_ANSWER_B: Self::TestB = 301;
+    type Answer = i64;
+    const SAMPLE_ANSWER_A: Self::TestAnswer = 152;
+    const SAMPLE_ANSWER_B: Self::TestAnswer = 301;
 
     fn parse(data: &'static str) -> IResult<Self::Parsed> {
         separated_list1(line_ending, monkey)
