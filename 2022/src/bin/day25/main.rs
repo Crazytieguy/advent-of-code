@@ -1,5 +1,4 @@
-use std::error::Error;
-
+use advent_2022::*;
 use nom::{
     branch::alt,
     character::complete::{char, line_ending},
@@ -7,10 +6,28 @@ use nom::{
 };
 use nom_supreme::ParserExt;
 
-const DATA: &str = include_str!("data.txt");
+boilerplate!(Day);
 
-type OutResult = std::result::Result<(), Box<dyn Error>>;
-type IResult<'a, T> = nom::IResult<&'a str, T>;
+impl BasicSolution for Day {
+    type Parsed = i64;
+    type A = String;
+    type B = &'static str;
+    type TestA = &'static str;
+    const SAMPLE_ANSWER_A: Self::TestA = "2=-1=0";
+    const SAMPLE_ANSWER_B: Self::TestB = "";
+
+    fn parse(data: &str) -> IResult<Self::Parsed> {
+        fold_many1(snafu.terminated(line_ending), || 0, |acc, cur| acc + cur)(data)
+    }
+
+    fn a(data: Self::Parsed) -> Self::A {
+        to_snafu(data)
+    }
+
+    fn b(_data: Self::Parsed) -> Self::B {
+        ""
+    }
+}
 
 fn snafu_digit(input: &str) -> IResult<i64> {
     alt((
@@ -24,10 +41,6 @@ fn snafu_digit(input: &str) -> IResult<i64> {
 
 fn snafu(input: &str) -> IResult<i64> {
     fold_many1(snafu_digit, || 0, |acc, cur| acc * 5 + cur)(input)
-}
-
-fn parse(data: &str) -> IResult<i64> {
-    fold_many1(snafu.terminated(line_ending), || 0, |acc, cur| acc + cur)(data)
 }
 
 fn to_snafu(number: i64) -> String {
@@ -51,27 +64,4 @@ fn to_snafu(number: i64) -> String {
     .chars()
     .rev()
     .collect()
-}
-
-fn solution(data: i64) -> String {
-    to_snafu(data)
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    const SAMPLE_DATA: &str = include_str!("sample.txt");
-
-    #[test]
-    fn test() -> OutResult {
-        assert_eq!(solution(parse(SAMPLE_DATA)?.1), "2=-1=0");
-        println!("solution: {}", solution(parse(DATA)?.1));
-        Ok(())
-    }
-}
-
-fn main() -> OutResult {
-    let parsed = parse(DATA)?.1;
-    println!("solution: {}", solution(parsed));
-    Ok(())
 }

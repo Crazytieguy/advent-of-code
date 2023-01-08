@@ -1,24 +1,50 @@
-use std::error::Error;
-
+use advent_2022::*;
 use itertools::{iterate, Itertools};
 use nom::{
     character::complete::{i64, line_ending},
     multi::separated_list1,
+    Parser,
 };
+use nom_supreme::ParserExt;
 
-const DATA: &str = include_str!("data.txt");
+boilerplate!(Day);
 
-type OutResult = std::result::Result<(), Box<dyn Error>>;
-type IResult<'a, T> = nom::IResult<&'a str, T>;
+impl Solution for Day {
+    type Parsed = Vec<i64>;
+    type A = i64;
+    type B = i64;
+    const SAMPLE_ANSWER_A: Self::TestA = 3;
+    const SAMPLE_ANSWER_B: Self::TestB = 1623178306;
 
-type Parsed = Vec<i64>;
+    fn parse(data: &'static str) -> IResult<Self::Parsed> {
+        separated_list1(line_ending, i64)
+            .terminated(line_ending)
+            .parse(data)
+    }
 
-fn parse(data: &str) -> IResult<Parsed> {
-    separated_list1(line_ending, i64)(data)
+    fn parse_test(data: &'static str) -> IResult<Self::ParsedTest> {
+        Self::parse(data)
+    }
+
+    fn a(data: Self::Parsed) -> Self::A {
+        solve::<25>(data, 1, 1)
+    }
+
+    fn b(data: Self::Parsed) -> Self::B {
+        solve::<25>(data, 811589153, 10)
+    }
+
+    fn a_test(data: Self::ParsedTest) -> Self::TestA {
+        solve::<1>(data, 1, 1)
+    }
+
+    fn b_test(data: Self::ParsedTest) -> Self::TestB {
+        solve::<1>(data, 811589153, 10)
+    }
 }
 
-fn solve<const NEXT_SIZE: usize>(data: &Parsed, decryption_key: i64, iterations: usize) -> i64 {
-    let numbers = data.iter().map(|&x| x * decryption_key).collect_vec();
+fn solve<const NEXT_SIZE: usize>(data: Vec<i64>, decryption_key: i64, iterations: usize) -> i64 {
+    let numbers = data.into_iter().map(|x| x * decryption_key).collect_vec();
     let mut prev = (0..numbers.len() as u16).collect_vec();
     let mut next = prev.clone();
     prev.rotate_right(1);
@@ -80,39 +106,4 @@ fn find_target<const NEXT_SIZE: usize>(
     iterate(overshot_target, |&cur| prev[cur as usize])
         .nth(NEXT_SIZE - amount_to_move % NEXT_SIZE)
         .unwrap()
-}
-
-fn part_a<const NEXT_SIZE: usize>(data: &Parsed) -> i64 {
-    solve::<NEXT_SIZE>(data, 1, 1)
-}
-
-fn part_b<const NEXT_SIZE: usize>(data: &Parsed) -> i64 {
-    solve::<NEXT_SIZE>(data, 811589153, 10)
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    const SAMPLE_DATA: &str = include_str!("sample.txt");
-
-    #[test]
-    fn test_a() -> OutResult {
-        assert_eq!(part_a::<1>(&parse(SAMPLE_DATA)?.1), 3);
-        println!("part a: {}", part_a::<25>(&parse(DATA)?.1));
-        Ok(())
-    }
-
-    #[test]
-    fn test_b() -> OutResult {
-        assert_eq!(part_b::<1>(&parse(SAMPLE_DATA)?.1), 1623178306);
-        println!("part b: {}", part_b::<25>(&parse(DATA)?.1));
-        Ok(())
-    }
-}
-
-fn main() -> OutResult {
-    let parsed = parse(DATA)?.1;
-    println!("part a: {}", part_a::<25>(&parsed));
-    println!("part b: {}", part_b::<25>(&parsed));
-    Ok(())
 }

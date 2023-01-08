@@ -1,5 +1,4 @@
-use std::{cmp::Reverse, collections::VecDeque, error::Error};
-
+use advent_2022::*;
 use itertools::Itertools;
 use nom::{
     branch::alt,
@@ -10,13 +9,30 @@ use nom::{
     Parser,
 };
 use nom_supreme::ParserExt;
+use std::{cmp::Reverse, collections::VecDeque};
 
-const DATA: &str = include_str!("data.txt");
+boilerplate!(Day);
 
-type OutResult = std::result::Result<(), Box<dyn Error>>;
-type IResult<'a, T> = nom::IResult<&'a str, T>;
+impl BasicSolution for Day {
+    type Parsed = Vec<Monkey>;
+    type A = u64;
+    type B = u64;
+    const SAMPLE_ANSWER_A: Self::TestA = 10605;
+    const SAMPLE_ANSWER_B: Self::TestB = 2713310158;
 
-type Parsed = Vec<Monkey>;
+    fn parse(data: &'static str) -> IResult<Self::Parsed> {
+        separated_list1(line_ending, monkey)(data)
+    }
+
+    fn a(mut monkeys: Self::Parsed) -> Self::A {
+        stuff_slinging_simian_shenanigans(&mut monkeys, 20, |n| n / 3)
+    }
+
+    fn b(mut monkeys: Self::Parsed) -> Self::B {
+        let least_common_denominator: u64 = monkeys.iter().map(|m| m.test).product();
+        stuff_slinging_simian_shenanigans(&mut monkeys, 10000, |n| n % least_common_denominator)
+    }
+}
 
 #[derive(Debug, Clone, Copy)]
 enum Op {
@@ -101,15 +117,11 @@ fn monkey(data: &str) -> IResult<Monkey> {
     .parse(data)
 }
 
-fn parse(data: &str) -> IResult<Parsed> {
-    separated_list1(line_ending, monkey)(data)
-}
-
 fn stuff_slinging_simian_shenanigans(
     monkeys: &mut [Monkey],
     rounds: usize,
     manage_worry_level: impl Fn(u64) -> u64,
-) {
+) -> u64 {
     for (_, turn) in (0..rounds).cartesian_product(0..monkeys.len()) {
         while let Some(item) = monkeys[turn].items.pop_front() {
             monkeys[turn].inspected += 1;
@@ -127,53 +139,14 @@ fn stuff_slinging_simian_shenanigans(
             monkeys[throw_to].items.push_back(new);
         }
     }
+    monkey_business(monkeys)
 }
 
-fn monkey_business(monkeys: Vec<Monkey>) -> u64 {
+fn monkey_business(monkeys: &[Monkey]) -> u64 {
     monkeys
-        .into_iter()
+        .iter()
         .map(|m| m.inspected)
         .sorted_by_key(|&n| Reverse(n))
         .take(2)
         .product()
-}
-
-fn part_a(data: &Parsed) -> u64 {
-    let mut monkeys = data.clone();
-    stuff_slinging_simian_shenanigans(&mut monkeys, 20, |n| n / 3);
-    monkey_business(monkeys)
-}
-
-fn part_b(data: &Parsed) -> u64 {
-    let mut monkeys = data.clone();
-    let least_common_denominator: u64 = monkeys.iter().map(|m| m.test).product();
-    stuff_slinging_simian_shenanigans(&mut monkeys, 10000, |n| n % least_common_denominator);
-    monkey_business(monkeys)
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    const SAMPLE_DATA: &str = include_str!("sample.txt");
-
-    #[test]
-    fn test_a() -> OutResult {
-        assert_eq!(part_a(&parse(SAMPLE_DATA)?.1), 10605);
-        println!("part a: {}", part_a(&parse(DATA)?.1));
-        Ok(())
-    }
-
-    #[test]
-    fn test_b() -> OutResult {
-        assert_eq!(part_b(&parse(SAMPLE_DATA)?.1), 2713310158);
-        println!("part b: {}", part_b(&parse(DATA)?.1));
-        Ok(())
-    }
-}
-
-fn main() -> OutResult {
-    let parsed = parse(DATA)?.1;
-    println!("part a: {}", part_a(&parsed));
-    println!("part b: {}", part_b(&parsed));
-    Ok(())
 }

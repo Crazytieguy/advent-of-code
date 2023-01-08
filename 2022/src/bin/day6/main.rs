@@ -1,6 +1,27 @@
+use advent_2022::*;
 use itertools::Itertools;
 
-const DATA: &str = include_str!("data.txt");
+boilerplate!(Day);
+
+impl BasicSolution for Day {
+    type Parsed = &'static str;
+    type A = usize;
+    type B = usize;
+    const SAMPLE_ANSWER_A: Self::TestA = 7;
+    const SAMPLE_ANSWER_B: Self::TestB = 19;
+
+    fn parse(data: &'static str) -> IResult<Self::Parsed> {
+        Ok(("", data))
+    }
+
+    fn a(data: Self::Parsed) -> Self::A {
+        solve::<4>(data)
+    }
+
+    fn b(data: Self::Parsed) -> Self::B {
+        solve::<14>(data)
+    }
+}
 
 fn solve<const N: usize>(data: &str) -> usize {
     data.as_bytes()
@@ -8,35 +29,4 @@ fn solve<const N: usize>(data: &str) -> usize {
         .position(|window| window.iter().all_unique())
         .expect("There should be an all unique sequence")
         + N
-}
-
-fn part_a(data: &str) -> usize {
-    solve::<4>(data)
-}
-
-fn part_b(data: &str) -> usize {
-    solve::<14>(data)
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    const SAMPLE_DATA: &str = include_str!("sample.txt");
-
-    #[test]
-    fn test_a() {
-        assert_eq!(part_a(SAMPLE_DATA), 7);
-        println!("part a: {}", part_a(DATA));
-    }
-
-    #[test]
-    fn test_b() {
-        assert_eq!(part_b(SAMPLE_DATA), 19);
-        println!("part b: {}", part_b(DATA));
-    }
-}
-
-fn main() {
-    println!("part a: {}", part_a(DATA));
-    println!("part b: {}", part_b(DATA));
 }

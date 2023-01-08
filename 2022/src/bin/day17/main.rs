@@ -1,28 +1,69 @@
 #![feature(array_windows)]
-
+use advent_2022::*;
 use itertools::Itertools;
-use nom::{branch::alt, character::complete::char, multi::many1};
+use nom::{
+    branch::alt,
+    character::complete::{char, line_ending},
+    multi::many1,
+    Parser,
+};
 use nom_supreme::ParserExt;
-use std::error::Error;
 
-const DATA: &str = include_str!("data.txt");
+boilerplate!(Day);
 
-type OutResult = std::result::Result<(), Box<dyn Error>>;
-type IResult<'a, T> = nom::IResult<&'a str, T>;
+impl BasicSolution for Day {
+    type Parsed = Vec<Direction>;
+    type A = usize;
+    type B = usize;
+    const SAMPLE_ANSWER_A: Self::TestA = 3068;
+    const SAMPLE_ANSWER_B: Self::TestB = 1_514_285_714_288;
+
+    fn parse(data: &str) -> IResult<Self::Parsed> {
+        many1(alt((
+            char('>').value(Direction::Right),
+            char('<').value(Direction::Left),
+        )))
+        .terminated(line_ending)
+        .parse(data)
+    }
+
+    fn a(data: Self::Parsed) -> usize {
+        simulate(&data, 2022).len()
+    }
+
+    fn b(data: Self::Parsed) -> usize {
+        let chamber = simulate(&data, 5000);
+        let (pattern_start, pattern_length) = chamber
+            .windows(50)
+            .enumerate()
+            .tuple_combinations()
+            .find(|((_, a), (_, b))| a == b)
+            .map(|((i, _), (j, _))| (i, j - i))
+            .expect("There should be a pattern!");
+
+        let rocks_before_pattern = count_rocks_in_chamber_slice(&chamber[..pattern_start]);
+
+        let rocks_generated_in_pattern =
+            count_rocks_in_chamber_slice(&chamber[pattern_start..pattern_start + pattern_length]);
+        let num_pattern_repetitions =
+            (1_000_000_000_000 - rocks_before_pattern) / rocks_generated_in_pattern;
+        let leftover_rocks =
+            (1_000_000_000_000 - rocks_before_pattern) % rocks_generated_in_pattern;
+        let leftover_rocks_height = (0..=pattern_length)
+            .find(|&i| {
+                count_rocks_in_chamber_slice(&chamber[pattern_start..pattern_start + i])
+                    >= leftover_rocks
+            })
+            .expect("There should be a leftover rock height");
+        // print_chamber(&chamber);
+        num_pattern_repetitions * pattern_length + pattern_start + leftover_rocks_height
+    }
+}
 
 #[derive(Debug, Clone, Copy)]
 enum Direction {
     Right,
     Left,
-}
-
-type Parsed = Vec<Direction>;
-
-fn parse(data: &str) -> IResult<Parsed> {
-    many1(alt((
-        char('>').value(Direction::Right),
-        char('<').value(Direction::Left),
-    )))(data)
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -79,7 +120,7 @@ fn gen_rocks() -> impl Iterator<Item = Vec<[Cell; 7]>> {
     rocks.into_iter().cycle()
 }
 
-fn simulate(air_directions: &Parsed, num_rocks: usize) -> Vec<[Cell; 7]> {
+fn simulate(air_directions: &[Direction], num_rocks: usize) -> Vec<[Cell; 7]> {
     let mut chamber: Vec<[Cell; 7]> = vec![];
     let mut air_directions = air_directions.iter().cycle();
     for mut rock in gen_rocks().take(num_rocks) {
@@ -148,10 +189,6 @@ fn simulate(air_directions: &Parsed, num_rocks: usize) -> Vec<[Cell; 7]> {
     chamber
 }
 
-fn part_a(data: &Parsed) -> usize {
-    simulate(data, 2022).len()
-}
-
 fn count_rocks_in_chamber_slice(slice: &[[Cell; 7]]) -> usize {
     slice
         .iter()
@@ -160,36 +197,6 @@ fn count_rocks_in_chamber_slice(slice: &[[Cell; 7]]) -> usize {
         .count()
         * 5
         / 22
-}
-
-fn part_b(data: &Parsed) -> u64 {
-    let chamber = simulate(data, 5000);
-    let (pattern_start, pattern_length) = chamber
-        .windows(50)
-        .enumerate()
-        .tuple_combinations()
-        .find(|((_, a), (_, b))| a == b)
-        .map(|((i, _), (j, _))| (i, j - i))
-        .expect("There should be a pattern!");
-
-    let rocks_before_pattern = count_rocks_in_chamber_slice(&chamber[..pattern_start]);
-
-    let rocks_generated_in_pattern =
-        count_rocks_in_chamber_slice(&chamber[pattern_start..pattern_start + pattern_length]);
-    let num_pattern_repetitions =
-        (1_000_000_000_000 - rocks_before_pattern as u64) / rocks_generated_in_pattern as u64;
-    let leftover_rocks =
-        (1_000_000_000_000 - rocks_before_pattern as u64) % rocks_generated_in_pattern as u64;
-    let leftover_rocks_height = (0..=pattern_length)
-        .find(|&i| {
-            count_rocks_in_chamber_slice(&chamber[pattern_start..pattern_start + i])
-                >= leftover_rocks as usize
-        })
-        .expect("There should be a leftover rock height");
-    // print_chamber(&chamber);
-    num_pattern_repetitions * pattern_length as u64
-        + pattern_start as u64
-        + leftover_rocks_height as u64
 }
 
 // Was really useful for debugging
@@ -210,31 +217,4 @@ fn print_chamber(chamber: &[[Cell; 7]]) -> Vec<u8> {
         buf.push(b'\n');
     }
     buf
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    const SAMPLE_DATA: &str = include_str!("sample.txt");
-
-    #[test]
-    fn test_a() -> OutResult {
-        assert_eq!(part_a(&parse(SAMPLE_DATA)?.1), 3068);
-        println!("part a: {}", part_a(&parse(DATA)?.1));
-        Ok(())
-    }
-
-    #[test]
-    fn test_b() -> OutResult {
-        assert_eq!(part_b(&parse(SAMPLE_DATA)?.1), 1_514_285_714_288);
-        println!("part b: {}", part_b(&parse(DATA)?.1));
-        Ok(())
-    }
-}
-
-fn main() -> OutResult {
-    let parsed = parse(DATA)?.1;
-    println!("part a: {}", part_a(&parsed));
-    println!("part b: {}", part_b(&parsed));
-    Ok(())
 }

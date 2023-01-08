@@ -1,8 +1,4 @@
-use std::{
-    error::Error,
-    ops::{Add, Mul},
-};
-
+use advent_2022::*;
 use nom::{
     bytes::complete::tag,
     character::complete::{line_ending, u8},
@@ -10,13 +6,97 @@ use nom::{
     sequence::{delimited, separated_pair},
     Parser,
 };
+use nom_supreme::ParserExt;
+use std::ops::{Add, Mul};
 
-const DATA: &str = include_str!("data.txt");
+boilerplate!(Day);
 
-type OutResult = std::result::Result<(), Box<dyn Error>>;
-type IResult<'a, T> = nom::IResult<&'a str, T>;
+impl BasicSolution for Day {
+    type Parsed = Vec<Blueprint>;
+    type A = u32;
+    type B = u32;
+    const SAMPLE_ANSWER_A: Self::TestA = 33;
+    const SAMPLE_ANSWER_B: Self::TestB = 56 * 62;
 
-type Parsed = Vec<Blueprint>;
+    fn parse(data: &'static str) -> IResult<Self::Parsed> {
+        separated_list1(line_ending, blueprint)
+            .terminated(line_ending)
+            .parse(data)
+    }
+
+    fn a(data: Self::Parsed) -> Self::A {
+        data.iter()
+            .map(|blueprint| {
+                let mut best = 0;
+                branch_and_bound(blueprint, State::new(24), &mut best);
+                blueprint.id as u32 * best as u32
+            })
+            .sum()
+    }
+
+    fn b(data: Self::Parsed) -> Self::B {
+        data.iter()
+            .take(3)
+            .map(|blueprint| {
+                let mut best = 0;
+                branch_and_bound(blueprint, State::new(32), &mut best);
+                best as u32
+            })
+            .product()
+    }
+}
+
+fn branch_and_bound(blueprint: &Blueprint, state: State, best: &mut u8) {
+    *best = state.geodes_secured.max(*best);
+    for state in state.branch(blueprint) {
+        if state.bound(blueprint) > *best {
+            branch_and_bound(blueprint, state, best);
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy)]
+struct Blueprint {
+    id: u8,
+    ore_robot_cost: Resources,
+    clay_robot_cost: Resources,
+    obsidian_robot_cost: Resources,
+    geode_robot_cost: Resources,
+}
+
+fn blueprint(input: &str) -> IResult<Blueprint> {
+    let (input, id) = delimited(tag("Blueprint "), u8, tag(": "))(input)?;
+    let (input, ore_robot_cost) = delimited(tag("Each ore robot costs "), u8, tag(" ore. "))
+        .map(|ore| ONE_ORE * ore)
+        .parse(input)?;
+    let (input, clay_robot_cost) = delimited(tag("Each clay robot costs "), u8, tag(" ore. "))
+        .map(|ore| ONE_ORE * ore)
+        .parse(input)?;
+    let (input, obsidian_robot_cost) = delimited(
+        tag("Each obsidian robot costs "),
+        separated_pair(u8, tag(" ore and "), u8),
+        tag(" clay. "),
+    )
+    .map(|(ore, clay)| ONE_ORE * ore + ONE_CLAY * clay)
+    .parse(input)?;
+    let (input, geode_robot_cost) = delimited(
+        tag("Each geode robot costs "),
+        separated_pair(u8, tag(" ore and "), u8),
+        tag(" obsidian."),
+    )
+    .map(|(ore, obsidian)| ONE_ORE * ore + ONE_OBSIDIAN * obsidian)
+    .parse(input)?;
+    Ok((
+        input,
+        Blueprint {
+            id,
+            ore_robot_cost,
+            clay_robot_cost,
+            obsidian_robot_cost,
+            geode_robot_cost,
+        },
+    ))
+}
 
 #[derive(Debug, Clone, Copy, Default)]
 struct Resources {
@@ -73,53 +153,6 @@ impl Mul<u8> for Resources {
             obsidian: self.obsidian * other,
         }
     }
-}
-
-#[derive(Debug, Clone, Copy)]
-struct Blueprint {
-    id: u8,
-    ore_robot_cost: Resources,
-    clay_robot_cost: Resources,
-    obsidian_robot_cost: Resources,
-    geode_robot_cost: Resources,
-}
-
-fn blueprint(input: &str) -> IResult<Blueprint> {
-    let (input, id) = delimited(tag("Blueprint "), u8, tag(": "))(input)?;
-    let (input, ore_robot_cost) = delimited(tag("Each ore robot costs "), u8, tag(" ore. "))
-        .map(|ore| ONE_ORE * ore)
-        .parse(input)?;
-    let (input, clay_robot_cost) = delimited(tag("Each clay robot costs "), u8, tag(" ore. "))
-        .map(|ore| ONE_ORE * ore)
-        .parse(input)?;
-    let (input, obsidian_robot_cost) = delimited(
-        tag("Each obsidian robot costs "),
-        separated_pair(u8, tag(" ore and "), u8),
-        tag(" clay. "),
-    )
-    .map(|(ore, clay)| ONE_ORE * ore + ONE_CLAY * clay)
-    .parse(input)?;
-    let (input, geode_robot_cost) = delimited(
-        tag("Each geode robot costs "),
-        separated_pair(u8, tag(" ore and "), u8),
-        tag(" obsidian."),
-    )
-    .map(|(ore, obsidian)| ONE_ORE * ore + ONE_OBSIDIAN * obsidian)
-    .parse(input)?;
-    Ok((
-        input,
-        Blueprint {
-            id,
-            ore_robot_cost,
-            clay_robot_cost,
-            obsidian_robot_cost,
-            geode_robot_cost,
-        },
-    ))
-}
-
-fn parse(data: &str) -> IResult<Parsed> {
-    separated_list1(line_ending, blueprint)(data)
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -207,63 +240,4 @@ impl State {
         );
         geodes
     }
-}
-
-fn branch_and_bound(blueprint: &Blueprint, state: State, best: &mut u8) {
-    *best = state.geodes_secured.max(*best);
-    for state in state.branch(blueprint) {
-        if state.bound(blueprint) > *best {
-            branch_and_bound(blueprint, state, best);
-        }
-    }
-}
-
-fn part_a(data: &Parsed) -> usize {
-    data.iter()
-        .map(|blueprint| {
-            let mut best = 0;
-            branch_and_bound(blueprint, State::new(24), &mut best);
-            blueprint.id as usize * best as usize
-        })
-        .sum()
-}
-
-fn part_b(data: &Parsed) -> usize {
-    data.iter()
-        .take(3)
-        .map(|blueprint| {
-            let mut best = 0;
-            branch_and_bound(blueprint, State::new(32), &mut best);
-            best as usize
-        })
-        .product()
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    const SAMPLE_DATA: &str = include_str!("sample.txt");
-
-    #[test]
-    fn test_a() -> OutResult {
-        assert_eq!(part_a(&parse(SAMPLE_DATA)?.1), 33);
-        println!("part a: {}", part_a(&parse(DATA)?.1));
-        Ok(())
-    }
-
-    #[test]
-    fn test_b() -> OutResult {
-        assert_eq!(part_b(&parse(SAMPLE_DATA)?.1), 56 * 62);
-        println!("part b: {}", part_b(&parse(DATA)?.1));
-        Ok(())
-    }
-}
-
-fn main() -> OutResult {
-    let start = std::time::Instant::now();
-    let parsed = parse(DATA)?.1;
-    println!("part a: {}", part_a(&parsed));
-    println!("part b: {}", part_b(&parsed));
-    println!("time: {:?}", start.elapsed());
-    Ok(())
 }

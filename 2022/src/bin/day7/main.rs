@@ -1,3 +1,4 @@
+use advent_2022::*;
 use nom::{
     branch::alt,
     bytes::complete::tag,
@@ -6,14 +7,46 @@ use nom::{
     Parser,
 };
 use nom_supreme::ParserExt;
-use std::{collections::HashMap, error::Error};
+use std::collections::HashMap;
 
-const DATA: &str = include_str!("data.txt");
+boilerplate!(Day);
 
-type OutResult = std::result::Result<(), Box<dyn Error>>;
-type IResult<'a, T> = nom::IResult<&'a str, T>;
+const TOTAL_DISK_SPACE: u32 = 70000000;
+const NEEDED_DISK_SPACE: u32 = 30000000;
 
-type Parsed<'a> = HashMap<Vec<&'a str>, u32>;
+impl BasicSolution for Day {
+    type Parsed = HashMap<Vec<&'static str>, u32>;
+    type A = u32;
+    type B = u32;
+    const SAMPLE_ANSWER_A: Self::TestA = 95437;
+    const SAMPLE_ANSWER_B: Self::TestB = 24933642;
+
+    fn parse(data: &'static str) -> IResult<Self::Parsed> {
+        let mut current_dir = vec![];
+        fold_many1(
+            parse_command,
+            HashMap::new,
+            move |mut directory_sizes, command| {
+                compute_command(command, &mut current_dir, &mut directory_sizes);
+                directory_sizes
+            },
+        )(data)
+    }
+
+    fn a(data: Self::Parsed) -> Self::A {
+        data.into_values().filter(|&size| size < 100000).sum()
+    }
+
+    fn b(data: Self::Parsed) -> Self::B {
+        let root_directory_size = data[&vec![]];
+        let need_to_free =
+            (root_directory_size + NEEDED_DISK_SPACE).saturating_sub(TOTAL_DISK_SPACE);
+        data.into_values()
+            .filter(|&size| size >= need_to_free)
+            .min()
+            .expect("At least one directory should be larger than the missing space")
+    }
+}
 
 #[derive(Debug, Clone, Copy)]
 enum CDTarget<'a> {
@@ -28,14 +61,43 @@ enum Command<'a> {
     CD(CDTarget<'a>),
 }
 
+use CDTarget::*;
+use Command::*;
+
+fn compute_command<'a>(
+    command: Command<'a>,
+    current_dir: &mut Vec<&'a str>,
+    directory_sizes: &mut HashMap<Vec<&'a str>, u32>,
+) {
+    match command {
+        LS(current_dir_size) => {
+            for i in 0..=current_dir.len() {
+                let path = &current_dir[..i];
+                if let Some(size) = directory_sizes.get_mut(path) {
+                    *size += current_dir_size;
+                } else {
+                    directory_sizes.insert(path.to_vec(), current_dir_size);
+                }
+            }
+        }
+        CD(target) => match target {
+            Root => current_dir.clear(),
+            Parent => {
+                current_dir.pop();
+            }
+            Child(name) => current_dir.push(name),
+        },
+    }
+}
+
 fn parse_cd(data: &str) -> IResult<Command> {
     tag("cd ")
         .precedes(alt((
-            tag("/").value(CDTarget::Root),
-            tag("..").value(CDTarget::Parent),
-            not_line_ending.map(CDTarget::Child),
+            tag("/").value(Root),
+            tag("..").value(Parent),
+            not_line_ending.map(Child),
         )))
-        .map(Command::CD)
+        .map(CD)
         .terminated(line_ending.opt())
         .parse(data)
 }
@@ -49,84 +111,10 @@ fn parse_ls_output_line(data: &str) -> IResult<u32> {
 fn parse_ls(data: &str) -> IResult<Command> {
     tag("ls\n")
         .precedes(fold_many0(parse_ls_output_line, || 0, |acc, cur| acc + cur))
-        .map(Command::LS)
+        .map(LS)
         .parse(data)
 }
 
 fn parse_command(data: &str) -> IResult<Command> {
     tag("$ ").precedes(alt((parse_cd, parse_ls))).parse(data)
-}
-
-fn parse(data: &str) -> IResult<Parsed> {
-    let mut current_dir = vec![];
-    fold_many1(
-        parse_command,
-        HashMap::new,
-        move |mut directory_sizes, command| {
-            match command {
-                Command::LS(current_dir_size) => {
-                    for i in 0..=current_dir.len() {
-                        let path = &current_dir[..i];
-                        if let Some(size) = directory_sizes.get_mut(path) {
-                            *size += current_dir_size;
-                        } else {
-                            directory_sizes.insert(path.to_vec(), current_dir_size);
-                        }
-                    }
-                }
-                Command::CD(target) => match target {
-                    CDTarget::Root => current_dir.clear(),
-                    CDTarget::Parent => {
-                        current_dir.pop();
-                    }
-                    CDTarget::Child(name) => current_dir.push(name),
-                },
-            }
-            directory_sizes
-        },
-    )(data)
-}
-
-fn part_a(data: &Parsed) -> u32 {
-    data.values().copied().filter(|&size| size < 100000).sum()
-}
-
-const TOTAL_DISK_SPACE: u32 = 70000000;
-const NEEDED_DISK_SPACE: u32 = 30000000;
-
-fn part_b(data: &Parsed) -> u32 {
-    let root_directory_size = data[&vec![]];
-    let need_to_free = (root_directory_size + NEEDED_DISK_SPACE).saturating_sub(TOTAL_DISK_SPACE);
-    data.values()
-        .copied()
-        .filter(|&size| size >= need_to_free)
-        .min()
-        .expect("At least one directory should be larger than the missing space")
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    const SAMPLE_DATA: &str = include_str!("sample.txt");
-
-    #[test]
-    fn test_a() -> OutResult {
-        assert_eq!(part_a(&parse(SAMPLE_DATA)?.1), 95437);
-        println!("part a: {}", part_a(&parse(DATA)?.1));
-        Ok(())
-    }
-
-    #[test]
-    fn test_b() -> OutResult {
-        assert_eq!(part_b(&parse(SAMPLE_DATA)?.1), 24933642);
-        println!("part b: {}", part_b(&parse(DATA)?.1));
-        Ok(())
-    }
-}
-
-fn main() -> OutResult {
-    let parsed = parse(DATA)?.1;
-    println!("part a: {}", part_a(&parsed));
-    println!("part b: {}", part_b(&parsed));
-    Ok(())
 }

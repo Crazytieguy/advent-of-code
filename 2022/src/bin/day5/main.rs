@@ -1,3 +1,5 @@
+#![feature(get_many_mut)]
+use advent_2022::*;
 use nom::{
     branch::alt,
     bytes::complete::tag,
@@ -10,13 +12,35 @@ use nom::{
     Parser,
 };
 use nom_supreme::{multi::parse_separated_terminated, ParserExt};
-use std::{collections::VecDeque, error::Error};
+use std::collections::VecDeque;
 
-type OutResult = std::result::Result<(), Box<dyn Error>>;
-type IResult<'a, T> = nom::IResult<&'a str, T>;
+boilerplate!(Day);
 
-const DATA: &str = include_str!("data.txt");
+impl BasicSolution for Day {
+    type Parsed = (Stacks, Vec<Instruction>);
+    type A = String;
+    type B = String;
+    type TestA = &'static str;
+    type TestB = &'static str;
+    const SAMPLE_ANSWER_A: Self::TestA = "CMZ";
+    const SAMPLE_ANSWER_B: Self::TestB = "MCD";
 
+    fn parse(data: &'static str) -> IResult<Self::Parsed> {
+        separated_pair(stacks, line_ending, instructions)
+            .terminated(line_ending)
+            .parse(data)
+    }
+
+    fn a((stacks, instructions): Self::Parsed) -> Self::A {
+        solve::<true>(stacks, &instructions)
+    }
+
+    fn b((stacks, instructions): Self::Parsed) -> Self::B {
+        solve::<false>(stacks, &instructions)
+    }
+}
+
+#[derive(Debug, Clone, Copy)]
 struct Instruction {
     amount: u8,
     from: u8,
@@ -24,7 +48,22 @@ struct Instruction {
 }
 
 type Stacks = Vec<VecDeque<char>>;
-type Parsed = (Stacks, Vec<Instruction>);
+
+fn solve<const REVERSE_ORDER: bool>(mut stacks: Stacks, instructions: &[Instruction]) -> String {
+    for &Instruction { amount, from, to } in instructions {
+        let (amount, from, to) = (amount as usize, from as usize, to as usize);
+        let [from, to] = stacks
+            .get_many_mut([from, to])
+            .expect("stacks should exist");
+        let at = from.len() - amount;
+        if REVERSE_ORDER {
+            to.extend(from.drain(at..).rev());
+        } else {
+            to.extend(from.drain(at..));
+        }
+    }
+    get_top_crates(stacks)
+}
 
 fn crate_(input: &str) -> IResult<Option<char>> {
     const UPPERCASE: &str = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
@@ -66,10 +105,6 @@ fn instructions(input: &str) -> IResult<Vec<Instruction>> {
     separated_list1(line_ending, instruction)(input)
 }
 
-fn parse(data: &str) -> IResult<Parsed> {
-    separated_pair(stacks, line_ending, instructions)(data)
-}
-
 fn get_top_crates(stacks: Stacks) -> String {
     stacks
         .into_iter()
@@ -79,55 +114,4 @@ fn get_top_crates(stacks: Stacks) -> String {
                 .expect("each stack should have at least one crate")
         })
         .collect()
-}
-
-fn solve(stacks: &Stacks, instructions: &[Instruction], reverse_order: bool) -> String {
-    let mut stacks = stacks.clone();
-    let mut temp_stack = VecDeque::new();
-    for &Instruction { amount, from, to } in instructions {
-        let (amount, from, to) = (amount as usize, from as usize, to as usize);
-        let at = stacks[from].len() - amount;
-        temp_stack.extend(stacks[from].drain(at..));
-        if reverse_order {
-            stacks[to].extend(temp_stack.drain(..).rev());
-        } else {
-            stacks[to].append(&mut temp_stack);
-        }
-    }
-    get_top_crates(stacks)
-}
-
-fn part_a((stacks, instructions): &Parsed) -> String {
-    solve(stacks, instructions, true)
-}
-
-fn part_b((stacks, instructions): &Parsed) -> String {
-    solve(stacks, instructions, false)
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    const SAMPLE_DATA: &str = include_str!("sample.txt");
-
-    #[test]
-    fn test_a() -> OutResult {
-        assert_eq!(part_a(&parse(SAMPLE_DATA)?.1), "CMZ");
-        println!("part a: {}", part_a(&parse(DATA)?.1));
-        Ok(())
-    }
-
-    #[test]
-    fn test_b() -> OutResult {
-        assert_eq!(part_b(&parse(SAMPLE_DATA)?.1), "MCD");
-        println!("part b: {}", part_b(&parse(DATA)?.1));
-        Ok(())
-    }
-}
-
-fn main() -> OutResult {
-    let parsed = parse(DATA)?.1;
-    println!("part a: {}", part_a(&parsed));
-    println!("part b: {}", part_b(&parsed));
-    Ok(())
 }

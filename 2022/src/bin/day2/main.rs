@@ -1,99 +1,57 @@
+use advent_2022::*;
 use nom::{
     branch::alt,
     character::complete::{char, line_ending},
     multi::separated_list1,
     sequence::separated_pair,
-    IResult,
+    Parser,
 };
 use nom_supreme::ParserExt;
-use std::error::Error;
 
-const DATA: &str = include_str!("data.txt");
+boilerplate!(Day);
 
-#[derive(Debug, Clone, Copy)]
-enum Left {
-    A,
-    B,
-    C,
-}
+impl BasicSolution for Day {
+    type Parsed = Vec<(i8, i8)>;
+    type A = u32;
+    type B = u32;
+    const SAMPLE_ANSWER_A: Self::TestA = 15;
+    const SAMPLE_ANSWER_B: Self::TestB = 12;
 
-#[derive(Debug, Clone, Copy)]
-enum Right {
-    X,
-    Y,
-    Z,
-}
-
-type Parsed = Vec<(Left, Right)>;
-
-fn parse(data: &'static str) -> IResult<&'static str, Parsed> {
-    separated_list1(
-        line_ending,
-        separated_pair(
-            alt((
-                char('A').value(Left::A),
-                char('B').value(Left::B),
-                char('C').value(Left::C),
-            )),
-            char(' '),
-            alt((
-                char('X').value(Right::X),
-                char('Y').value(Right::Y),
-                char('Z').value(Right::Z),
-            )),
-        ),
-    )(data)
-}
-
-fn part_a(data: &Parsed) -> usize {
-    data.iter()
-        .map(|&(opponent_choice, own_choice)| {
-            let result_score = match (own_choice as i8 - opponent_choice as i8).rem_euclid(3) {
-                0 => 3, // tie
-                1 => 6, // win
-                2 => 0, // lose
-                _ => unreachable!(),
-            };
-            let choice_score = own_choice as usize + 1;
-            choice_score + result_score
-        })
-        .sum()
-}
-
-fn part_b(data: &Parsed) -> usize {
-    data.iter()
-        .map(|&(opponent_choice, result)| {
-            let choice_score =
-                (opponent_choice as i8 + result as i8 - 1).rem_euclid(3) as usize + 1;
-            let result_score = result as usize * 3;
-            choice_score + result_score
-        })
-        .sum()
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    const SAMPLE_DATA: &str = include_str!("sample.txt");
-
-    #[test]
-    fn test_a() -> Result<(), Box<dyn Error>> {
-        assert_eq!(part_a(&parse(SAMPLE_DATA)?.1), 15);
-        println!("part a: {}", part_a(&parse(DATA)?.1));
-        Ok(())
+    fn parse(data: &str) -> IResult<Self::Parsed> {
+        separated_list1(
+            line_ending,
+            separated_pair(
+                alt((char('A').value(0), char('B').value(1), char('C').value(2))),
+                char(' '),
+                alt((char('X').value(0), char('Y').value(1), char('Z').value(2))),
+            ),
+        )
+        .terminated(line_ending)
+        .parse(data)
     }
 
-    #[test]
-    fn test_b() -> Result<(), Box<dyn Error>> {
-        assert_eq!(part_b(&parse(SAMPLE_DATA)?.1), 12);
-        println!("part b: {}", part_b(&parse(DATA)?.1));
-        Ok(())
+    fn a(data: Self::Parsed) -> Self::A {
+        data.into_iter()
+            .map(|(opponent_choice, own_choice)| {
+                let result_score = match (own_choice - opponent_choice).rem_euclid(3) {
+                    0 => 3, // tie
+                    1 => 6, // win
+                    2 => 0, // lose
+                    _ => unreachable!(),
+                };
+                let choice_score = own_choice as u32 + 1;
+                choice_score + result_score
+            })
+            .sum()
     }
-}
 
-fn main() -> Result<(), Box<dyn Error>> {
-    let parsed = parse(DATA)?.1;
-    println!("part a: {}", part_a(&parsed));
-    println!("part b: {}", part_b(&parsed));
-    Ok(())
+    fn b(data: Self::Parsed) -> Self::B {
+        data.into_iter()
+            .map(|(opponent_choice, result)| {
+                let choice_score = (opponent_choice + result - 1).rem_euclid(3) as u32 + 1;
+                let result_score = result as u32 * 3;
+                choice_score + result_score
+            })
+            .sum()
+    }
 }

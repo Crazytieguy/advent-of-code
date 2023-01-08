@@ -1,48 +1,23 @@
-use std::error::Error;
+use advent_2022::*;
 
-const DATA: &str = include_str!("data.txt");
+boilerplate!(Day);
 
-type OutResult = std::result::Result<(), Box<dyn Error>>;
-type IResult<'a, T> = nom::IResult<&'a str, T>;
+impl BasicSolution for Day {
+    type Parsed = &'static str;
+    type A = u32;
+    type B = u32;
+    const SAMPLE_ANSWER_A: Self::TestA = 0;
+    const SAMPLE_ANSWER_B: Self::TestB = 0;
 
-type Parsed<'a> = &'a str;
-
-fn parse(data: &str) -> IResult<Parsed> {
-    todo!("{data:?}")
-}
-
-fn part_a(data: &Parsed) -> usize {
-    todo!("{data:?}")
-}
-
-fn part_b(data: &Parsed) -> usize {
-    todo!("{data:?}")
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    const SAMPLE_DATA: &str = include_str!("sample.txt");
-
-    #[test]
-    fn test_a() -> OutResult {
-        assert_eq!(part_a(&parse(SAMPLE_DATA)?.1), 0);
-        println!("part a: {}", part_a(&parse(DATA)?.1));
-        Ok(())
+    fn parse(data: &'static str) -> IResult<Self::Parsed> {
+        Ok(("", data))
     }
 
-    #[test]
-    #[ignore]
-    fn test_b() -> OutResult {
-        assert_eq!(part_b(&parse(SAMPLE_DATA)?.1), 0);
-        println!("part b: {}", part_b(&parse(DATA)?.1));
-        Ok(())
+    fn a(data: Self::Parsed) -> Self::A {
+        todo!("{data}")
     }
-}
 
-fn main() -> OutResult {
-    let parsed = parse(DATA)?.1;
-    println!("part a: {}", part_a(&parsed));
-    println!("part b: {}", part_b(&parsed));
-    Ok(())
+    fn b(_: Self::Parsed) -> Self::B {
+        0
+    }
 }

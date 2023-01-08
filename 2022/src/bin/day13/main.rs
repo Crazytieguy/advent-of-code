@@ -1,20 +1,53 @@
+use advent_2022::*;
 use itertools::Itertools;
 use nom::{
     branch::alt,
     character::complete::{char, line_ending, u8},
     multi::{separated_list0, separated_list1},
-    sequence::{delimited, pair, separated_pair},
+    sequence::{delimited, separated_pair},
     Parser,
 };
-use std::{cmp::Ordering, error::Error};
+use nom_supreme::ParserExt;
+use std::cmp::Ordering;
 use Value::*;
 
-const DATA: &str = include_str!("data.txt");
+boilerplate!(Day);
 
-type OutResult = std::result::Result<(), Box<dyn Error>>;
-type IResult<'a, T> = nom::IResult<&'a str, T>;
+impl BasicSolution for Day {
+    type Parsed = Vec<(Value, Value)>;
+    type A = usize;
+    type B = usize;
+    const SAMPLE_ANSWER_A: Self::TestA = 13;
+    const SAMPLE_ANSWER_B: Self::TestB = 140;
 
-type Parsed = Vec<(Value, Value)>;
+    fn parse(data: &'static str) -> IResult<Self::Parsed> {
+        separated_list1(
+            line_ending,
+            separated_pair(value, line_ending, value).terminated(line_ending),
+        )(data)
+    }
+
+    fn a(data: Self::Parsed) -> Self::A {
+        data.into_iter()
+            .enumerate()
+            .filter(|(_, (a, b))| b >= a)
+            .map(|(i, _)| i + 1)
+            .sum()
+    }
+
+    fn b(data: Self::Parsed) -> Self::B {
+        let divider_a = List(vec![List(vec![Integer(2)])]);
+        let divider_b = List(vec![List(vec![Integer(6)])]);
+        let all_packets = data
+            .iter()
+            .flat_map(|(a, b)| [a, b])
+            .chain([&divider_a, &divider_b])
+            .sorted_unstable()
+            .collect_vec();
+        all_packets.partition_point(|&v| v <= &divider_a)
+            * all_packets.partition_point(|&v| v <= &divider_b)
+    }
+}
 
 #[derive(Debug, Clone)]
 enum Value {
@@ -47,69 +80,9 @@ impl PartialOrd for Value {
     }
 }
 
-fn parse_value(data: &str) -> IResult<Value> {
+fn value(data: &str) -> IResult<Value> {
     alt((
         u8.map(Integer),
-        delimited(
-            char('['),
-            separated_list0(char(','), parse_value),
-            char(']'),
-        )
-        .map(List),
+        delimited(char('['), separated_list0(char(','), value), char(']')).map(List),
     ))(data)
-}
-
-fn parse(data: &str) -> IResult<Parsed> {
-    separated_list1(
-        pair(line_ending, line_ending),
-        separated_pair(parse_value, line_ending, parse_value),
-    )(data)
-}
-
-fn part_a(data: &Parsed) -> usize {
-    data.iter()
-        .enumerate()
-        .filter(|(_, (a, b))| b >= a)
-        .map(|(i, _)| i + 1)
-        .sum()
-}
-
-fn part_b(data: &Parsed) -> usize {
-    let divider_a = List(vec![List(vec![Integer(2)])]);
-    let divider_b = List(vec![List(vec![Integer(6)])]);
-    let all_packets = data
-        .iter()
-        .flat_map(|(a, b)| [a, b])
-        .chain([&divider_a, &divider_b])
-        .sorted_unstable()
-        .collect_vec();
-    all_packets.partition_point(|&v| v <= &divider_a)
-        * all_packets.partition_point(|&v| v <= &divider_b)
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    const SAMPLE_DATA: &str = include_str!("sample.txt");
-
-    #[test]
-    fn test_a() -> OutResult {
-        assert_eq!(part_a(&parse(SAMPLE_DATA)?.1), 13);
-        println!("part a: {}", part_a(&parse(DATA)?.1));
-        Ok(())
-    }
-
-    #[test]
-    fn test_b() -> OutResult {
-        assert_eq!(part_b(&parse(SAMPLE_DATA)?.1), 140);
-        println!("part b: {}", part_b(&parse(DATA)?.1));
-        Ok(())
-    }
-}
-
-fn main() -> OutResult {
-    let parsed = parse(DATA)?.1;
-    println!("part a: {}", part_a(&parsed));
-    println!("part b: {}", part_b(&parsed));
-    Ok(())
 }

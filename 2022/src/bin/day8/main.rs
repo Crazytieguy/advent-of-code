@@ -1,7 +1,42 @@
-const DATA: &str = include_str!("data.txt");
+use advent_2022::*;
 
-fn parse(data: &str) -> Vec<&[u8]> {
-    data.lines().map(|line| line.as_bytes()).collect()
+boilerplate!(Day);
+
+impl BasicSolution for Day {
+    type Parsed = Vec<&'static [u8]>;
+    type A = usize;
+    type B = usize;
+    const SAMPLE_ANSWER_A: Self::TestA = 21;
+    const SAMPLE_ANSWER_B: Self::TestB = 8;
+
+    fn parse(data: &'static str) -> IResult<Self::Parsed> {
+        Ok(("", data.lines().map(|line| line.as_bytes()).collect()))
+    }
+
+    fn a(data: Self::Parsed) -> Self::A {
+        iter_tree_directions(&data)
+            .map(|(tree, mut directions)| {
+                let tree_is_higher = |other_tree| tree > other_tree;
+                directions.0.all(tree_is_higher)
+                    || directions.1.all(tree_is_higher)
+                    || directions.2.all(tree_is_higher)
+                    || directions.3.all(tree_is_higher)
+            })
+            .filter(|&visible| visible)
+            .count()
+    }
+
+    fn b(data: Self::Parsed) -> Self::B {
+        iter_tree_directions(&data)
+            .map(|(tree, directions)| {
+                count_trees_visible(tree, directions.0)
+                    * count_trees_visible(tree, directions.1)
+                    * count_trees_visible(tree, directions.2)
+                    * count_trees_visible(tree, directions.3)
+            })
+            .max()
+            .expect("At least one tree")
+    }
 }
 
 fn iter_tree_directions<'a>(
@@ -36,58 +71,9 @@ fn iter_tree_directions<'a>(
     })
 }
 
-fn part_a(data: &[&[u8]]) -> usize {
-    iter_tree_directions(data)
-        .map(|(tree, mut directions)| {
-            let tree_is_higher = |other_tree| tree > other_tree;
-            directions.0.all(tree_is_higher)
-                || directions.1.all(tree_is_higher)
-                || directions.2.all(tree_is_higher)
-                || directions.3.all(tree_is_higher)
-        })
-        .filter(|&visible| visible)
-        .count()
-}
-
 fn count_trees_visible(tree: u8, mut trees: impl ExactSizeIterator<Item = u8>) -> usize {
     let num_trees = trees.len();
     trees
         .position(|other_tree| other_tree >= tree)
         .map_or(num_trees, |pos| pos + 1)
-}
-
-fn part_b(data: &[&[u8]]) -> usize {
-    iter_tree_directions(data)
-        .map(|(tree, directions)| {
-            count_trees_visible(tree, directions.0)
-                * count_trees_visible(tree, directions.1)
-                * count_trees_visible(tree, directions.2)
-                * count_trees_visible(tree, directions.3)
-        })
-        .max()
-        .expect("At least one tree")
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    const SAMPLE_DATA: &str = include_str!("sample.txt");
-
-    #[test]
-    fn test_a() {
-        assert_eq!(part_a(&parse(SAMPLE_DATA)), 21);
-        println!("part a: {}", part_a(&parse(DATA)));
-    }
-
-    #[test]
-    fn test_b() {
-        assert_eq!(part_b(&parse(SAMPLE_DATA)), 8);
-        println!("part b: {}", part_b(&parse(DATA)));
-    }
-}
-
-fn main() {
-    let parsed = parse(DATA);
-    println!("part a: {}", part_a(&parsed));
-    println!("part b: {}", part_b(&parsed));
 }

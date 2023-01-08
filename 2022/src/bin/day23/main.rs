@@ -1,25 +1,42 @@
+use advent_2022::*;
 use std::{
     collections::{HashMap, HashSet},
-    error::Error,
     ops::RangeInclusive,
 };
 
-const DATA: &str = include_str!("data.txt");
+boilerplate!(Day);
 
-type OutResult = std::result::Result<(), Box<dyn Error>>;
+impl BasicSolution for Day {
+    type Parsed = HashSet<(i16, i16)>;
+    type A = usize;
+    type B = usize;
+    const SAMPLE_ANSWER_A: Self::TestA = 110;
+    const SAMPLE_ANSWER_B: Self::TestB = 20;
 
-type Parsed = HashSet<(i16, i16)>;
-
-fn parse(data: &str) -> Parsed {
-    data.lines()
-        .enumerate()
-        .flat_map(move |(row, line)| {
-            line.chars()
+    fn parse(data: &str) -> IResult<Self::Parsed> {
+        Ok((
+            "",
+            data.lines()
                 .enumerate()
-                .filter(|&(_, c)| c == '#')
-                .map(move |(col, _)| (row as i16, col as i16))
-        })
-        .collect()
+                .flat_map(move |(row, line)| {
+                    line.chars()
+                        .enumerate()
+                        .filter(|&(_, c)| c == '#')
+                        .map(move |(col, _)| (row as i16, col as i16))
+                })
+                .collect(),
+        ))
+    }
+
+    fn a(mut elve_positions: Self::Parsed) -> Self::A {
+        run_simulation(&mut elve_positions, 10);
+        let (rows, cols) = calc_bounds(&elve_positions);
+        rows.len() * cols.len() - elve_positions.len()
+    }
+
+    fn b(mut elve_positions: Self::Parsed) -> Self::B {
+        run_simulation(&mut elve_positions, 10000).expect("not done within 10000 rounds")
+    }
 }
 
 fn run_simulation(elve_positions: &mut HashSet<(i16, i16)>, max_rounds: usize) -> Option<usize> {
@@ -75,18 +92,6 @@ fn calc_bounds(elve_positions: &HashSet<(i16, i16)>) -> (RangeInclusive<i16>, Ra
     (min_row..=max_row, min_col..=max_col)
 }
 
-fn part_a(data: &Parsed) -> usize {
-    let mut elve_positions = data.clone();
-    run_simulation(&mut elve_positions, 10);
-    let (rows, cols) = calc_bounds(&elve_positions);
-    rows.len() * cols.len() - elve_positions.len()
-}
-
-fn part_b(data: &Parsed) -> usize {
-    let mut elve_positions = data.clone();
-    run_simulation(&mut elve_positions, 10000).expect("not done within 10000 rounds")
-}
-
 // for debugging
 #[allow(dead_code)]
 fn print_elve_positions(elves: &HashSet<(i16, i16)>) {
@@ -102,31 +107,4 @@ fn print_elve_positions(elves: &HashSet<(i16, i16)>) {
         println!();
     }
     println!();
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    const SAMPLE_DATA: &str = include_str!("sample.txt");
-
-    #[test]
-    fn test_a() -> OutResult {
-        assert_eq!(part_a(&parse(SAMPLE_DATA)), 110);
-        println!("part a: {}", part_a(&parse(DATA)));
-        Ok(())
-    }
-
-    #[test]
-    fn test_b() -> OutResult {
-        assert_eq!(part_b(&parse(SAMPLE_DATA)), 20);
-        println!("part b: {}", part_b(&parse(DATA)));
-        Ok(())
-    }
-}
-
-fn main() -> OutResult {
-    let parsed = parse(DATA);
-    println!("part a: {}", part_a(&parsed));
-    println!("part b: {}", part_b(&parsed));
-    Ok(())
 }

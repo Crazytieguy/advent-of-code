@@ -1,44 +1,64 @@
+use advent_2022::*;
+use itertools::Itertools;
 use std::collections::VecDeque;
 
-use itertools::Itertools;
+boilerplate!(Day);
 
-const DATA: &str = include_str!("data.txt");
+impl BasicSolution for Day {
+    type Parsed = Input;
+    type A = u32;
+    type B = u32;
+    const SAMPLE_ANSWER_A: Self::TestA = 31;
+    const SAMPLE_ANSWER_B: Self::TestB = 29;
+
+    fn parse(data: &'static str) -> IResult<Self::Parsed> {
+        let mut height_map = data
+            .lines()
+            .map(|row| row.as_bytes().to_vec())
+            .collect_vec();
+
+        let mut find_position_and_assign = |from, to| {
+            height_map
+                .iter_mut()
+                .enumerate()
+                .find_map(|(x, row)| {
+                    row.iter_mut()
+                        .enumerate()
+                        .find(|(_, &mut height)| height == from)
+                        .map(|(y, height)| {
+                            *height = to;
+                            (x, y)
+                        })
+                })
+                .expect("The character should be present in the input")
+        };
+        Ok((
+            "",
+            Input {
+                start: find_position_and_assign(b'S', b'a'),
+                end: find_position_and_assign(b'E', b'z'),
+                height_map,
+            },
+        ))
+    }
+
+    fn a(data: Self::Parsed) -> Self::A {
+        bfs(&data, |&pos| pos == data.start)
+    }
+
+    fn b(data: Self::Parsed) -> Self::B {
+        bfs(&data, |&(x, y)| data.height_map[x][y] == b'a')
+    }
+}
 
 type Position = (usize, usize);
 type HeightMap = Vec<Vec<u8>>;
-struct Parsed {
+
+#[derive(Debug, Clone)]
+struct Input {
     start: Position,
     end: Position,
     height_map: HeightMap,
-}
-
-fn parse(data: &str) -> Parsed {
-    let mut height_map = data
-        .lines()
-        .map(|row| row.as_bytes().to_vec())
-        .collect_vec();
-
-    let mut find_position_and_assign = |from, to| {
-        height_map
-            .iter_mut()
-            .enumerate()
-            .find_map(|(x, row)| {
-                row.iter_mut()
-                    .enumerate()
-                    .find(|(_, &mut height)| height == from)
-                    .map(|(y, height)| {
-                        *height = to;
-                        (x, y)
-                    })
-            })
-            .expect("The character should be present in the input")
-    };
-
-    Parsed {
-        start: find_position_and_assign(b'S', b'a'),
-        end: find_position_and_assign(b'E', b'z'),
-        height_map,
-    }
 }
 
 fn neighbors(height_map: &HeightMap, (x, y): Position) -> impl Iterator<Item = Position> + '_ {
@@ -58,11 +78,11 @@ fn neighbors(height_map: &HeightMap, (x, y): Position) -> impl Iterator<Item = P
 }
 
 fn bfs(
-    Parsed {
+    Input {
         end, height_map, ..
-    }: &Parsed,
+    }: &Input,
     success: impl Fn(&Position) -> bool,
-) -> usize {
+) -> u32 {
     let mut seen = vec![vec![false; height_map[0].len()]; height_map.len()];
     let mut queue = VecDeque::from([(*end, 0)]);
     while let Some((pos, steps)) = queue.pop_front() {
@@ -78,36 +98,4 @@ fn bfs(
         }
     }
     unreachable!("should always find a path")
-}
-
-fn part_a(parsed: &Parsed) -> usize {
-    bfs(parsed, |&pos| pos == parsed.start)
-}
-
-fn part_b(parsed: &Parsed) -> usize {
-    bfs(parsed, |&(x, y)| parsed.height_map[x][y] == b'a')
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    const SAMPLE_DATA: &str = include_str!("sample.txt");
-
-    #[test]
-    fn test_a() {
-        assert_eq!(part_a(&parse(SAMPLE_DATA)), 31);
-        println!("part a: {}", part_a(&parse(DATA)));
-    }
-
-    #[test]
-    fn test_b() {
-        assert_eq!(part_b(&parse(SAMPLE_DATA)), 29);
-        println!("part b: {}", part_b(&parse(DATA)));
-    }
-}
-
-fn main() {
-    let parsed = parse(DATA);
-    println!("part a: {}", part_a(&parsed));
-    println!("part b: {}", part_b(&parsed));
 }

@@ -1,6 +1,5 @@
 #![feature(exclusive_range_pattern)]
-use std::error::Error;
-
+use advent_2022::*;
 use itertools::iterate;
 use nom::{
     branch::alt,
@@ -9,16 +8,51 @@ use nom::{
     Parser,
 };
 use nom_supreme::ParserExt;
-use Direction::*;
-use Move::*;
-use Rotation::*;
 
-const DATA: &str = include_str!("data.txt");
+boilerplate!(Day);
 
-type OutResult = std::result::Result<(), Box<dyn Error>>;
-type IResult<'a, T> = nom::IResult<&'a str, T>;
+impl Solution for Day {
+    type Parsed = (Vec<&'static [u8]>, Vec<Move>);
+    type A = usize;
+    type B = usize;
+    const SAMPLE_ANSWER_A: Self::TestA = 6032;
+    const SAMPLE_ANSWER_B: Self::TestB = 5031;
 
-type Parsed<'a> = (Vec<&'a [u8]>, Vec<Move>);
+    fn parse(data: &'static str) -> IResult<Self::Parsed> {
+        let mut lines = data.lines();
+        let grid = lines
+            .by_ref()
+            .take_while(|line| !line.is_empty())
+            .map(str::as_bytes)
+            .collect();
+        let path = lines
+            .next()
+            .expect("there should be a path after the empty line");
+        many1(parse_move)
+            .parse(path)
+            .map(|(rest, moves)| (rest, (grid, moves)))
+    }
+
+    fn parse_test(data: &'static str) -> IResult<Self::ParsedTest> {
+        Self::parse(data)
+    }
+
+    fn a(data: Self::Parsed) -> Self::A {
+        solve(data, move_one_2d::<150, 200>)
+    }
+
+    fn a_test(data: Self::ParsedTest) -> Self::TestA {
+        solve(data, move_one_2d::<16, 12>)
+    }
+
+    fn b(data: Self::Parsed) -> Self::B {
+        solve(data, move_one_cube)
+    }
+
+    fn b_test(data: Self::ParsedTest) -> Self::TestB {
+        solve(data, move_one_sample_cube)
+    }
+}
 
 #[derive(Debug, Clone, Copy)]
 enum Direction {
@@ -27,18 +61,21 @@ enum Direction {
     Left,
     Right,
 }
+use Direction::*;
 
 #[derive(Debug, Clone, Copy)]
 enum Rotation {
     Clockwise,
     CounterClockwise,
 }
+use Rotation::*;
 
 #[derive(Debug, Clone, Copy)]
 enum Move {
     Turn(Rotation),
     Forward(usize),
 }
+use Move::*;
 
 fn parse_move(input: &str) -> IResult<Move> {
     alt((
@@ -48,21 +85,6 @@ fn parse_move(input: &str) -> IResult<Move> {
     ))(input)
 }
 
-fn parse(data: &str) -> IResult<Parsed> {
-    let mut lines = data.lines();
-    let grid = lines
-        .by_ref()
-        .take_while(|line| !line.is_empty())
-        .map(str::as_bytes)
-        .collect();
-    let path = lines
-        .next()
-        .expect("there should be a path after the empty line");
-    many1(parse_move)
-        .parse(path)
-        .map(|(rest, moves)| (rest, (grid, moves)))
-}
-
 #[derive(Debug, Clone, Copy)]
 struct State {
     x: usize,
@@ -70,39 +92,14 @@ struct State {
     direction: Direction,
 }
 
-fn move_one_2d<const X: usize, const Y: usize>(&State { x, y, direction }: &State) -> State {
-    match direction {
-        Right => State {
-            x: (x + 1) % X,
-            y,
-            direction,
-        },
-        Down => State {
-            x,
-            y: (y + 1) % Y,
-            direction,
-        },
-        Left => State {
-            x: x.checked_sub(1).unwrap_or(X - 1),
-            y,
-            direction,
-        },
-        Up => State {
-            x,
-            y: y.checked_sub(1).unwrap_or(Y - 1),
-            direction,
-        },
-    }
-}
-
-fn solve((grid, path): &Parsed, move_one: fn(&State) -> State) -> usize {
-    let State { x, y, direction } = path.iter().fold(
+fn solve((grid, path): (Vec<&'static [u8]>, Vec<Move>), move_one: fn(&State) -> State) -> usize {
+    let State { x, y, direction } = path.into_iter().fold(
         State {
             y: 0,
             x: grid[0].iter().position(|&c| c == b'.').unwrap(),
             direction: Right,
         },
-        |state, &m| match m {
+        |state, m| match m {
             Turn(Clockwise) => State {
                 direction: match state.direction {
                     Up => Right,
@@ -138,6 +135,31 @@ fn solve((grid, path): &Parsed, move_one: fn(&State) -> State) -> usize {
         Up => 3,
     };
     1000 * row_number + 4 * column_number + facing_number
+}
+
+fn move_one_2d<const X: usize, const Y: usize>(&State { x, y, direction }: &State) -> State {
+    match direction {
+        Right => State {
+            x: (x + 1) % X,
+            y,
+            direction,
+        },
+        Down => State {
+            x,
+            y: (y + 1) % Y,
+            direction,
+        },
+        Left => State {
+            x: x.checked_sub(1).unwrap_or(X - 1),
+            y,
+            direction,
+        },
+        Up => State {
+            x,
+            y: y.checked_sub(1).unwrap_or(Y - 1),
+            direction,
+        },
+    }
 }
 
 fn move_one_cube(&State { x, y, direction }: &State) -> State {
@@ -243,135 +265,105 @@ fn move_one_cube(&State { x, y, direction }: &State) -> State {
     }
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-    const SAMPLE_DATA: &str = include_str!("sample.txt");
-
-    fn move_one_sample_cube(&State { x, y, direction }: &State) -> State {
-        match direction {
-            Right => match (x, y) {
-                (11, 0..4) => State {
-                    x: 15,
-                    y: 11 - y,
-                    direction: Left,
-                },
-                (11, 4..8) => State {
-                    x: 15 - (y - 4),
-                    y: 8,
-                    direction: Down,
-                },
-                (15, 8..12) => State {
-                    x: 11,
-                    y: 3 - (y - 8),
-                    direction: Left,
-                },
-                _ => State {
-                    x: x + 1,
-                    y,
-                    direction,
-                },
+fn move_one_sample_cube(&State { x, y, direction }: &State) -> State {
+    match direction {
+        Right => match (x, y) {
+            (11, 0..4) => State {
+                x: 15,
+                y: 11 - y,
+                direction: Left,
             },
-            Left => match (x, y) {
-                (8, 0..4) => State {
-                    x: y + 4,
-                    y: 4,
-                    direction: Down,
-                },
-                (0, 4..8) => State {
-                    x: 15 - (y - 4),
-                    y: 11,
-                    direction: Up,
-                },
-                (8, 8..12) => State {
-                    x: 7 - (y - 8),
-                    y: 7,
-                    direction: Up,
-                },
-                _ => State {
-                    x: x - 1,
-                    y,
-                    direction,
-                },
+            (11, 4..8) => State {
+                x: 15 - (y - 4),
+                y: 8,
+                direction: Down,
             },
-            Down => match (x, y) {
-                (0..4, 7) => State {
-                    x: 11 - x,
-                    y: 11,
-                    direction: Up,
-                },
-                (4..8, 7) => State {
-                    x: 8,
-                    y: 11 - (x - 4),
-                    direction: Right,
-                },
-                (8..12, 11) => State {
-                    x: 3 - (x - 8),
-                    y: 7,
-                    direction: Up,
-                },
-                (12..16, 11) => State {
-                    x: 0,
-                    y: 7 - (x - 12),
-                    direction: Right,
-                },
-                _ => State {
-                    x,
-                    y: y + 1,
-                    direction,
-                },
+            (15, 8..12) => State {
+                x: 11,
+                y: 3 - (y - 8),
+                direction: Left,
             },
-            Up => match (x, y) {
-                (0..4, 4) => State {
-                    x: 11 - x,
-                    y: 0,
-                    direction: Down,
-                },
-                (4..8, 4) => State {
-                    x: 8,
-                    y: x - 4,
-                    direction: Right,
-                },
-                (8..12, 0) => State {
-                    x: 4,
-                    y: 3 - (x - 8),
-                    direction: Down,
-                },
-                (12..16, 4) => State {
-                    x: 11,
-                    y: 7 - (x - 12),
-                    direction: Left,
-                },
-                _ => State {
-                    x,
-                    y: y - 1,
-                    direction,
-                },
+            _ => State {
+                x: x + 1,
+                y,
+                direction,
             },
-        }
+        },
+        Left => match (x, y) {
+            (8, 0..4) => State {
+                x: y + 4,
+                y: 4,
+                direction: Down,
+            },
+            (0, 4..8) => State {
+                x: 15 - (y - 4),
+                y: 11,
+                direction: Up,
+            },
+            (8, 8..12) => State {
+                x: 7 - (y - 8),
+                y: 7,
+                direction: Up,
+            },
+            _ => State {
+                x: x - 1,
+                y,
+                direction,
+            },
+        },
+        Down => match (x, y) {
+            (0..4, 7) => State {
+                x: 11 - x,
+                y: 11,
+                direction: Up,
+            },
+            (4..8, 7) => State {
+                x: 8,
+                y: 11 - (x - 4),
+                direction: Right,
+            },
+            (8..12, 11) => State {
+                x: 3 - (x - 8),
+                y: 7,
+                direction: Up,
+            },
+            (12..16, 11) => State {
+                x: 0,
+                y: 7 - (x - 12),
+                direction: Right,
+            },
+            _ => State {
+                x,
+                y: y + 1,
+                direction,
+            },
+        },
+        Up => match (x, y) {
+            (0..4, 4) => State {
+                x: 11 - x,
+                y: 0,
+                direction: Down,
+            },
+            (4..8, 4) => State {
+                x: 8,
+                y: x - 4,
+                direction: Right,
+            },
+            (8..12, 0) => State {
+                x: 4,
+                y: 3 - (x - 8),
+                direction: Down,
+            },
+            (12..16, 4) => State {
+                x: 11,
+                y: 7 - (x - 12),
+                direction: Left,
+            },
+            _ => State {
+                x,
+                y: y - 1,
+                direction,
+            },
+        },
     }
-
-    #[test]
-    fn test_a() -> OutResult {
-        assert_eq!(solve(&parse(SAMPLE_DATA)?.1, move_one_2d::<16, 12>), 6032);
-        println!(
-            "part a: {}",
-            solve(&parse(DATA)?.1, move_one_2d::<150, 200>)
-        );
-        Ok(())
-    }
-
-    #[test]
-    fn test_b() -> OutResult {
-        assert_eq!(solve(&parse(SAMPLE_DATA)?.1, move_one_sample_cube), 5031);
-        println!("part b: {}", solve(&parse(DATA)?.1, move_one_cube));
-        Ok(())
-    }
-}
-
-fn main() -> OutResult {
-    let parsed = parse(DATA)?.1;
-    println!("part a: {}", solve(&parsed, move_one_2d::<150, 200>));
-    println!("part b: {}", solve(&parsed, move_one_cube));
-    Ok(())
 }

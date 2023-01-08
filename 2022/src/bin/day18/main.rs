@@ -1,55 +1,67 @@
-use std::error::Error;
-
+use advent_2022::*;
 use nom::{
     character::complete::{char, line_ending, u8},
     multi::separated_list1,
     sequence::tuple,
     Parser,
 };
+use nom_supreme::ParserExt;
 
-const DATA: &str = include_str!("data.txt");
+boilerplate!(Day);
 
-type OutResult = std::result::Result<(), Box<dyn Error>>;
-type IResult<'a, T> = nom::IResult<&'a str, T>;
+const SIZE: usize = 24;
+const TEST_SIZE: usize = 9;
+
+impl Solution for Day {
+    type Parsed = (Vec<Tuple>, Arr3D<SIZE>);
+    type ParsedTest = (Vec<Tuple>, Arr3D<TEST_SIZE>);
+    type A = usize;
+    type B = usize;
+    const SAMPLE_ANSWER_A: Self::TestA = 64;
+    const SAMPLE_ANSWER_B: Self::TestB = 58;
+
+    fn parse(data: &'static str) -> IResult<Self::Parsed> {
+        parse(data)
+    }
+
+    fn a(data: Self::Parsed) -> Self::A {
+        part_a(data)
+    }
+
+    fn b(data: Self::Parsed) -> Self::B {
+        part_b(data)
+    }
+
+    fn parse_test(data: &'static str) -> IResult<Self::ParsedTest> {
+        parse(data)
+    }
+
+    fn a_test(data: Self::ParsedTest) -> Self::A {
+        part_a(data)
+    }
+
+    fn b_test(data: Self::ParsedTest) -> Self::B {
+        part_b(data)
+    }
+}
 
 type Tuple = (u8, u8, u8);
-type Parsed<const N: usize> = (Vec<Tuple>, [[[bool; N]; N]; N]);
+type Arr3D<const N: usize> = [[[bool; N]; N]; N];
 
-fn parse_cube(data: &str) -> IResult<(u8, u8, u8)> {
-    tuple((u8, char(','), u8, char(','), u8))
-        .map(|(a, _, b, _, c)| (a + 1, b + 1, c + 1))
+fn parse<const N: usize>(data: &str) -> IResult<(Vec<Tuple>, Arr3D<N>)> {
+    separated_list1(line_ending, parse_cube)
+        .terminated(line_ending)
+        .map(|coords| {
+            let mut matrix = [[[false; N]; N]; N];
+            for &(x, y, z) in &coords {
+                matrix[x as usize][y as usize][z as usize] = true;
+            }
+            (coords, matrix)
+        })
         .parse(data)
 }
 
-fn parse<const N: usize>(data: &str) -> IResult<Parsed<N>> {
-    let (input, coords) = separated_list1(line_ending, parse_cube)(data)?;
-    let mut matrix = [[[false; N]; N]; N];
-    for &(x, y, z) in &coords {
-        matrix[x as usize][y as usize][z as usize] = true;
-    }
-    Ok((input, (coords, matrix)))
-}
-
-fn adjacent_coords<const N: usize>((x, y, z): Tuple) -> impl Iterator<Item = Tuple> {
-    [
-        (-1, 0, 0),
-        (1, 0, 0),
-        (0, -1, 0),
-        (0, 1, 0),
-        (0, 0, -1),
-        (0, 0, 1),
-    ]
-    .iter()
-    .filter_map(move |&(dx, dy, dz)| {
-        x.checked_add_signed(dx)
-            .zip(y.checked_add_signed(dy))
-            .zip(z.checked_add_signed(dz))
-    })
-    .map(|((x, y), z)| (x, y, z))
-    .filter(|&(x, y, z)| (x as usize) < N && (y as usize) < N && (z as usize) < N)
-}
-
-fn part_a<const N: usize>((coords, matrix): &Parsed<N>) -> usize {
+fn part_a<const N: usize>((coords, matrix): (Vec<Tuple>, Arr3D<N>)) -> usize {
     coords
         .iter()
         .flat_map(|&t| adjacent_coords::<N>(t))
@@ -57,7 +69,7 @@ fn part_a<const N: usize>((coords, matrix): &Parsed<N>) -> usize {
         .count()
 }
 
-fn part_b<const N: usize>((_coords, matrix): &Parsed<N>) -> usize {
+fn part_b<const N: usize>((_coords, matrix): (Vec<Tuple>, Arr3D<N>)) -> usize {
     let mut visited = [[[false; N]; N]; N];
     let mut encountered = 0;
     let mut queue = vec![(0, 0, 0)];
@@ -77,29 +89,27 @@ fn part_b<const N: usize>((_coords, matrix): &Parsed<N>) -> usize {
     encountered
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-    const SAMPLE_DATA: &str = include_str!("sample.txt");
-
-    #[test]
-    fn test_a() -> OutResult {
-        assert_eq!(part_a::<9>(&parse::<9>(SAMPLE_DATA)?.1), 64);
-        println!("part a: {}", part_a::<24>(&parse::<24>(DATA)?.1));
-        Ok(())
-    }
-
-    #[test]
-    fn test_b() -> OutResult {
-        assert_eq!(part_b::<9>(&parse::<9>(SAMPLE_DATA)?.1), 58);
-        println!("part b: {}", part_b::<24>(&parse::<24>(DATA)?.1));
-        Ok(())
-    }
+fn parse_cube(data: &str) -> IResult<(u8, u8, u8)> {
+    tuple((u8, char(','), u8, char(','), u8))
+        .map(|(a, _, b, _, c)| (a + 1, b + 1, c + 1))
+        .parse(data)
 }
 
-fn main() -> OutResult {
-    let parsed = parse::<24>(DATA)?.1;
-    println!("part a: {}", part_a::<24>(&parsed));
-    println!("part b: {}", part_b::<24>(&parsed));
-    Ok(())
+fn adjacent_coords<const N: usize>((x, y, z): Tuple) -> impl Iterator<Item = Tuple> {
+    [
+        (-1, 0, 0),
+        (1, 0, 0),
+        (0, -1, 0),
+        (0, 1, 0),
+        (0, 0, -1),
+        (0, 0, 1),
+    ]
+    .iter()
+    .filter_map(move |&(dx, dy, dz)| {
+        x.checked_add_signed(dx)
+            .zip(y.checked_add_signed(dy))
+            .zip(z.checked_add_signed(dz))
+    })
+    .map(|((x, y), z)| (x, y, z))
+    .filter(|&(x, y, z)| (x as usize) < N && (y as usize) < N && (z as usize) < N)
 }

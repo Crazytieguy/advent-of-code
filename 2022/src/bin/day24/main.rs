@@ -1,10 +1,68 @@
-use std::{collections::VecDeque, error::Error};
-
+use advent_2022::*;
 use itertools::izip;
+use std::collections::VecDeque;
 
-const DATA: &str = include_str!("data.txt");
+boilerplate!(Day);
 
-type OutResult = std::result::Result<(), Box<dyn Error>>;
+impl Solution for Day {
+    type Parsed = (Blizzards, usize);
+    type A = usize;
+    type B = usize;
+    const SAMPLE_ANSWER_A: Self::TestA = 18;
+    const SAMPLE_ANSWER_B: Self::TestB = 54;
+
+    fn parse(data: &str) -> IResult<Self::Parsed> {
+        let width = data.find('\n').expect("no newline") - 2;
+        let (up, (down, (left, right))) = data
+            .lines()
+            .filter(|line| &line[2..3] != "#")
+            .map(|line| {
+                let (mut up, mut down, mut left, mut right) = (0, 0, 0, 0);
+                line.bytes()
+                    .filter(|&c| c != b'#')
+                    .enumerate()
+                    .for_each(|(col, c)| {
+                        let bit = 1 << col;
+                        match c {
+                            b'>' => right |= bit,
+                            b'<' => left |= bit,
+                            b'^' => up |= bit,
+                            b'v' => down |= bit,
+                            _ => {}
+                        };
+                    });
+                (up, (down, (left, right)))
+            })
+            .unzip();
+        let blizzards = Blizzards {
+            up,
+            down,
+            left,
+            right,
+        };
+        Ok(("", (blizzards, width)))
+    }
+
+    fn parse_test(data: &'static str) -> IResult<Self::ParsedTest> {
+        Self::parse(data)
+    }
+
+    fn a((mut blizzards, width): Self::Parsed) -> Self::A {
+        simulate_shortest_path::<25>(&mut blizzards, width, Exit)
+    }
+
+    fn a_test((mut blizzards, width): Self::ParsedTest) -> Self::A {
+        simulate_shortest_path::<4>(&mut blizzards, width, Exit)
+    }
+
+    fn b((mut blizzards, width): Self::Parsed) -> Self::B {
+        simulate_3::<25>(&mut blizzards, width)
+    }
+
+    fn b_test((mut blizzards, width): Self::ParsedTest) -> Self::B {
+        simulate_3::<4>(&mut blizzards, width)
+    }
+}
 
 #[derive(Debug, Default, Clone)]
 struct Blizzards {
@@ -32,40 +90,6 @@ impl Blizzards {
     }
 }
 
-fn parse(data: &str) -> (Blizzards, usize) {
-    let width = data.find('\n').expect("no newline") - 2;
-    let (up, (down, (left, right))) = data
-        .lines()
-        .filter(|line| &line[2..3] != "#")
-        .map(|line| {
-            let (mut up, mut down, mut left, mut right) = (0, 0, 0, 0);
-            line.bytes()
-                .filter(|&c| c != b'#')
-                .enumerate()
-                .for_each(|(col, c)| {
-                    let bit = 1 << col;
-                    match c {
-                        b'>' => right |= bit,
-                        b'<' => left |= bit,
-                        b'^' => up |= bit,
-                        b'v' => down |= bit,
-                        _ => {}
-                    };
-                });
-            (up, (down, (left, right)))
-        })
-        .unzip();
-    (
-        Blizzards {
-            up,
-            down,
-            left,
-            right,
-        },
-        width,
-    )
-}
-
 fn adjacent_positions<const HEIGHT: usize>(positions: &[u128], width: usize) -> [u128; HEIGHT] {
     let mut new_positions = [0; HEIGHT];
     for (row, above, cur, bellow) in izip!(
@@ -86,6 +110,12 @@ enum Destination {
 }
 
 use Destination::*;
+
+fn simulate_3<const HEIGHT: usize>(blizzards: &mut Blizzards, width: usize) -> usize {
+    simulate_shortest_path::<HEIGHT>(blizzards, width, Exit)
+        + simulate_shortest_path::<HEIGHT>(blizzards, width, Entrance)
+        + simulate_shortest_path::<HEIGHT>(blizzards, width, Exit)
+}
 
 fn simulate_shortest_path<const HEIGHT: usize>(
     blizzards: &mut Blizzards,
@@ -118,50 +148,4 @@ fn simulate_shortest_path<const HEIGHT: usize>(
         }
     }
     unreachable!()
-}
-
-fn part_a<const HEIGHT: usize>(blizzards: &mut Blizzards, width: usize) -> usize {
-    simulate_shortest_path::<HEIGHT>(blizzards, width, Exit)
-}
-
-fn part_b<const HEIGHT: usize>(
-    blizzards: &mut Blizzards,
-    width: usize,
-    part_a_ans: usize,
-) -> usize {
-    part_a_ans
-        + simulate_shortest_path::<HEIGHT>(blizzards, width, Entrance)
-        + simulate_shortest_path::<HEIGHT>(blizzards, width, Exit)
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    const SAMPLE_DATA: &str = include_str!("sample.txt");
-
-    #[test]
-    fn test_a() -> OutResult {
-        let (mut blizzards, width) = parse(SAMPLE_DATA);
-        assert_eq!(part_a::<4>(&mut blizzards, width), 18);
-        Ok(())
-    }
-
-    #[test]
-    fn test_b() -> OutResult {
-        let (mut blizzards, width) = parse(SAMPLE_DATA);
-        let a = part_a::<4>(&mut blizzards, width);
-        assert_eq!(part_b::<4>(&mut blizzards, width, a), 54);
-        Ok(())
-    }
-}
-
-fn main() -> OutResult {
-    let (mut blizzards, width) = parse(DATA);
-    let start = std::time::Instant::now();
-    let a = part_a::<25>(&mut blizzards, width);
-    println!("part a: {a}");
-    let b = part_b::<25>(&mut blizzards, width, a);
-    println!("part b: {b}");
-    println!("{:?}", start.elapsed());
-    Ok(())
 }
