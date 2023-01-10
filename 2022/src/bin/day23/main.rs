@@ -2,8 +2,8 @@
 #![feature(array_windows)]
 #![feature(get_many_mut)]
 use advent_2022::*;
-use itertools::{izip, Itertools};
-use std::{ops::Range, simd::u8x32};
+use itertools::Itertools;
+use std::{collections::VecDeque, ops::Range, simd::u8x32};
 
 boilerplate!(Day);
 
@@ -24,52 +24,17 @@ impl BasicSolution for Day {
         Ok(("", grid))
     }
 
-    fn a(mut elve_positions: Self::Parsed) -> Self::Answer {
-        run_simulation(&mut elve_positions, 10);
-        let (rows, cols) = elve_positions.bounds();
-        rows.len() * cols.len() - elve_positions.len()
+    fn a(mut elve_grid: Self::Parsed) -> Self::Answer {
+        elve_grid.run_simulation(10);
+        let (rows, cols) = elve_grid.bounds();
+        rows.len() * cols.len() - elve_grid.len()
     }
 
-    fn b(mut elve_positions: Self::Parsed) -> Self::Answer {
-        run_simulation(&mut elve_positions, 10000).expect("not done within 10000 rounds")
+    fn b(mut elve_grid: Self::Parsed) -> Self::Answer {
+        elve_grid
+            .run_simulation(10000)
+            .expect("not done within 10000 rounds")
     }
-}
-
-fn run_simulation(elve_positions: &mut BitGrid, max_rounds: usize) -> Option<usize> {
-    for round in 0..max_rounds {
-        let want_stay = elve_positions.want_stay();
-        let mut want_north = elve_positions.want_north();
-        let mut want_south = elve_positions.want_south();
-        let mut want_west = elve_positions.want_west();
-        let mut want_east = elve_positions.want_east();
-        let mut prioritized_directions = [
-            &mut want_north,
-            &mut want_south,
-            &mut want_west,
-            &mut want_east,
-        ];
-        prioritized_directions.rotate_left(round % 4);
-        for dir in &mut prioritized_directions {
-            dir.difference_assign(&want_stay);
-        }
-        for i in 0..4 {
-            for j in (i + 1)..4 {
-                let [higher_priority, lower_priority] =
-                    prioritized_directions.get_many_mut([i, j]).unwrap();
-                lower_priority.difference_assign(higher_priority);
-            }
-        }
-        cancel_north_south(&mut want_north, &mut want_south);
-        cancel_west_east(&mut want_west, &mut want_east);
-        if !(elve_positions.move_north(&want_north)
-            | elve_positions.move_south(&want_south)
-            | elve_positions.move_west(&want_west)
-            | elve_positions.move_east(&want_east))
-        {
-            return Some(round + 1);
-        }
-    }
-    None
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -83,126 +48,92 @@ fn shift_east(&row: &u8x32) -> u8x32 {
     (row << u8x32::splat(1)) | (row.rotate_lanes_right::<1>() >> u8x32::splat(7))
 }
 
-fn cancel_west_east(want_west: &mut BitGrid, want_east: &mut BitGrid) {
-    for (west, east) in izip!(&mut want_west.0, &mut want_east.0) {
-        let both = shift_west(west) & shift_east(east);
-        *west &= !shift_east(&both);
-        *east &= !shift_west(&both);
+fn propose(
+    [nw, n, ne]: &[u8x32; 3],
+    [w, cur, e]: &[u8x32; 3],
+    [sw, s, se]: &[u8x32; 3],
+    priority: [Direction; 4],
+) -> [u8x32; 4] {
+    let mut propositions = [*cur; 4];
+    let mut not_chosen = nw | n | ne | w | e | sw | s | se;
+    for d in priority {
+        let (row, dir_available) = match d {
+            North => (&mut propositions[0], !(ne | n | nw)),
+            South => (&mut propositions[1], !(se | s | sw)),
+            West => (&mut propositions[2], !(nw | w | sw)),
+            East => (&mut propositions[3], !(ne | e | se)),
+        };
+        *row &= dir_available & not_chosen;
+        not_chosen &= !dir_available;
     }
+    propositions
 }
 
-fn cancel_north_south(want_north: &mut BitGrid, want_south: &mut BitGrid) {
-    for (north, south) in izip!(&mut want_north.0[2..], &mut want_south.0) {
-        let both = *north & *south;
-        *north &= !both;
-        *south &= !both;
-    }
+fn collide_proposals(
+    [_, south, _, _]: &[u8x32; 4],
+    [_, _, west, east]: &[u8x32; 4],
+    [north, _, _, _]: &[u8x32; 4],
+) -> [u8x32; 4] {
+    [
+        north & !*south,
+        south & !*north,
+        shift_west(west) & !shift_east(east),
+        shift_east(east) & !shift_west(west),
+    ]
 }
+
+#[derive(Debug, Clone, Copy)]
+enum Direction {
+    North,
+    South,
+    West,
+    East,
+}
+
+use Direction::*;
 
 impl BitGrid {
     fn new() -> Self {
         Self([Default::default(); 160])
     }
 
-    fn move_north(&mut self, want_north: &Self) -> bool {
-        let mut moved = false;
-        for (i, &row) in want_north.0.iter().enumerate().skip(1) {
-            if row != u8x32::splat(0) {
-                moved = true;
-                self.0[i] &= !row;
-                self.0[i - 1] |= row;
+    fn run_simulation(&mut self, max_rounds: usize) -> Option<usize> {
+        let mut priority = [North, South, West, East];
+        for round in 0..max_rounds {
+            let moved;
+            (*self, moved) = self.play_round(priority);
+            if !moved {
+                return Some(round + 1);
             }
+            priority.rotate_left(1);
         }
-        moved
+        None
     }
 
-    fn move_south(&mut self, want_south: &Self) -> bool {
+    fn play_round(&self, priority: [Direction; 4]) -> (Self, bool) {
+        let mut new_self = self.clone();
         let mut moved = false;
-        for (i, &row) in want_south.0.iter().enumerate().rev().skip(1) {
-            if row != u8x32::splat(0) {
-                moved = true;
-                self.0[i] &= !row;
-                self.0[i + 1] |= row;
+        let mut shifted = VecDeque::from([Default::default(); 3]);
+        let mut proposals = VecDeque::from([Default::default(); 3]);
+        for (i, row) in self.0[2..].iter().enumerate() {
+            shifted.pop_front();
+            shifted.push_back([shift_east(row), *row, shift_west(row)]);
+            proposals.pop_front();
+            proposals.push_back(propose(&shifted[0], &shifted[1], &shifted[2], priority));
+            let [from_south, from_north, from_east, from_west] =
+                collide_proposals(&proposals[0], &proposals[1], &proposals[2]);
+            let destinations = from_north | from_south | from_west | from_east;
+            if destinations == u8x32::splat(0) {
+                continue;
             }
+            moved = true;
+            new_self.0[i + 1] &= !from_south;
+            new_self.0[i - 1] &= !from_north;
+            new_self.0[i] &= !shift_west(&from_west);
+            new_self.0[i] &= !shift_east(&from_east);
+            new_self.0[i] |= destinations;
         }
-        moved
-    }
-
-    fn move_west(&mut self, want_west: &Self) -> bool {
-        let mut moved = false;
-        for (row, &west) in izip!(&mut self.0, &want_west.0) {
-            if west != u8x32::splat(0) {
-                moved = true;
-                *row &= !west;
-                *row |= shift_west(&west);
-            }
-        }
-        moved
-    }
-
-    fn move_east(&mut self, want_east: &Self) -> bool {
-        let mut moved = false;
-        for (row, &east) in izip!(&mut self.0, &want_east.0) {
-            if east != u8x32::splat(0) {
-                moved = true;
-                *row &= !east;
-                *row |= shift_east(&east);
-            }
-        }
-        moved
-    }
-
-    fn difference_assign(&mut self, other: &Self) {
-        for (row, &other_row) in izip!(&mut self.0, &other.0) {
-            *row &= !other_row;
-        }
-    }
-
-    fn want_stay(&self) -> Self {
-        let mut grid = self.clone();
-        for (row, [above, cur, below]) in izip!(&mut grid.0[1..], self.0.array_windows()) {
-            *row &= !(shift_west(above)
-                | above
-                | shift_east(above)
-                | shift_west(cur)
-                | shift_east(cur)
-                | shift_west(below)
-                | below
-                | shift_east(below));
-        }
-        grid
-    }
-
-    fn want_north(&self) -> Self {
-        let mut grid = self.clone();
-        for (row, above) in izip!(&mut grid.0[1..], &self.0) {
-            *row &= !(shift_west(above) | above | shift_east(above));
-        }
-        grid
-    }
-
-    fn want_south(&self) -> Self {
-        let mut grid = self.clone();
-        for (row, below) in izip!(&mut grid.0, &self.0[1..]) {
-            *row &= !(shift_west(below) | below | shift_east(below));
-        }
-        grid
-    }
-
-    fn want_west(&self) -> Self {
-        let mut grid = self.clone();
-        for (row, [above, cur, below]) in izip!(&mut grid.0[1..], self.0.array_windows()) {
-            *row &= !(shift_east(above) | shift_east(cur) | shift_east(below));
-        }
-        grid
-    }
-
-    fn want_east(&self) -> Self {
-        let mut grid = self.clone();
-        for (row, [above, cur, below]) in izip!(&mut grid.0[1..], self.0.array_windows()) {
-            *row &= !(shift_west(above) | shift_west(cur) | shift_west(below));
-        }
-        grid
+        (new_self, moved)
     }
 
     fn insert(&mut self, row: usize, col: usize) {
