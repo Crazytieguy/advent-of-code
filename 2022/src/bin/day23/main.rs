@@ -2,8 +2,8 @@
 #![feature(array_windows)]
 #![feature(get_many_mut)]
 use advent_2022::*;
-use itertools::Itertools;
-use std::{collections::VecDeque, ops::Range, simd::u8x32};
+use itertools::{chain, Itertools};
+use std::{array, collections::VecDeque, ops::Range, simd::u8x32};
 
 boilerplate!(Day);
 
@@ -113,26 +113,24 @@ impl BitGrid {
     fn play_round(&self, priority: [Direction; 4]) -> (Self, bool) {
         let mut new_self = self.clone();
         let mut moved = false;
-        let mut shifted = VecDeque::from([Default::default(); 3]);
-        let mut proposals = VecDeque::from([Default::default(); 3]);
-        for (i, row) in self.0[2..].iter().enumerate() {
-            shifted.pop_front();
-            shifted.push_back([shift_east(row), *row, shift_west(row)]);
-            proposals.pop_front();
-            proposals.push_back(propose(&shifted[0], &shifted[1], &shifted[2], priority));
-            let [from_south, from_north, from_east, from_west] =
-                collide_proposals(&proposals[0], &proposals[1], &proposals[2]);
-            let destinations = from_north | from_south | from_west | from_east;
-            if destinations == u8x32::splat(0) {
-                continue;
-            }
-            moved = true;
-            new_self.0[i + 1] &= !from_south;
-            new_self.0[i - 1] &= !from_north;
-            new_self.0[i] &= !shift_west(&from_west);
-            new_self.0[i] &= !shift_east(&from_east);
-            new_self.0[i] |= destinations;
-        }
+        let zeros = [Default::default(); 2];
+        chain!(&zeros, &self.0, &zeros)
+            .map(|row| [shift_east(row), *row, shift_west(row)])
+            .map_windows(|[above, cur, below]| propose(above, cur, below, priority))
+            .map_windows(|[above, cur, below]| collide_proposals(above, cur, below))
+            .enumerate()
+            .for_each(|(i, [from_south, from_north, from_east, from_west])| {
+                let destinations = from_north | from_south | from_west | from_east;
+                if destinations == u8x32::splat(0) {
+                    return;
+                }
+                moved = true;
+                new_self.0[i + 1] &= !from_south;
+                new_self.0[i - 1] &= !from_north;
+                new_self.0[i] &= !shift_west(&from_west);
+                new_self.0[i] &= !shift_east(&from_east);
+                new_self.0[i] |= destinations;
+            });
         (new_self, moved)
     }
 
@@ -171,21 +169,68 @@ impl BitGrid {
             .map(|x| x.count_ones() as usize)
             .sum()
     }
-}
 
-// for debugging
-#[allow(dead_code)]
-fn print_elve_positions(elves: &BitGrid) {
-    let (rows, cols) = elves.bounds();
-    for row in rows {
-        for col in cols.clone() {
-            if elves.get(row, col) {
-                print!("#");
-            } else {
-                print!(".");
+    // for debugging
+    #[allow(dead_code)]
+    fn print(&self) {
+        let (rows, cols) = self.bounds();
+        for row in rows {
+            for col in cols.clone() {
+                if self.get(row, col) {
+                    print!("#");
+                } else {
+                    print!(".");
+                }
             }
+            println!();
         }
         println!();
     }
-    println!();
 }
+
+struct MapWindows<I: Iterator, F, T, const N: usize>
+where
+    F: FnMut([&I::Item; N]) -> T,
+{
+    iter: I,
+    f: F,
+    buf: VecDeque<I::Item>,
+}
+
+impl<I: Iterator, F, T, const N: usize> MapWindows<I, F, T, N>
+where
+    F: FnMut([&I::Item; N]) -> T,
+{
+    fn new(mut iter: I, f: F) -> Self {
+        let buf = iter.by_ref().take(N - 1).collect();
+        Self { iter, f, buf }
+    }
+}
+
+impl<I: Iterator, F, T, const N: usize> Iterator for MapWindows<I, F, T, N>
+where
+    F: FnMut([&I::Item; N]) -> T,
+{
+    type Item = T;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.iter.next().map(|next| {
+            self.buf.push_back(next);
+            let res = (self.f)(array::from_fn(|i| &self.buf[i]));
+            self.buf.pop_front();
+            res
+        })
+    }
+}
+
+trait MapWindowsIterator: Iterator {
+    fn map_windows<T, F, const N: usize>(self, f: F) -> MapWindows<Self, F, T, N>
+    where
+        Self: Sized,
+        F: FnMut([&Self::Item; N]) -> T,
+    {
+        MapWindows::new(self, f)
+    }
+}
+
+impl<I: Iterator> MapWindowsIterator for I {}
