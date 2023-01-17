@@ -4,7 +4,7 @@ use nom::{
     bytes::complete::tag,
     character::complete::{i32, line_ending},
     multi::separated_list1,
-    sequence::tuple,
+    Parser,
 };
 use nom_supreme::ParserExt;
 use std::ops::Range;
@@ -42,12 +42,40 @@ impl Solution for Day {
     }
 }
 
-type Pair = (i32, i32, i32, i32);
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+struct Point {
+    x: i32,
+    y: i32,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+struct Pair {
+    sensor: Point,
+    beacon: Point,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+struct Line {
+    start: Point,
+    end: Point,
+}
+
+fn pair(input: &str) -> IResult<Pair> {
+    let (input, x) = tag("Sensor at x=").precedes(i32).parse(input)?;
+    let (input, y) = tag(", y=").precedes(i32).parse(input)?;
+    let sensor = Point { x, y };
+    let (input, x) = tag(": closest beacon is at x=")
+        .precedes(i32)
+        .parse(input)?;
+    let (input, y) = tag(", y=").precedes(i32).parse(input)?;
+    let beacon = Point { x, y };
+    Ok((input, Pair { sensor, beacon }))
+}
 
 fn solve_a<const EXAMPLE_ROW: i32>(pairs: Vec<Pair>) -> usize {
     let count_covered_xs: usize = pairs
         .iter()
-        .flat_map(|&pair| covered_xs(pair, EXAMPLE_ROW))
+        .flat_map(|pair| pair.covered_xs(EXAMPLE_ROW))
         .sorted_unstable_by_key(|range| range.start)
         .coalesce(|a, b| {
             if a.end >= b.start {
@@ -60,38 +88,184 @@ fn solve_a<const EXAMPLE_ROW: i32>(pairs: Vec<Pair>) -> usize {
         .sum();
     let blocked_xs = pairs
         .into_iter()
-        .flat_map(|(sx, sy, bx, by)| [(sx, sy), (bx, by)])
-        .filter(|&(_, y)| y == EXAMPLE_ROW)
+        .flat_map(|pair| [pair.sensor, pair.beacon])
+        .filter(|p| p.y == EXAMPLE_ROW)
         .unique()
         .count();
     count_covered_xs - blocked_xs
 }
 
-fn solve_b<const MAX_COORD: i32>(mut pairs: Vec<Pair>) -> i64 {
-    pairs.sort_unstable();
-    for y in 0..=MAX_COORD {
-        let first_available_x = pairs
-            .iter()
-            .flat_map(|&pair| covered_xs(pair, y))
-            .fold(0, |x, range| if range.contains(&x) { range.end } else { x });
-        if first_available_x <= MAX_COORD {
-            return first_available_x as i64 * 4_000_000 + y as i64;
+fn solve_b<const MAX_COORD: i32>(pairs: Vec<Pair>) -> i64 {
+    let top_right = pairs
+        .iter()
+        .map(|pair| pair.top_right())
+        .into_group_map_by(|line| line.y_intercept());
+    let positive_slope_overlaps = pairs
+        .iter()
+        .map(|pair| pair.bottom_left())
+        .into_grouping_map_by(|line| line.y_intercept())
+        .fold(vec![], |mut overlaps, y_intercept, line| {
+            overlaps.extend(
+                top_right
+                    .get(&y_intercept)
+                    .iter()
+                    .flat_map(|v| v.iter())
+                    .filter_map(|other| line.overlap(other)),
+            );
+            overlaps
+        });
+    let top_left = pairs
+        .iter()
+        .map(|pair| pair.top_left())
+        .into_group_map_by(|line| line.y_intercept());
+    let negative_slope_overlaps = pairs
+        .iter()
+        .map(|pair| pair.bottom_right())
+        .into_grouping_map_by(|line| line.y_intercept())
+        .fold(vec![], |mut overlaps, y_intercept, line| {
+            overlaps.extend(
+                top_left
+                    .get(&y_intercept)
+                    .iter()
+                    .flat_map(|v| v.iter())
+                    .filter_map(|other| line.overlap(other)),
+            );
+            overlaps
+        });
+    let Point { x, y } = positive_slope_overlaps
+        .values()
+        .flatten()
+        .cartesian_product(negative_slope_overlaps.values().flatten())
+        .find_map(|(positive, negative)| {
+            positive.interception(negative).filter(|p| {
+                p.x >= 0
+                    && p.y >= 0
+                    && p.x <= MAX_COORD
+                    && p.y <= MAX_COORD
+                    && pairs.iter().all(|pair| !pair.covers(p))
+            })
+        })
+        .expect("should be an interception");
+
+    x as i64 * 4_000_000 + y as i64
+}
+
+impl Point {
+    fn manhattan_distance(&self, other: &Point) -> i32 {
+        (self.x - other.x).abs() + (self.y - other.y).abs()
+    }
+}
+
+impl Pair {
+    fn cover_distance(&self) -> i32 {
+        self.sensor.manhattan_distance(&self.beacon)
+    }
+
+    fn top_left(&self) -> Line {
+        Line {
+            start: Point {
+                x: self.sensor.x - self.cover_distance() - 1,
+                y: self.sensor.y,
+            },
+            end: Point {
+                x: self.sensor.x,
+                y: self.sensor.y - self.cover_distance() - 1,
+            },
         }
     }
-    unreachable!("no solution found")
+
+    fn top_right(&self) -> Line {
+        Line {
+            start: Point {
+                x: self.sensor.x,
+                y: self.sensor.y - self.cover_distance() - 1,
+            },
+            end: Point {
+                x: self.sensor.x + self.cover_distance() + 1,
+                y: self.sensor.y,
+            },
+        }
+    }
+
+    fn bottom_left(&self) -> Line {
+        Line {
+            start: Point {
+                x: self.sensor.x - self.cover_distance() - 1,
+                y: self.sensor.y,
+            },
+            end: Point {
+                x: self.sensor.x,
+                y: self.sensor.y + self.cover_distance() + 1,
+            },
+        }
+    }
+
+    fn bottom_right(&self) -> Line {
+        Line {
+            start: Point {
+                x: self.sensor.x,
+                y: self.sensor.y + self.cover_distance() + 1,
+            },
+            end: Point {
+                x: self.sensor.x + self.cover_distance() + 1,
+                y: self.sensor.y,
+            },
+        }
+    }
+
+    fn covers(&self, point: &Point) -> bool {
+        self.sensor.manhattan_distance(point) <= self.cover_distance()
+    }
+
+    fn covered_xs(&self, row: i32) -> Option<Range<i32>> {
+        let x_offset = self.cover_distance() - (self.sensor.y - row).abs();
+        Some(self.sensor.x - x_offset..self.sensor.x + x_offset + 1).filter(|r| !r.is_empty())
+    }
 }
 
-fn pair(input: &str) -> IResult<Pair> {
-    tuple((
-        tag("Sensor at x=").precedes(i32),
-        tag(", y=").precedes(i32),
-        tag(": closest beacon is at x=").precedes(i32),
-        tag(", y=").precedes(i32),
-    ))(input)
-}
+impl Line {
+    fn slope(&self) -> i32 {
+        if self.end.y - self.start.y > 0 {
+            1
+        } else {
+            -1
+        }
+    }
 
-fn covered_xs((sensor_x, sensor_y, beacon_x, beacon_y): Pair, row: i32) -> Option<Range<i32>> {
-    let manhattan_distance = (sensor_x - beacon_x).abs() + (sensor_y - beacon_y).abs();
-    let x_offset = manhattan_distance - (sensor_y - row).abs();
-    Some(sensor_x - x_offset..sensor_x + x_offset + 1).filter(|r| !r.is_empty())
+    fn y_intercept(&self) -> i32 {
+        self.start.y - self.slope() * self.start.x
+    }
+
+    fn overlap(&self, other: &Line) -> Option<Line> {
+        debug_assert_eq!(self.slope(), other.slope());
+        debug_assert_eq!(self.y_intercept(), other.y_intercept());
+        if self.start.x > other.end.x || self.end.x < other.start.x {
+            return None;
+        }
+        let x = self.start.x.max(other.start.x);
+        let y = self.slope() * x + self.y_intercept();
+        let start = Point { x, y };
+
+        let x = self.end.x.min(other.end.x);
+        let y = self.slope() * x + self.y_intercept();
+        let end = Point { x, y };
+        return Some(Line { start, end });
+    }
+
+    fn interception(&self, other: &Line) -> Option<Point> {
+        debug_assert_ne!(self.slope(), other.slope());
+        let y_intercept_diff = other.y_intercept() - self.y_intercept();
+        let slope_diff = self.slope() - other.slope();
+        let x = y_intercept_diff / slope_diff;
+        let y = self.slope() * x + self.y_intercept();
+        if y_intercept_diff % slope_diff != 0
+            || x < self.start.x
+            || x > self.end.x
+            || x < other.start.x
+            || x > other.end.x
+        {
+            return None;
+        }
+        Some(Point { x, y })
+    }
 }
