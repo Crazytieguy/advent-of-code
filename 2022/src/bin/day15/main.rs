@@ -7,7 +7,7 @@ use nom::{
     Parser,
 };
 use nom_supreme::ParserExt;
-use std::ops::Range;
+use std::{collections::HashMap, ops::Range};
 
 boilerplate!(Day);
 
@@ -98,40 +98,22 @@ fn solve_a<const EXAMPLE_ROW: i32>(pairs: Vec<Pair>) -> usize {
 fn solve_b<const MAX_COORD: i32>(pairs: Vec<Pair>) -> i64 {
     let top_right = pairs
         .iter()
-        .map(|pair| pair.top_right())
-        .into_group_map_by(|line| line.y_intercept());
+        .map(Pair::top_right)
+        .into_group_map_by(Line::y_intercept);
     let positive_slope_overlaps = pairs
         .iter()
-        .map(|pair| pair.bottom_left())
-        .into_grouping_map_by(|line| line.y_intercept())
-        .fold(vec![], |mut overlaps, y_intercept, line| {
-            overlaps.extend(
-                top_right
-                    .get(&y_intercept)
-                    .iter()
-                    .flat_map(|v| v.iter())
-                    .filter_map(|other| line.overlap(other)),
-            );
-            overlaps
-        });
+        .map(Pair::bottom_left)
+        .into_grouping_map_by(Line::y_intercept)
+        .fold(vec![], fold_compatible_overlaps(&top_right));
     let top_left = pairs
         .iter()
-        .map(|pair| pair.top_left())
-        .into_group_map_by(|line| line.y_intercept());
+        .map(Pair::top_left)
+        .into_group_map_by(Line::y_intercept);
     let negative_slope_overlaps = pairs
         .iter()
-        .map(|pair| pair.bottom_right())
-        .into_grouping_map_by(|line| line.y_intercept())
-        .fold(vec![], |mut overlaps, y_intercept, line| {
-            overlaps.extend(
-                top_left
-                    .get(&y_intercept)
-                    .iter()
-                    .flat_map(|v| v.iter())
-                    .filter_map(|other| line.overlap(other)),
-            );
-            overlaps
-        });
+        .map(Pair::bottom_right)
+        .into_grouping_map_by(Line::y_intercept)
+        .fold(vec![], fold_compatible_overlaps(&top_left));
     let Point { x, y } = positive_slope_overlaps
         .values()
         .flatten()
@@ -139,8 +121,8 @@ fn solve_b<const MAX_COORD: i32>(pairs: Vec<Pair>) -> i64 {
         .find_map(|(positive, negative)| {
             positive.interception(negative).filter(|p| {
                 p.x >= 0
-                    && p.y >= 0
                     && p.x <= MAX_COORD
+                    && p.y >= 0
                     && p.y <= MAX_COORD
                     && pairs.iter().all(|pair| !pair.covers(p))
             })
@@ -148,6 +130,21 @@ fn solve_b<const MAX_COORD: i32>(pairs: Vec<Pair>) -> i64 {
         .expect("should be an interception");
 
     x as i64 * 4_000_000 + y as i64
+}
+
+fn fold_compatible_overlaps(
+    parallel: &HashMap<i32, Vec<Line>>,
+) -> impl Fn(Vec<Line>, &i32, Line) -> Vec<Line> + '_ {
+    |mut overlaps, y_intercept, line| {
+        overlaps.extend(
+            parallel
+                .get(&y_intercept)
+                .iter()
+                .flat_map(|v| v.iter())
+                .filter_map(|other| line.overlap(other)),
+        );
+        overlaps
+    }
 }
 
 impl Point {
@@ -236,18 +233,22 @@ impl Line {
         self.start.y - self.slope() * self.start.x
     }
 
+    fn y_at(&self, x: i32) -> Option<i32> {
+        if self.start.x > x || self.end.x < x {
+            return None;
+        }
+        Some(self.slope() * x + self.y_intercept())
+    }
+
     fn overlap(&self, other: &Line) -> Option<Line> {
         debug_assert_eq!(self.slope(), other.slope());
         debug_assert_eq!(self.y_intercept(), other.y_intercept());
-        if self.start.x > other.end.x || self.end.x < other.start.x {
-            return None;
-        }
         let x = self.start.x.max(other.start.x);
-        let y = self.slope() * x + self.y_intercept();
+        let y = self.y_at(x)?;
         let start = Point { x, y };
 
         let x = self.end.x.min(other.end.x);
-        let y = self.slope() * x + self.y_intercept();
+        let y = self.y_at(x)?;
         let end = Point { x, y };
         return Some(Line { start, end });
     }
@@ -257,13 +258,8 @@ impl Line {
         let y_intercept_diff = other.y_intercept() - self.y_intercept();
         let slope_diff = self.slope() - other.slope();
         let x = y_intercept_diff / slope_diff;
-        let y = self.slope() * x + self.y_intercept();
-        if y_intercept_diff % slope_diff != 0
-            || x < self.start.x
-            || x > self.end.x
-            || x < other.start.x
-            || x > other.end.x
-        {
+        let y = self.y_at(x)?;
+        if y != other.y_at(x)? {
             return None;
         }
         Some(Point { x, y })
