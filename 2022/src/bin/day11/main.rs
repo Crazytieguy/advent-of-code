@@ -9,7 +9,7 @@ use nom::{
     Parser,
 };
 use nom_supreme::ParserExt;
-use std::{cmp::Reverse, collections::VecDeque};
+use std::cmp::Reverse;
 
 boilerplate!(Day);
 
@@ -43,7 +43,7 @@ enum Op {
 #[derive(Debug, Clone)]
 struct Monkey {
     inspected: u64,
-    items: VecDeque<u64>,
+    items: Vec<u64>,
     operation: Op,
     test: u64,
     if_true: usize,
@@ -57,9 +57,9 @@ fn monkey_number(data: &str) -> IResult<usize> {
         .parse(data)
 }
 
-fn starting_items(data: &str) -> IResult<VecDeque<u64>> {
+fn starting_items(data: &str) -> IResult<Vec<u64>> {
     tag("  Starting items: ")
-        .precedes(separated_list0(tag(", "), u64).map(Into::into))
+        .precedes(separated_list0(tag(", "), u64))
         .terminated(line_ending)
         .parse(data)
 }
@@ -122,7 +122,7 @@ fn stuff_slinging_simian_shenanigans(
     manage_worry_level: impl Fn(u64) -> u64,
 ) -> u64 {
     for (_, turn) in (0..rounds).cartesian_product(0..monkeys.len()) {
-        while let Some(item) = monkeys[turn].items.pop_front() {
+        while let Some(item) = monkeys[turn].items.pop() {
             monkeys[turn].inspected += 1;
             let new = match monkeys[turn].operation {
                 Op::Add(n) => item + n,
@@ -135,7 +135,7 @@ fn stuff_slinging_simian_shenanigans(
             } else {
                 monkeys[turn].if_false
             };
-            monkeys[throw_to].items.push_back(new);
+            monkeys[throw_to].items.push(new);
         }
     }
     monkey_business(monkeys)
