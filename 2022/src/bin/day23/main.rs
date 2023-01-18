@@ -1,6 +1,4 @@
 #![feature(portable_simd)]
-#![feature(array_windows)]
-#![feature(get_many_mut)]
 use advent_2022::*;
 use itertools::{chain, Itertools};
 use std::{array, collections::VecDeque, ops::Range, simd::u8x32};
