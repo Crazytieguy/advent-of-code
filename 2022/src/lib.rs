@@ -106,11 +106,11 @@ pub trait Solution: SolutionData {
         let parsing_time = start.elapsed();
         let parsed_b = parsed_a.clone();
         let start = Instant::now();
-        println!("a: {}", Self::a(parsed_a),);
+        println!("a: {}", Self::a(parsed_a));
         let (start, part_a) = (Instant::now(), start.elapsed() + parsing_time);
-        println!("b: {}", Self::b(parsed_b),);
+        println!("b: {}", Self::b(parsed_b));
         let part_b = start.elapsed() + parsing_time;
-        println!("\na runs in {part_a:?}; b runs in {part_b:?}",);
+        println!("\na runs in {part_a:?}; b runs in {part_b:?}");
         Ok(())
     }
 }
