@@ -138,7 +138,7 @@ fn fold_compatible_overlaps(
     |mut overlaps, y_intercept, line| {
         overlaps.extend(
             parallel
-                .get(&y_intercept)
+                .get(y_intercept)
                 .iter()
                 .flat_map(|v| v.iter())
                 .filter_map(|other| line.overlap(other)),
@@ -250,7 +250,7 @@ impl Line {
         let x = self.end.x.min(other.end.x);
         let y = self.y_at(x)?;
         let end = Point { x, y };
-        return Some(Line { start, end });
+        Some(Line { start, end })
     }
 
     fn interception(&self, other: &Line) -> Option<Point> {
