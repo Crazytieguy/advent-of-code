@@ -1,10 +1,7 @@
 #![feature(associated_type_defaults)]
 use nom::character::complete::line_ending;
 use nom_supreme::{final_parser::final_parser, ParserExt};
-use std::{
-    fmt::{Debug, Display},
-    time::Instant,
-};
+use std::fmt::{Debug, Display};
 
 pub type OutResult = Result<(), Box<dyn std::error::Error>>;
 pub type IResult<'a, T> = nom::IResult<&'a str, T>;
@@ -101,16 +98,20 @@ pub trait Solution: SolutionData {
     }
 
     fn main() -> OutResult {
-        let start = Instant::now();
-        let parsed_a = Self::final_parse(Self::DATA)?;
-        let parsing_time = start.elapsed();
-        let parsed_b = parsed_a.clone();
-        let start = Instant::now();
-        println!("a: {}", Self::a(parsed_a));
-        let (start, part_a) = (Instant::now(), start.elapsed() + parsing_time);
-        println!("b: {}", Self::b(parsed_b));
-        let part_b = start.elapsed() + parsing_time;
-        println!("\na runs in {part_a:?}; b runs in {part_b:?}");
+        let parsed = Self::final_parse(Self::DATA)?;
+        let arg = std::env::args().nth(1);
+        match arg.as_deref() {
+            Some("a") => {
+                println!("a: {}", Self::a(parsed));
+            }
+            Some("b") => {
+                println!("b: {}", Self::b(parsed));
+            }
+            _ => {
+                println!("a: {}", Self::a(parsed.clone()));
+                println!("b: {}", Self::b(parsed));
+            }
+        }
         Ok(())
     }
 }
