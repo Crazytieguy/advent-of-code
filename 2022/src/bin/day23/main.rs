@@ -1,7 +1,9 @@
 #![feature(portable_simd)]
+#![feature(iter_map_windows)]
+
 use advent_2022::*;
 use itertools::{chain, Itertools};
-use std::{array, collections::VecDeque, ops::Range, simd::u8x32};
+use std::{ops::Range, simd::u8x32};
 
 boilerplate!(Day);
 
@@ -185,50 +187,3 @@ impl BitGrid {
         println!();
     }
 }
-
-struct MapWindows<I: Iterator, F, T, const N: usize>
-where
-    F: FnMut([&I::Item; N]) -> T,
-{
-    iter: I,
-    f: F,
-    buf: VecDeque<I::Item>,
-}
-
-impl<I: Iterator, F, T, const N: usize> MapWindows<I, F, T, N>
-where
-    F: FnMut([&I::Item; N]) -> T,
-{
-    fn new(mut iter: I, f: F) -> Self {
-        let buf = iter.by_ref().take(N - 1).collect();
-        Self { iter, f, buf }
-    }
-}
-
-impl<I: Iterator, F, T, const N: usize> Iterator for MapWindows<I, F, T, N>
-where
-    F: FnMut([&I::Item; N]) -> T,
-{
-    type Item = T;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        self.iter.next().map(|next| {
-            self.buf.push_back(next);
-            let res = (self.f)(array::from_fn(|i| &self.buf[i]));
-            self.buf.pop_front();
-            res
-        })
-    }
-}
-
-trait MapWindowsIterator: Iterator {
-    fn map_windows<T, F, const N: usize>(self, f: F) -> MapWindows<Self, F, T, N>
-    where
-        Self: Sized,
-        F: FnMut([&Self::Item; N]) -> T,
-    {
-        MapWindows::new(self, f)
-    }
-}
-
-impl<I: Iterator> MapWindowsIterator for I {}
