@@ -112,7 +112,7 @@ fn total_cost(state: State, memo: &mut HashMap<State, usize>) -> usize {
         return 0;
     }
     let cost = (0..7)
-        .cartesian_product([A, B, C, D].into_iter())
+        .cartesian_product([A, B, C, D])
         .flat_map(|(hall_id, room_type)| state.move_between(hall_id, room_type))
         .map(|(new_state, move_cost)| move_cost.saturating_add(total_cost(new_state, memo)))
         .min()
