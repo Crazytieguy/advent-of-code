@@ -1,3 +1,5 @@
+use std::ops::RangeInclusive;
+
 use advent_2022::*;
 use nom::{
     character::complete::{char, line_ending, u32},
@@ -5,7 +7,6 @@ use nom::{
     Parser,
 };
 use nom_supreme::ParserExt;
-use std::ops::RangeInclusive;
 
 type RangesPair = [RangeInclusive<u32>; 2];
 

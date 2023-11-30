@@ -1,3 +1,5 @@
+use std::cmp::Reverse;
+
 use advent_2022::*;
 use itertools::Itertools;
 use nom::{
@@ -9,7 +11,6 @@ use nom::{
     Parser,
 };
 use nom_supreme::ParserExt;
-use std::cmp::Reverse;
 
 boilerplate!(Day);
 

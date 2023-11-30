@@ -1,7 +1,8 @@
 #![feature(associated_type_defaults)]
+use std::fmt::{Debug, Display};
+
 use nom::character::complete::line_ending;
 use nom_supreme::{final_parser::final_parser, ParserExt};
-use std::fmt::{Debug, Display};
 
 pub type OutResult = Result<(), Box<dyn std::error::Error>>;
 pub type IResult<'a, T> = nom::IResult<&'a str, T>;

@@ -1,6 +1,7 @@
+use std::collections::VecDeque;
+
 use advent_2022::*;
 use itertools::Itertools;
-use std::collections::VecDeque;
 
 boilerplate!(Day);
 

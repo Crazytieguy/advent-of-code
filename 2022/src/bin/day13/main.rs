@@ -1,3 +1,5 @@
+use std::cmp::Ordering;
+
 use advent_2022::*;
 use itertools::Itertools;
 use nom::{
@@ -8,7 +10,6 @@ use nom::{
     Parser,
 };
 use nom_supreme::ParserExt;
-use std::cmp::Ordering;
 use Value::*;
 
 boilerplate!(Day);

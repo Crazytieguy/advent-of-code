@@ -1,4 +1,6 @@
 #![feature(get_many_mut)]
+use std::collections::VecDeque;
+
 use advent_2022::*;
 use nom::{
     branch::alt,
@@ -12,7 +14,6 @@ use nom::{
     Parser,
 };
 use nom_supreme::{multi::parse_separated_terminated, ParserExt};
-use std::collections::VecDeque;
 
 boilerplate!(Day);
 

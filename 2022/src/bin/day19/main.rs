@@ -1,3 +1,5 @@
+use std::ops::{Add, Mul};
+
 use advent_2022::*;
 use nom::{
     bytes::complete::tag,
@@ -6,7 +8,6 @@ use nom::{
     sequence::{delimited, separated_pair},
     Parser,
 };
-use std::ops::{Add, Mul};
 
 boilerplate!(Day);
 

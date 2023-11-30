@@ -1,7 +1,8 @@
 #![feature(anonymous_lifetime_in_impl_trait)]
+use std::{collections::HashSet, str::Lines};
+
 use advent_2022::*;
 use itertools::Itertools;
-use std::{collections::HashSet, str::Lines};
 
 boilerplate!(Day);
 

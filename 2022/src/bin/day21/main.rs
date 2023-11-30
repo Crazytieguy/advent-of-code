@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use advent_2022::*;
 use nom::{
     branch::alt,
@@ -8,7 +10,6 @@ use nom::{
     Parser,
 };
 use nom_supreme::ParserExt;
-use std::collections::HashMap;
 
 boilerplate!(Day);
 

@@ -1,3 +1,5 @@
+use std::iter;
+
 use advent_2022::*;
 use itertools::{repeat_n, Itertools};
 use nom::{
@@ -8,7 +10,6 @@ use nom::{
     Parser,
 };
 use nom_supreme::ParserExt;
-use std::iter;
 
 boilerplate!(Day);
 

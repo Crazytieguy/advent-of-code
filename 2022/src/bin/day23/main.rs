@@ -1,9 +1,10 @@
 #![feature(portable_simd)]
 #![feature(iter_map_windows)]
 
+use std::{ops::Range, simd::u8x32};
+
 use advent_2022::*;
 use itertools::{chain, Itertools};
-use std::{ops::Range, simd::u8x32};
 
 boilerplate!(Day);
 

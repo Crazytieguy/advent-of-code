@@ -1,9 +1,12 @@
+use std::cmp::Reverse;
+
 use advent_2022::*;
 use itertools::Itertools;
-use nom::character::complete::{line_ending, u32};
-use nom::multi::{fold_many1, separated_list1};
+use nom::{
+    character::complete::{line_ending, u32},
+    multi::{fold_many1, separated_list1},
+};
 use nom_supreme::ParserExt;
-use std::cmp::Reverse;
 
 boilerplate!(Day);
 

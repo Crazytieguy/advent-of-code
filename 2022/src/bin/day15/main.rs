@@ -1,3 +1,5 @@
+use std::{collections::HashMap, ops::Range};
+
 use advent_2022::*;
 use itertools::Itertools;
 use nom::{
@@ -7,7 +9,6 @@ use nom::{
     Parser,
 };
 use nom_supreme::ParserExt;
-use std::{collections::HashMap, ops::Range};
 
 boilerplate!(Day);
 
