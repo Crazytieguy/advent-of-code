@@ -6,7 +6,7 @@ use nom::{
     branch::alt,
     bytes::complete::tag,
     character::{
-        complete::{char, line_ending, one_of, u8},
+        complete::{anychar, char, line_ending, u8},
         streaming::not_line_ending,
     },
     multi::{many1_count, separated_list1},
@@ -63,8 +63,12 @@ fn solve<const REVERSE_ORDER: bool>(mut stacks: Stacks, instructions: &[Instruct
 }
 
 fn crate_(input: &str) -> IResult<Option<char>> {
-    const UPPERCASE: &str = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
-    let crate_ = delimited(char('['), one_of(UPPERCASE), char(']')).map(Some);
+    let crate_ = delimited(
+        char('['),
+        anychar.verify(char::is_ascii_uppercase),
+        char(']'),
+    )
+    .map(Some);
     let not_crate = tag("   ").value(None);
     alt((crate_, not_crate))(input)
 }
