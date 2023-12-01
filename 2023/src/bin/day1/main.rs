@@ -41,26 +41,21 @@ impl BasicSolution for Day {
 }
 
 fn solve(data: &str, spelled_out_vals: &[(&str, u32)]) -> anyhow::Result<u32> {
-    itertools::process_results(
-        data.lines()
-            .map(|line| calibration_value(line, spelled_out_vals)),
-        |it| it.sum(),
-    )
-}
+    let calibration_value = |line: &str| {
+        let err = || anyhow!("Couldn't find a digit in line '{line}'");
 
-fn calibration_value(line: &str, spelled_out_vals: &[(&str, u32)]) -> anyhow::Result<u32> {
-    let err = || anyhow!("Couldn't find a digit in line '{line}'");
+        let digit_at_i = |i| {
+            let literal = line[i..i + 1].parse().ok();
+            let match_spelled = |&(digit, val)| line[i..].starts_with(digit).then_some(val);
+            literal.or_else(|| spelled_out_vals.iter().find_map(match_spelled))
+        };
 
-    let digit_at_i = |i| {
-        let literal = line[i..i + 1].parse().ok();
-        let match_spelled = |&(digit, val)| line[i..].starts_with(digit).then_some(val);
-        literal.or_else(|| spelled_out_vals.iter().find_map(match_spelled))
+        let first = (0..line.len()).find_map(digit_at_i).ok_or_else(err)?;
+        let last = (0..line.len()).rev().find_map(digit_at_i).ok_or_else(err)?;
+
+        Ok(first * 10 + last)
     };
-
-    let first = (0..line.len()).find_map(digit_at_i).ok_or_else(err)?;
-    let last = (0..line.len()).rev().find_map(digit_at_i).ok_or_else(err)?;
-
-    Ok(first * 10 + last)
+    itertools::process_results(data.lines().map(calibration_value), |it| it.sum())
 }
 
 fn main() -> anyhow::Result<()> {
