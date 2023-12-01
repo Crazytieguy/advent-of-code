@@ -69,7 +69,7 @@ fn neighbors(height_map: &HeightMap, (x, y): Position) -> impl Iterator<Item = P
         height_map
             .get(x)
             .and_then(|row| row.get(y))
-            .map_or(false, is_high_enough)
+            .is_some_and(is_high_enough)
     };
     [(-1, 0), (1, 0), (0, -1), (0, 1)]
         .into_iter()
