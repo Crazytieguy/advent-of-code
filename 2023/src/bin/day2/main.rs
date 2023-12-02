@@ -2,8 +2,8 @@ use advent_2023::*;
 use nom::{
     branch::alt,
     bytes::complete::tag,
-    character::complete::{char, line_ending, u32, u8},
-    multi::{fold_many_m_n, separated_list1},
+    character::complete::{char, line_ending, u8},
+    multi::{fold_many1, separated_list1},
     sequence::separated_pair,
     Parser,
 };
@@ -29,11 +29,10 @@ impl BasicSolution for Day {
         Ok(data
             .into_iter()
             .filter(|game| {
-                game.subsets
-                    .iter()
-                    .all(|subset| subset.red <= 12 && subset.green <= 13 && subset.blue <= 14)
+                let Revealed { red, green, blue } = game.revealed;
+                red <= 12 && green <= 13 && blue <= 14
             })
-            .map(|game| game.id)
+            .map(|game| game.id as u32)
             .sum())
     }
 
@@ -41,14 +40,7 @@ impl BasicSolution for Day {
         Ok(data
             .into_iter()
             .map(|game| {
-                let Subset { red, green, blue } =
-                    game.subsets
-                        .iter()
-                        .fold(Subset::default(), |max_subset, cur_subset| Subset {
-                            red: max_subset.red.max(cur_subset.red),
-                            green: max_subset.green.max(cur_subset.green),
-                            blue: max_subset.blue.max(cur_subset.blue),
-                        });
+                let Revealed { red, green, blue } = game.revealed;
                 red as u32 * green as u32 * blue as u32
             })
             .sum())
@@ -57,38 +49,32 @@ impl BasicSolution for Day {
 
 #[derive(Debug, Clone)]
 struct Game {
-    id: u32,
-    subsets: Vec<Subset>,
+    id: u8,
+    revealed: Revealed,
 }
 
 fn game(data: &str) -> IResult<Game> {
-    separated_pair(
-        tag("Game ").precedes(u32),
-        tag(": "),
-        separated_list1(tag("; "), subset),
-    )
-    .map(|(id, subsets)| Game { id, subsets })
-    .parse(data)
+    separated_pair(tag("Game ").precedes(u8), tag(": "), revealed)
+        .map(|(id, revealed)| Game { id, revealed })
+        .parse(data)
 }
 
 #[derive(Debug, Clone, Default)]
-struct Subset {
+struct Revealed {
     red: u8,
     green: u8,
     blue: u8,
 }
 
-fn subset(data: &str) -> IResult<Subset> {
-    fold_many_m_n(
-        1,
-        3,
-        cubes.terminated(tag(", ").opt()),
-        Subset::default,
+fn revealed(data: &str) -> IResult<Revealed> {
+    fold_many1(
+        color_count.terminated(tag(", ").or(tag("; ")).opt()),
+        Revealed::default,
         |mut acc, (n, color)| {
             match color {
-                Color::Red => acc.red = n,
-                Color::Green => acc.green = n,
-                Color::Blue => acc.blue = n,
+                Color::Red => acc.red = acc.red.max(n),
+                Color::Green => acc.green = acc.green.max(n),
+                Color::Blue => acc.blue = acc.blue.max(n),
             }
             acc
         },
@@ -102,7 +88,7 @@ enum Color {
     Green,
 }
 
-fn cubes(data: &str) -> IResult<(u8, Color)> {
+fn color_count(data: &str) -> IResult<(u8, Color)> {
     separated_pair(
         u8,
         char(' '),
