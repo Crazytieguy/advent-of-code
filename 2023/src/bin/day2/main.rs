@@ -41,16 +41,15 @@ impl BasicSolution for Day {
         Ok(data
             .into_iter()
             .map(|game| {
-                let max_subset =
+                let Subset { red, green, blue } =
                     game.subsets
                         .iter()
-                        .fold(Subset::default(), |mut max_subset, cur_subset| {
-                            max_subset.red = max_subset.red.max(cur_subset.red);
-                            max_subset.green = max_subset.green.max(cur_subset.green);
-                            max_subset.blue = max_subset.blue.max(cur_subset.blue);
-                            max_subset
+                        .fold(Subset::default(), |max_subset, cur_subset| Subset {
+                            red: max_subset.red.max(cur_subset.red),
+                            green: max_subset.green.max(cur_subset.green),
+                            blue: max_subset.blue.max(cur_subset.blue),
                         });
-                max_subset.red as u32 * max_subset.green as u32 * max_subset.blue as u32
+                red as u32 * green as u32 * blue as u32
             })
             .sum())
     }
@@ -63,12 +62,13 @@ struct Game {
 }
 
 fn game(data: &str) -> IResult<Game> {
-    let (data, id) = tag("Game ")
-        .precedes(u32)
-        .terminated(tag(": "))
-        .parse(data)?;
-    let (data, subsets) = separated_list1(tag("; "), subset)(data)?;
-    Ok((data, Game { id, subsets }))
+    separated_pair(
+        tag("Game ").precedes(u32),
+        tag(": "),
+        separated_list1(tag("; "), subset),
+    )
+    .map(|(id, subsets)| Game { id, subsets })
+    .parse(data)
 }
 
 #[derive(Debug, Clone, Default)]
@@ -76,6 +76,23 @@ struct Subset {
     red: u8,
     green: u8,
     blue: u8,
+}
+
+fn subset(data: &str) -> IResult<Subset> {
+    fold_many_m_n(
+        1,
+        3,
+        cubes.terminated(tag(", ").opt()),
+        Subset::default,
+        |mut acc, (n, color)| {
+            match color {
+                Color::Red => acc.red = n,
+                Color::Green => acc.green = n,
+                Color::Blue => acc.blue = n,
+            }
+            acc
+        },
+    )(data)
 }
 
 #[derive(Debug, Clone)]
@@ -94,23 +111,6 @@ fn cubes(data: &str) -> IResult<(u8, Color)> {
             tag("green").value(Color::Green),
             tag("blue").value(Color::Blue),
         )),
-    )(data)
-}
-
-fn subset(data: &str) -> IResult<Subset> {
-    fold_many_m_n(
-        1,
-        3,
-        cubes.terminated(tag(", ").opt()),
-        Subset::default,
-        |mut acc, (n, color)| {
-            match color {
-                Color::Red => acc.red = n,
-                Color::Green => acc.green = n,
-                Color::Blue => acc.blue = n,
-            }
-            acc
-        },
     )(data)
 }
 
