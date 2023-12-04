@@ -14,8 +14,8 @@ impl BasicSolution for Day {
     const SAMPLE_ANSWER_A: Self::TestAnswer = 142;
     const SAMPLE_ANSWER_B: Self::TestAnswer = 281;
 
-    fn parse(data: &'static str) -> IResult<Self::Parsed> {
-        Ok(("", data))
+    fn parse(data: &'static str) -> anyhow::Result<Self::Parsed> {
+        Ok(data)
     }
 
     fn a(data: Self::Parsed) -> anyhow::Result<Self::Answer> {

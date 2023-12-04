@@ -1,12 +1,11 @@
 use advent_2023::*;
 use itertools::Itertools;
-use nom::{
-    bytes::complete::{take_until, take_while},
-    character::complete::{char, line_ending},
-    multi::separated_list1,
+use winnow::{
+    ascii::{line_ending, not_line_ending},
+    combinator::{opt, preceded, repeat, separated_pair, terminated},
+    token::take_until0,
     Parser,
 };
-use nom_supreme::ParserExt;
 
 struct Day;
 
@@ -25,8 +24,10 @@ impl BasicSolution for Day {
     const SAMPLE_ANSWER_A: Self::TestAnswer = 13;
     const SAMPLE_ANSWER_B: Self::TestAnswer = 30;
 
-    fn parse(data: &'static str) -> IResult<Self::Parsed> {
-        separated_list1(line_ending, card)(data)
+    fn parse(data: &'static str) -> anyhow::Result<Self::Parsed> {
+        repeat(1.., terminated(card, opt(line_ending)))
+            .parse(data)
+            .map_err(anyhow::Error::msg)
     }
 
     fn a(data: Self::Parsed) -> anyhow::Result<Self::Answer> {
@@ -49,16 +50,17 @@ impl BasicSolution for Day {
     }
 }
 
-fn card(data: &str) -> IResult<Card> {
-    let (data, _) = take_until(":").and(char(':')).parse(data)?;
-    let (data, [winning_numbers, numbers_i_own]) = take_while(|c| matches!(c, '0'..='9' | ' '))
-        .separated_array(char('|'))
-        .parse(data)?;
+fn card(data: &mut &str) -> winnow::PResult<Card> {
+    let (winning_numbers, numbers_i_own) = preceded(
+        (take_until0(":"), ':'),
+        separated_pair(take_until0("|"), '|', not_line_ending),
+    )
+    .parse_next(data)?;
     let matches = winning_numbers
         .split_ascii_whitespace()
         .filter(|n| numbers_i_own.split_ascii_whitespace().contains(n))
         .count();
-    Ok((data, Card { matches }))
+    Ok(Card { matches })
 }
 
 fn main() -> anyhow::Result<()> {

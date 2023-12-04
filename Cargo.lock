@@ -31,8 +31,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "itertools 0.12.0",
- "nom",
- "nom-supreme",
+ "winnow",
 ]
 
 [[package]]
@@ -333,3 +332,12 @@ name = "unicode-ident"
 version = "1.0.12"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3354b9ac3fae1ff6755cb6db53683adb661634f67557942dea4facebec0fee4b"
+
+[[package]]
+name = "winnow"
+version = "0.5.19"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "829846f3e3db426d4cee4510841b71a8e58aa2a76b1132579487ae430ccd9c7b"
+dependencies = [
+ "memchr",
+]

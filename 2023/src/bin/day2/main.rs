@@ -1,13 +1,11 @@
 use advent_2023::*;
-use nom::{
-    branch::alt,
-    bytes::complete::tag,
-    character::complete::{char, line_ending, u8},
-    multi::{fold_many1, separated_list1},
-    sequence::separated_pair,
+use winnow::{
+    ascii::{dec_uint, line_ending},
+    combinator::{alt, fold_repeat, opt, preceded, repeat, separated_pair, terminated},
+    stream::AsChar,
+    token::take_till0,
     Parser,
 };
-use nom_supreme::ParserExt;
 
 struct Day;
 
@@ -41,8 +39,10 @@ impl BasicSolution for Day {
     const SAMPLE_ANSWER_A: Self::TestAnswer = 8;
     const SAMPLE_ANSWER_B: Self::TestAnswer = 2286;
 
-    fn parse(data: &'static str) -> IResult<Self::Parsed> {
-        separated_list1(line_ending, game)(data)
+    fn parse(data: &'static str) -> anyhow::Result<Self::Parsed> {
+        repeat(1.., terminated(game, opt(line_ending)))
+            .parse(data)
+            .map_err(anyhow::Error::msg)
     }
 
     fn a(data: Self::Parsed) -> anyhow::Result<Self::Answer> {
@@ -67,15 +67,16 @@ impl BasicSolution for Day {
     }
 }
 
-fn game(data: &str) -> IResult<Game> {
-    separated_pair(tag("Game ").precedes(u8), tag(": "), revealed)
-        .map(|(id, revealed)| Game { id, revealed })
-        .parse(data)
+fn game(data: &mut &str) -> winnow::PResult<Game> {
+    ("Game ", dec_uint, ": ", revealed)
+        .map(|(_, id, _, revealed)| Game { id, revealed })
+        .parse_next(data)
 }
 
-fn revealed(data: &str) -> IResult<Revealed> {
-    fold_many1(
-        color_count.terminated(tag(", ").or(tag("; ")).opt()),
+fn revealed(data: &mut &str) -> winnow::PResult<Revealed> {
+    fold_repeat(
+        1..,
+        preceded(take_till0(AsChar::is_dec_digit), color_count),
         Revealed::default,
         |mut acc, (n, color)| {
             match color {
@@ -85,19 +86,21 @@ fn revealed(data: &str) -> IResult<Revealed> {
             }
             acc
         },
-    )(data)
+    )
+    .parse_next(data)
 }
 
-fn color_count(data: &str) -> IResult<(u8, Color)> {
+fn color_count(data: &mut &str) -> winnow::PResult<(u8, Color)> {
     separated_pair(
-        u8,
-        char(' '),
+        dec_uint,
+        ' ',
         alt((
-            tag("red").value(Color::Red),
-            tag("green").value(Color::Green),
-            tag("blue").value(Color::Blue),
+            "red".value(Color::Red),
+            "green".value(Color::Green),
+            "blue".value(Color::Blue),
         )),
-    )(data)
+    )
+    .parse_next(data)
 }
 
 fn main() -> anyhow::Result<()> {

@@ -1,11 +1,6 @@
 #![feature(associated_type_defaults)]
 use std::fmt::{Debug, Display};
 
-use nom::character::complete::line_ending;
-use nom_supreme::{final_parser::final_parser, ParserExt};
-
-pub type IResult<'a, T> = nom::IResult<&'a str, T>;
-
 pub trait BasicSolution {
     type Parsed: Debug + Clone = &'static str;
     type Answer: Debug + Display + PartialEq<Self::TestAnswer>;
@@ -16,7 +11,7 @@ pub trait BasicSolution {
     const SAMPLE_ANSWER_A: Self::TestAnswer;
     const SAMPLE_ANSWER_B: Self::TestAnswer;
 
-    fn parse(data: &'static str) -> IResult<Self::Parsed>;
+    fn parse(data: &'static str) -> anyhow::Result<Self::Parsed>;
     fn a(data: Self::Parsed) -> anyhow::Result<Self::Answer>;
     fn b(data: Self::Parsed) -> anyhow::Result<Self::Answer>;
 }
@@ -34,7 +29,7 @@ impl<T: BasicSolution> Solution for T {
     const SAMPLE_ANSWER_B: <Self as BasicSolution>::TestAnswer =
         <Self as BasicSolution>::SAMPLE_ANSWER_B;
 
-    fn parse(data: &'static str) -> IResult<Self::Parsed> {
+    fn parse(data: &'static str) -> anyhow::Result<Self::Parsed> {
         <Self as BasicSolution>::parse(data)
     }
 
@@ -46,7 +41,7 @@ impl<T: BasicSolution> Solution for T {
         <Self as BasicSolution>::b(data)
     }
 
-    fn parse_test(data: &'static str) -> IResult<Self::ParsedTest> {
+    fn parse_test(data: &'static str) -> anyhow::Result<Self::ParsedTest> {
         Self::parse(data)
     }
     fn a_test(data: Self::ParsedTest) -> anyhow::Result<Self::Answer> {
@@ -68,41 +63,33 @@ pub trait Solution {
     const SAMPLE_ANSWER_A: Self::TestAnswer;
     const SAMPLE_ANSWER_B: Self::TestAnswer;
 
-    fn parse(data: &'static str) -> IResult<Self::Parsed>;
+    fn parse(data: &'static str) -> anyhow::Result<Self::Parsed>;
     fn a(data: Self::Parsed) -> anyhow::Result<Self::Answer>;
     fn b(data: Self::Parsed) -> anyhow::Result<Self::Answer>;
-    fn parse_test(data: &'static str) -> IResult<Self::ParsedTest>;
+    fn parse_test(data: &'static str) -> anyhow::Result<Self::ParsedTest>;
     fn a_test(data: Self::ParsedTest) -> anyhow::Result<Self::Answer>;
     fn b_test(data: Self::ParsedTest) -> anyhow::Result<Self::Answer>;
 
-    fn final_parse(data: &'static str) -> Result<Self::Parsed, nom::error::Error<&str>> {
-        final_parser(Self::parse.terminated(line_ending.opt()))(data)
-    }
-
-    fn final_parse_test(data: &'static str) -> Result<Self::ParsedTest, nom::error::Error<&str>> {
-        final_parser(Self::parse_test.terminated(line_ending.opt()))(data)
-    }
-
     fn test_a() -> anyhow::Result<()> {
         assert_eq!(
-            Self::a_test(Self::final_parse_test(Self::SAMPLE_DATA)?)?,
+            Self::parse_test(Self::SAMPLE_DATA).and_then(Self::a_test)?,
             Self::SAMPLE_ANSWER_A
         );
-        println!("a: {}", Self::a(Self::final_parse(Self::DATA)?)?);
+        println!("a: {}", Self::parse(Self::DATA).and_then(Self::a)?);
         Ok(())
     }
 
     fn test_b() -> anyhow::Result<()> {
         assert_eq!(
-            Self::b_test(Self::final_parse_test(Self::SAMPLE_DATA_B)?)?,
+            Self::parse_test(Self::SAMPLE_DATA_B).and_then(Self::b_test)?,
             Self::SAMPLE_ANSWER_B
         );
-        println!("b: {}", Self::b(Self::final_parse(Self::DATA)?)?);
+        println!("b: {}", Self::parse(Self::DATA).and_then(Self::b)?);
         Ok(())
     }
 
     fn main() -> anyhow::Result<()> {
-        let parsed = Self::final_parse(Self::DATA)?;
+        let parsed = Self::parse(Self::DATA)?;
         let arg = std::env::args().nth(1);
         match arg.as_deref() {
             Some("a") => {

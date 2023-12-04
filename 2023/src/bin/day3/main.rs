@@ -1,7 +1,14 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, ops::Range};
 
 use advent_2023::*;
 use itertools::Itertools;
+use winnow::{
+    ascii::dec_uint,
+    combinator::{iterator, preceded},
+    stream::AsChar,
+    token::take_till0,
+    Located, Parser,
+};
 
 struct Day;
 
@@ -14,8 +21,7 @@ struct Schematic<'a> {
 #[derive(Debug, Clone)]
 struct Number {
     row: usize,
-    start_column: usize,
-    end_column: usize,
+    columns: Range<usize>,
     value: u32,
 }
 
@@ -29,37 +35,24 @@ impl BasicSolution for Day {
     const SAMPLE_ANSWER_A: Self::TestAnswer = 4361;
     const SAMPLE_ANSWER_B: Self::TestAnswer = 467835;
 
-    fn parse(data: &'static str) -> IResult<Self::Parsed> {
-        let numbers = data
-            .lines()
-            .enumerate()
-            .flat_map(|(row, line)| {
-                line.chars()
-                    .enumerate()
-                    .filter_map(move |(col, c)| {
-                        c.to_digit(10).map(|value| Number {
-                            row,
-                            start_column: col,
-                            end_column: col,
-                            value,
-                        })
-                    })
-                    .coalesce(|first, second| {
-                        if first.end_column + 1 == second.start_column {
-                            Ok(Number {
-                                row: first.row,
-                                start_column: first.start_column,
-                                end_column: second.end_column,
-                                value: first.value * 10 + second.value,
-                            })
-                        } else {
-                            Err((first, second))
-                        }
-                    })
-            })
-            .collect();
+    fn parse(data: &'static str) -> anyhow::Result<Self::Parsed> {
+        let mut numbers = Vec::new();
+        for (row, line) in data.lines().enumerate() {
+            let mut iter_nums = iterator(
+                Located::new(line),
+                preceded(not_number, dec_uint.with_span()),
+            );
+            numbers.extend(iter_nums.map(|(value, columns)| Number {
+                row,
+                columns,
+                value,
+            }));
+            // Purely for error checking
+            let (rest, _) = iter_nums.finish().map_err(anyhow::Error::msg)?;
+            not_number.parse(rest).map_err(anyhow::Error::msg)?;
+        }
         let raw = data.lines().map(str::as_bytes).collect_vec();
-        Ok(("", Schematic { raw, numbers }))
+        Ok(Schematic { raw, numbers })
     }
 
     fn a(Schematic { numbers, raw }: Self::Parsed) -> anyhow::Result<Self::Answer> {
@@ -95,10 +88,14 @@ impl BasicSolution for Day {
     }
 }
 
+fn not_number(data: &mut Located<&'static str>) -> winnow::PResult<&'static str> {
+    take_till0(AsChar::is_dec_digit).parse_next(data)
+}
+
 impl Number {
     fn adjacent_coords(&self) -> impl Iterator<Item = (usize, usize)> + '_ {
         let rows_to_check = self.row.saturating_sub(1)..=self.row + 1;
-        let columns_to_check = self.start_column.saturating_sub(1)..=self.end_column + 1;
+        let columns_to_check = self.columns.start.saturating_sub(1)..self.columns.end + 1;
         rows_to_check.cartesian_product(columns_to_check)
     }
 }
