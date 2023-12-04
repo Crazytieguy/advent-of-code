@@ -11,6 +11,26 @@ use nom_supreme::ParserExt;
 
 struct Day;
 
+#[derive(Debug, Clone)]
+struct Game {
+    id: u8,
+    revealed: Revealed,
+}
+
+#[derive(Debug, Clone, Default)]
+struct Revealed {
+    red: u8,
+    green: u8,
+    blue: u8,
+}
+
+#[derive(Debug, Clone)]
+enum Color {
+    Blue,
+    Red,
+    Green,
+}
+
 impl BasicSolution for Day {
     const DATA: &'static str = include_str!("data.txt");
     const SAMPLE_DATA: &'static str = include_str!("sample.txt");
@@ -47,23 +67,10 @@ impl BasicSolution for Day {
     }
 }
 
-#[derive(Debug, Clone)]
-struct Game {
-    id: u8,
-    revealed: Revealed,
-}
-
 fn game(data: &str) -> IResult<Game> {
     separated_pair(tag("Game ").precedes(u8), tag(": "), revealed)
         .map(|(id, revealed)| Game { id, revealed })
         .parse(data)
-}
-
-#[derive(Debug, Clone, Default)]
-struct Revealed {
-    red: u8,
-    green: u8,
-    blue: u8,
 }
 
 fn revealed(data: &str) -> IResult<Revealed> {
@@ -79,13 +86,6 @@ fn revealed(data: &str) -> IResult<Revealed> {
             acc
         },
     )(data)
-}
-
-#[derive(Debug, Clone)]
-enum Color {
-    Blue,
-    Red,
-    Green,
 }
 
 fn color_count(data: &str) -> IResult<(u8, Color)> {
