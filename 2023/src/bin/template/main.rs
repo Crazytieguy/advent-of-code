@@ -1,9 +1,5 @@
 use advent_2023::{BasicSolution, Solution};
-use winnow::{
-    ascii::{line_ending, not_line_ending},
-    combinator::{opt, repeat, terminated},
-    Parser,
-};
+use winnow::{combinator::rest, Parser};
 
 struct Day;
 
@@ -18,9 +14,9 @@ impl BasicSolution for Day {
     const SAMPLE_ANSWER_B: Self::TestAnswer = 0;
 
     fn parse(data: &'static str) -> anyhow::Result<Self::Parsed> {
-        repeat(1.., terminated(line, opt(line_ending)))
-            .parse(data)
-            .map_err(anyhow::Error::msg)
+        data.lines()
+            .map(|line| line_parser.parse(line).map_err(anyhow::Error::msg))
+            .collect()
     }
 
     fn part_a(data: Self::Parsed) -> anyhow::Result<Self::Answer> {
@@ -32,8 +28,8 @@ impl BasicSolution for Day {
     }
 }
 
-fn line(data: &mut &'static str) -> winnow::PResult<&'static str> {
-    not_line_ending.parse_next(data)
+fn line_parser(data: &mut &'static str) -> winnow::PResult<&'static str> {
+    rest.parse_next(data)
 }
 
 fn main() -> anyhow::Result<()> {

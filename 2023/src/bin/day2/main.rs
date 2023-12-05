@@ -1,10 +1,8 @@
 #![warn(clippy::pedantic)]
 use advent_2023::{BasicSolution, Solution};
 use winnow::{
-    ascii::{dec_uint, line_ending},
-    combinator::{alt, fold_repeat, opt, preceded, repeat, separated_pair, terminated},
-    stream::AsChar,
-    token::take_till0,
+    ascii::dec_uint,
+    combinator::{alt, fold_repeat, opt, preceded, separated_pair},
     Parser,
 };
 
@@ -13,22 +11,12 @@ struct Day;
 #[derive(Debug, Clone)]
 struct Game {
     id: u8,
-    revealed: Revealed,
+    revealed: [u8; 3],
 }
 
-#[derive(Debug, Clone, Default)]
-struct Revealed {
-    red: u8,
-    green: u8,
-    blue: u8,
-}
-
-#[derive(Debug, Clone)]
-enum Color {
-    Blue,
-    Red,
-    Green,
-}
+const RED: usize = 0;
+const GREEN: usize = 1;
+const BLUE: usize = 2;
 
 impl BasicSolution for Day {
     const DATA: &'static str = include_str!("data.txt");
@@ -41,16 +29,16 @@ impl BasicSolution for Day {
     const SAMPLE_ANSWER_B: Self::TestAnswer = 2286;
 
     fn parse(data: &'static str) -> anyhow::Result<Self::Parsed> {
-        repeat(1.., terminated(game, opt(line_ending)))
-            .parse(data)
-            .map_err(anyhow::Error::msg)
+        data.lines()
+            .map(|line| game.parse(line).map_err(anyhow::Error::msg))
+            .collect()
     }
 
     fn part_a(data: Self::Parsed) -> anyhow::Result<Self::Answer> {
         Ok(data
             .into_iter()
             .filter(|game| {
-                let Revealed { red, green, blue } = game.revealed;
+                let [red, green, blue] = game.revealed;
                 red <= 12 && green <= 13 && blue <= 14
             })
             .map(|game| u32::from(game.id))
@@ -61,7 +49,7 @@ impl BasicSolution for Day {
         Ok(data
             .into_iter()
             .map(|game| {
-                let Revealed { red, green, blue } = game.revealed;
+                let [red, green, blue] = game.revealed;
                 u32::from(red) * u32::from(green) * u32::from(blue)
             })
             .sum())
@@ -74,32 +62,24 @@ fn game(data: &mut &str) -> winnow::PResult<Game> {
         .parse_next(data)
 }
 
-fn revealed(data: &mut &str) -> winnow::PResult<Revealed> {
+fn revealed(data: &mut &str) -> winnow::PResult<[u8; 3]> {
     fold_repeat(
         1..,
-        preceded(take_till0(AsChar::is_dec_digit), color_count),
-        Revealed::default,
+        preceded(opt(alt((", ", "; "))), color_count),
+        || [0; 3],
         |mut acc, (n, color)| {
-            match color {
-                Color::Red => acc.red = acc.red.max(n),
-                Color::Green => acc.green = acc.green.max(n),
-                Color::Blue => acc.blue = acc.blue.max(n),
-            }
+            acc[color] = acc[color].max(n);
             acc
         },
     )
     .parse_next(data)
 }
 
-fn color_count(data: &mut &str) -> winnow::PResult<(u8, Color)> {
+fn color_count(data: &mut &str) -> winnow::PResult<(u8, usize)> {
     separated_pair(
         dec_uint,
         ' ',
-        alt((
-            "red".value(Color::Red),
-            "green".value(Color::Green),
-            "blue".value(Color::Blue),
-        )),
+        alt(("red".value(RED), "green".value(GREEN), "blue".value(BLUE))),
     )
     .parse_next(data)
 }

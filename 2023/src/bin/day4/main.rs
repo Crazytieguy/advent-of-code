@@ -1,12 +1,7 @@
 #![warn(clippy::pedantic)]
 use advent_2023::{BasicSolution, Solution};
 use itertools::Itertools;
-use winnow::{
-    ascii::{line_ending, not_line_ending},
-    combinator::{opt, preceded, repeat, separated_pair, terminated},
-    token::take_until0,
-    Parser,
-};
+use winnow::{combinator::rest, token::take_until0, Parser};
 
 struct Day;
 
@@ -26,9 +21,9 @@ impl BasicSolution for Day {
     const SAMPLE_ANSWER_B: Self::TestAnswer = 30;
 
     fn parse(data: &'static str) -> anyhow::Result<Self::Parsed> {
-        repeat(1.., terminated(card, opt(line_ending)))
-            .parse(data)
-            .map_err(anyhow::Error::msg)
+        data.lines()
+            .map(|line| card.parse(line).map_err(anyhow::Error::msg))
+            .collect()
     }
 
     #[allow(clippy::cast_possible_truncation)]
@@ -53,11 +48,8 @@ impl BasicSolution for Day {
 }
 
 fn card(data: &mut &str) -> winnow::PResult<Card> {
-    let (winning_numbers, numbers_i_own) = preceded(
-        (take_until0(":"), ':'),
-        separated_pair(take_until0("|"), '|', not_line_ending),
-    )
-    .parse_next(data)?;
+    let (_, _, winning_numbers, _, numbers_i_own) =
+        (take_until0(":"), ':', take_until0("|"), '|', rest).parse_next(data)?;
     let matches = winning_numbers
         .split_ascii_whitespace()
         .filter(|n| numbers_i_own.split_ascii_whitespace().contains(n))

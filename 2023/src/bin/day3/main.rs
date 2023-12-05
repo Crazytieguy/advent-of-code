@@ -39,10 +39,8 @@ impl BasicSolution for Day {
     fn parse(data: &'static str) -> anyhow::Result<Self::Parsed> {
         let mut numbers = Vec::new();
         for (row, line) in data.lines().enumerate() {
-            let mut iter_nums = iterator(
-                Located::new(line),
-                preceded(not_number, dec_uint.with_span()),
-            );
+            let mut iter_nums =
+                iterator(Located::new(line), preceded(not_dec, dec_uint.with_span()));
             numbers.extend(iter_nums.map(|(value, columns)| Number {
                 row,
                 columns,
@@ -50,7 +48,7 @@ impl BasicSolution for Day {
             }));
             // Purely for error checking
             let (rest, ()) = iter_nums.finish().map_err(anyhow::Error::msg)?;
-            not_number.parse(rest).map_err(anyhow::Error::msg)?;
+            not_dec.parse(rest).map_err(anyhow::Error::msg)?;
         }
         let raw = data.lines().map(str::as_bytes).collect_vec();
         Ok(Schematic { raw, numbers })
@@ -85,7 +83,7 @@ impl BasicSolution for Day {
     }
 }
 
-fn not_number(data: &mut Located<&'static str>) -> winnow::PResult<&'static str> {
+fn not_dec(data: &mut Located<&'static str>) -> winnow::PResult<&'static str> {
     take_till0(AsChar::is_dec_digit).parse_next(data)
 }
 
