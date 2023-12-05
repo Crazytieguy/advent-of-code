@@ -1,9 +1,10 @@
+#![warn(clippy::pedantic)]
 use std::ops::Range;
 
 use advent_2023::{BasicSolution, Solution};
 use itertools::Itertools;
 use winnow::{
-    ascii::{dec_uint, line_ending},
+    ascii::{dec_uint, not_line_ending},
     combinator::{opt, preceded, separated},
     Parser,
 };
@@ -19,7 +20,14 @@ struct Mapping {
 #[derive(Debug, Clone)]
 struct Almanac {
     seeds: Vec<u64>,
-    all_mappings: [Vec<Mapping>; 7],
+    all_mappings: Vec<Vec<Mapping>>,
+}
+
+#[derive(Debug, Clone)]
+struct MappedRange {
+    before: Option<Range<u64>>,
+    overlap: Option<Range<u64>>,
+    after: Option<Range<u64>>,
 }
 
 impl BasicSolution for Day {
@@ -43,7 +51,9 @@ impl BasicSolution for Day {
                 data.all_mappings.iter().fold(seed, |acc, mappings| {
                     mappings
                         .iter()
-                        .find_map(|mapping| mapping.map(acc))
+                        .find_map(|mapping| {
+                            mapping.source.contains(&acc).then(|| mapping.offset(acc))
+                        })
                         .unwrap_or(acc)
                 })
             })
@@ -54,7 +64,6 @@ impl BasicSolution for Day {
     fn part_b(data: Self::Parsed) -> anyhow::Result<Self::Answer> {
         let seed_ranges = data.seeds.into_iter().tuples().map(|(a, b)| a..a + b);
         seed_ranges
-            .into_iter()
             .flat_map(|seed_range| {
                 data.all_mappings
                     .iter()
@@ -75,18 +84,18 @@ fn multi_map_range(
     mappings: &[Mapping],
 ) -> impl Iterator<Item = Range<u64>> {
     let mut overlaps = vec![];
-    let mut leftovers_a = vec![input_range];
-    let mut leftovers_b = vec![];
+    let mut leftovers = vec![input_range];
+    let mut leftovers_queue = vec![];
     for mapping in mappings {
-        for input_range in leftovers_a.drain(..) {
-            let [before, overlap, after] = mapping.map_range(input_range);
-            overlaps.extend(overlap);
-            leftovers_b.extend(before);
-            leftovers_b.extend(after);
+        for input_range in leftovers.drain(..) {
+            let mapped = mapping.map_range(input_range);
+            overlaps.extend(mapped.overlap);
+            leftovers_queue.extend(mapped.before);
+            leftovers_queue.extend(mapped.after);
         }
-        std::mem::swap(&mut leftovers_a, &mut leftovers_b);
+        std::mem::swap(&mut leftovers, &mut leftovers_queue);
     }
-    overlaps.into_iter().chain(leftovers_a)
+    overlaps.into_iter().chain(leftovers)
 }
 
 impl Mapping {
@@ -94,64 +103,54 @@ impl Mapping {
         value + self.destination_start - self.source.start
     }
 
-    fn map(&self, value: u64) -> Option<u64> {
-        if self.source.contains(&value) {
-            Some(self.offset(value))
-        } else {
-            None
-        }
-    }
-
-    fn map_range(&self, range: Range<u64>) -> [Option<Range<u64>>; 3] {
+    fn map_range(&self, range: Range<u64>) -> MappedRange {
         let opt_range = |start, end| Some(start..end).filter(|r| !r.is_empty());
-        let before_mapping = opt_range(range.start, self.source.start.min(range.end));
-        let after_mapping = opt_range(self.source.end.max(range.start), range.end);
+        let before = opt_range(range.start, self.source.start.min(range.end));
+        let after = opt_range(self.source.end.max(range.start), range.end);
         let overlap = opt_range(
             range.start.max(self.source.start),
             range.end.min(self.source.end),
         )
         .map(|r| self.offset(r.start)..self.offset(r.end));
-        [before_mapping, overlap, after_mapping]
+        MappedRange {
+            before,
+            overlap,
+            after,
+        }
     }
 }
 
-fn almanac(data: &mut &str) -> winnow::PResult<Almanac> {
-    let seeds = seeds.parse_next(data)?;
-    let mappings = |tag| {
-        preceded(
-            (line_ending, line_ending, tag, line_ending),
-            separated(1.., mapping, line_ending),
-        )
-    };
-    let all_mappings = [
-        mappings("seed-to-soil map:").parse_next(data)?,
-        mappings("soil-to-fertilizer map:").parse_next(data)?,
-        mappings("fertilizer-to-water map:").parse_next(data)?,
-        mappings("water-to-light map:").parse_next(data)?,
-        mappings("light-to-temperature map:").parse_next(data)?,
-        mappings("temperature-to-humidity map:").parse_next(data)?,
-        mappings("humidity-to-location map:").parse_next(data)?,
-    ];
-    let _ = opt(line_ending).parse_next(data)?;
-
-    Ok(Almanac {
-        seeds,
-        all_mappings,
-    })
+fn almanac(data: &mut &'static str) -> winnow::PResult<Almanac> {
+    (seeds, "\n\n", separated(7..=7, mappings, "\n\n"), opt("\n"))
+        .map(|(seeds, _, all_mappings, _)| Almanac {
+            seeds,
+            all_mappings,
+        })
+        .parse_next(data)
 }
 
 fn seeds(data: &mut &str) -> winnow::PResult<Vec<u64>> {
-    preceded("seeds: ", separated(1.., dec_uint::<_, u64, _>, ' ')).parse_next(data)
+    preceded("seeds: ", separated(1.., u64, ' ')).parse_next(data)
+}
+
+fn mappings(data: &mut &str) -> winnow::PResult<Vec<Mapping>> {
+    preceded((not_line_ending, "\n"), separated(1.., mapping, "\n")).parse_next(data)
 }
 
 fn mapping(data: &mut &str) -> winnow::PResult<Mapping> {
-    let (destination_start, _, source_start, _, len): (u64, _, u64, _, u64) =
-        (dec_uint, ' ', dec_uint, ' ', dec_uint).parse_next(data)?;
-    let source = source_start..source_start + len;
-    Ok(Mapping {
-        source,
-        destination_start,
-    })
+    (u64, ' ', u64, ' ', u64)
+        .map(|(destination_start, _, source_start, _, len)| {
+            let source = source_start..source_start + len;
+            Mapping {
+                source,
+                destination_start,
+            }
+        })
+        .parse_next(data)
+}
+
+fn u64(data: &mut &str) -> winnow::PResult<u64> {
+    dec_uint.parse_next(data)
 }
 
 fn main() -> anyhow::Result<()> {
