@@ -1,4 +1,5 @@
-use advent_2023::*;
+#![warn(clippy::pedantic)]
+use advent_2023::{BasicSolution, Solution};
 use itertools::Itertools;
 use winnow::{
     ascii::{line_ending, not_line_ending},
@@ -30,6 +31,7 @@ impl BasicSolution for Day {
             .map_err(anyhow::Error::msg)
     }
 
+    #[allow(clippy::cast_possible_truncation)]
     fn a(data: Self::Parsed) -> anyhow::Result<Self::Answer> {
         Ok(data
             .into_iter()

@@ -1,4 +1,4 @@
-use advent_2023::*;
+use advent_2023::{BasicSolution, Solution};
 use winnow::{
     ascii::{line_ending, not_line_ending},
     combinator::{opt, repeat, terminated},

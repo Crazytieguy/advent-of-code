@@ -1,4 +1,6 @@
 #![feature(associated_type_defaults)]
+#![warn(clippy::pedantic)]
+#![allow(clippy::missing_errors_doc)]
 use std::fmt::{Debug, Display};
 
 pub trait BasicSolution {

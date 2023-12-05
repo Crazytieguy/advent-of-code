@@ -1,6 +1,7 @@
+#![warn(clippy::pedantic)]
 use std::{collections::HashMap, ops::Range};
 
-use advent_2023::*;
+use advent_2023::{BasicSolution, Solution};
 use itertools::Itertools;
 use winnow::{
     ascii::dec_uint,
@@ -33,7 +34,7 @@ impl BasicSolution for Day {
     type Answer = u32;
 
     const SAMPLE_ANSWER_A: Self::TestAnswer = 4361;
-    const SAMPLE_ANSWER_B: Self::TestAnswer = 467835;
+    const SAMPLE_ANSWER_B: Self::TestAnswer = 467_835;
 
     fn parse(data: &'static str) -> anyhow::Result<Self::Parsed> {
         let mut numbers = Vec::new();
@@ -48,7 +49,7 @@ impl BasicSolution for Day {
                 value,
             }));
             // Purely for error checking
-            let (rest, _) = iter_nums.finish().map_err(anyhow::Error::msg)?;
+            let (rest, ()) = iter_nums.finish().map_err(anyhow::Error::msg)?;
             not_number.parse(rest).map_err(anyhow::Error::msg)?;
         }
         let raw = data.lines().map(str::as_bytes).collect_vec();
@@ -69,17 +70,13 @@ impl BasicSolution for Day {
 
     fn b(Schematic { numbers, raw }: Self::Parsed) -> anyhow::Result<Self::Answer> {
         let mut potential_gears: HashMap<(usize, usize), Vec<u32>> = HashMap::new();
-        numbers.into_iter().for_each(|number| {
-            number
-                .adjacent_coords()
+        for num in numbers {
+            num.adjacent_coords()
                 .filter(|&coords| get_2d(&raw, coords) == Some(b'*'))
                 .for_each(|coords| {
-                    potential_gears
-                        .entry(coords)
-                        .or_default()
-                        .push(number.value);
+                    potential_gears.entry(coords).or_default().push(num.value);
                 });
-        });
+        }
         Ok(potential_gears
             .into_values()
             .filter(|values| values.len() == 2)
@@ -95,7 +92,7 @@ fn not_number(data: &mut Located<&'static str>) -> winnow::PResult<&'static str>
 impl Number {
     fn adjacent_coords(&self) -> impl Iterator<Item = (usize, usize)> + '_ {
         let rows_to_check = self.row.saturating_sub(1)..=self.row + 1;
-        let columns_to_check = self.columns.start.saturating_sub(1)..self.columns.end + 1;
+        let columns_to_check = self.columns.start.saturating_sub(1)..=self.columns.end;
         rows_to_check.cartesian_product(columns_to_check)
     }
 }

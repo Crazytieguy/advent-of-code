@@ -1,4 +1,5 @@
-use advent_2023::*;
+#![warn(clippy::pedantic)]
+use advent_2023::{BasicSolution, Solution};
 use winnow::{
     ascii::{dec_uint, line_ending},
     combinator::{alt, fold_repeat, opt, preceded, repeat, separated_pair, terminated},
@@ -52,7 +53,7 @@ impl BasicSolution for Day {
                 let Revealed { red, green, blue } = game.revealed;
                 red <= 12 && green <= 13 && blue <= 14
             })
-            .map(|game| game.id as u32)
+            .map(|game| u32::from(game.id))
             .sum())
     }
 
@@ -61,7 +62,7 @@ impl BasicSolution for Day {
             .into_iter()
             .map(|game| {
                 let Revealed { red, green, blue } = game.revealed;
-                red as u32 * green as u32 * blue as u32
+                u32::from(red) * u32::from(green) * u32::from(blue)
             })
             .sum())
     }

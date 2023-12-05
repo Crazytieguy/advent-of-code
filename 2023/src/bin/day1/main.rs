@@ -1,4 +1,5 @@
-use advent_2023::*;
+#![warn(clippy::pedantic)]
+use advent_2023::{BasicSolution, Solution};
 use anyhow::anyhow;
 
 struct Day;
@@ -45,7 +46,7 @@ fn solve(data: &str, spelled_out_vals: &[(&str, u32)]) -> anyhow::Result<u32> {
         let err = || anyhow!("Couldn't find a digit in line '{line}'");
 
         let digit_at_i = |i| {
-            let literal = line[i..i + 1].parse().ok();
+            let literal = line[i..=i].parse().ok();
             let match_spelled = |&(digit, val)| line[i..].starts_with(digit).then_some(val);
             literal.or_else(|| spelled_out_vals.iter().find_map(match_spelled))
         };
