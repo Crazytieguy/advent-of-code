@@ -56,7 +56,7 @@ impl BasicSolution for Day {
         Ok(Schematic { raw, numbers })
     }
 
-    fn a(Schematic { numbers, raw }: Self::Parsed) -> anyhow::Result<Self::Answer> {
+    fn part_a(Schematic { numbers, raw }: Self::Parsed) -> anyhow::Result<Self::Answer> {
         Ok(numbers
             .into_iter()
             .filter(|number| {
@@ -68,7 +68,7 @@ impl BasicSolution for Day {
             .sum())
     }
 
-    fn b(Schematic { numbers, raw }: Self::Parsed) -> anyhow::Result<Self::Answer> {
+    fn part_b(Schematic { numbers, raw }: Self::Parsed) -> anyhow::Result<Self::Answer> {
         let mut potential_gears: HashMap<(usize, usize), Vec<u32>> = HashMap::new();
         for num in numbers {
             num.adjacent_coords()
@@ -111,11 +111,11 @@ mod tests {
 
     #[test]
     fn a() -> anyhow::Result<()> {
-        Day::test_a()
+        Day::test_part_a()
     }
 
     #[test]
     fn b() -> anyhow::Result<()> {
-        Day::test_b()
+        Day::test_part_b()
     }
 }

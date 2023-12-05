@@ -23,11 +23,11 @@ impl BasicSolution for Day {
             .map_err(anyhow::Error::msg)
     }
 
-    fn a(data: Self::Parsed) -> anyhow::Result<Self::Answer> {
+    fn part_a(data: Self::Parsed) -> anyhow::Result<Self::Answer> {
         todo!("{data:?}")
     }
 
-    fn b(_: Self::Parsed) -> anyhow::Result<Self::Answer> {
+    fn part_b(_: Self::Parsed) -> anyhow::Result<Self::Answer> {
         Ok(0)
     }
 }
@@ -46,11 +46,11 @@ mod tests {
 
     #[test]
     fn a() -> anyhow::Result<()> {
-        Day::test_a()
+        Day::test_part_a()
     }
 
     #[test]
     fn b() -> anyhow::Result<()> {
-        Day::test_b()
+        Day::test_part_b()
     }
 }

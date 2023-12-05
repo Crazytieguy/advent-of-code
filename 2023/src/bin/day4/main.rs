@@ -32,14 +32,14 @@ impl BasicSolution for Day {
     }
 
     #[allow(clippy::cast_possible_truncation)]
-    fn a(data: Self::Parsed) -> anyhow::Result<Self::Answer> {
+    fn part_a(data: Self::Parsed) -> anyhow::Result<Self::Answer> {
         Ok(data
             .into_iter()
             .map(|card| 2usize.pow(card.matches as u32) / 2)
             .sum())
     }
 
-    fn b(data: Self::Parsed) -> anyhow::Result<Self::Answer> {
+    fn part_b(data: Self::Parsed) -> anyhow::Result<Self::Answer> {
         let mut card_copies = vec![1; data.len()];
         data.iter().enumerate().for_each(|(i, card)| {
             let copies_of_cur = card_copies[i];
@@ -75,11 +75,11 @@ mod tests {
 
     #[test]
     fn a() -> anyhow::Result<()> {
-        Day::test_a()
+        Day::test_part_a()
     }
 
     #[test]
     fn b() -> anyhow::Result<()> {
-        Day::test_b()
+        Day::test_part_b()
     }
 }

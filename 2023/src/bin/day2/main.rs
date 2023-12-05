@@ -46,7 +46,7 @@ impl BasicSolution for Day {
             .map_err(anyhow::Error::msg)
     }
 
-    fn a(data: Self::Parsed) -> anyhow::Result<Self::Answer> {
+    fn part_a(data: Self::Parsed) -> anyhow::Result<Self::Answer> {
         Ok(data
             .into_iter()
             .filter(|game| {
@@ -57,7 +57,7 @@ impl BasicSolution for Day {
             .sum())
     }
 
-    fn b(data: Self::Parsed) -> anyhow::Result<Self::Answer> {
+    fn part_b(data: Self::Parsed) -> anyhow::Result<Self::Answer> {
         Ok(data
             .into_iter()
             .map(|game| {
@@ -114,11 +114,11 @@ mod tests {
 
     #[test]
     fn a() -> anyhow::Result<()> {
-        Day::test_a()
+        Day::test_part_a()
     }
 
     #[test]
     fn b() -> anyhow::Result<()> {
-        Day::test_b()
+        Day::test_part_b()
     }
 }

@@ -14,8 +14,8 @@ pub trait BasicSolution {
     const SAMPLE_ANSWER_B: Self::TestAnswer;
 
     fn parse(data: &'static str) -> anyhow::Result<Self::Parsed>;
-    fn a(data: Self::Parsed) -> anyhow::Result<Self::Answer>;
-    fn b(data: Self::Parsed) -> anyhow::Result<Self::Answer>;
+    fn part_a(data: Self::Parsed) -> anyhow::Result<Self::Answer>;
+    fn part_b(data: Self::Parsed) -> anyhow::Result<Self::Answer>;
 }
 
 impl<T: BasicSolution> Solution for T {
@@ -35,22 +35,22 @@ impl<T: BasicSolution> Solution for T {
         <Self as BasicSolution>::parse(data)
     }
 
-    fn a(data: Self::Parsed) -> anyhow::Result<Self::Answer> {
-        <Self as BasicSolution>::a(data)
+    fn part_a(data: Self::Parsed) -> anyhow::Result<Self::Answer> {
+        <Self as BasicSolution>::part_a(data)
     }
 
-    fn b(data: Self::Parsed) -> anyhow::Result<Self::Answer> {
-        <Self as BasicSolution>::b(data)
+    fn part_b(data: Self::Parsed) -> anyhow::Result<Self::Answer> {
+        <Self as BasicSolution>::part_b(data)
     }
 
     fn parse_test(data: &'static str) -> anyhow::Result<Self::ParsedTest> {
         Self::parse(data)
     }
-    fn a_test(data: Self::ParsedTest) -> anyhow::Result<Self::Answer> {
-        Self::a(data)
+    fn part_a_test(data: Self::ParsedTest) -> anyhow::Result<Self::Answer> {
+        Self::part_a(data)
     }
-    fn b_test(data: Self::ParsedTest) -> anyhow::Result<Self::Answer> {
-        Self::b(data)
+    fn part_b_test(data: Self::ParsedTest) -> anyhow::Result<Self::Answer> {
+        Self::part_b(data)
     }
 }
 
@@ -66,27 +66,27 @@ pub trait Solution {
     const SAMPLE_ANSWER_B: Self::TestAnswer;
 
     fn parse(data: &'static str) -> anyhow::Result<Self::Parsed>;
-    fn a(data: Self::Parsed) -> anyhow::Result<Self::Answer>;
-    fn b(data: Self::Parsed) -> anyhow::Result<Self::Answer>;
+    fn part_a(data: Self::Parsed) -> anyhow::Result<Self::Answer>;
+    fn part_b(data: Self::Parsed) -> anyhow::Result<Self::Answer>;
     fn parse_test(data: &'static str) -> anyhow::Result<Self::ParsedTest>;
-    fn a_test(data: Self::ParsedTest) -> anyhow::Result<Self::Answer>;
-    fn b_test(data: Self::ParsedTest) -> anyhow::Result<Self::Answer>;
+    fn part_a_test(data: Self::ParsedTest) -> anyhow::Result<Self::Answer>;
+    fn part_b_test(data: Self::ParsedTest) -> anyhow::Result<Self::Answer>;
 
-    fn test_a() -> anyhow::Result<()> {
+    fn test_part_a() -> anyhow::Result<()> {
         assert_eq!(
-            Self::parse_test(Self::SAMPLE_DATA).and_then(Self::a_test)?,
+            Self::parse_test(Self::SAMPLE_DATA).and_then(Self::part_a_test)?,
             Self::SAMPLE_ANSWER_A
         );
-        println!("a: {}", Self::parse(Self::DATA).and_then(Self::a)?);
+        println!("a: {}", Self::parse(Self::DATA).and_then(Self::part_a)?);
         Ok(())
     }
 
-    fn test_b() -> anyhow::Result<()> {
+    fn test_part_b() -> anyhow::Result<()> {
         assert_eq!(
-            Self::parse_test(Self::SAMPLE_DATA_B).and_then(Self::b_test)?,
+            Self::parse_test(Self::SAMPLE_DATA_B).and_then(Self::part_b_test)?,
             Self::SAMPLE_ANSWER_B
         );
-        println!("b: {}", Self::parse(Self::DATA).and_then(Self::b)?);
+        println!("b: {}", Self::parse(Self::DATA).and_then(Self::part_b)?);
         Ok(())
     }
 
@@ -95,14 +95,14 @@ pub trait Solution {
         let arg = std::env::args().nth(1);
         match arg.as_deref() {
             Some("a") => {
-                println!("a: {}", Self::a(parsed)?);
+                println!("a: {}", Self::part_a(parsed)?);
             }
             Some("b") => {
-                println!("b: {}", Self::b(parsed)?);
+                println!("b: {}", Self::part_b(parsed)?);
             }
             _ => {
-                println!("a: {}", Self::a(parsed.clone())?);
-                println!("b: {}", Self::b(parsed)?);
+                println!("a: {}", Self::part_a(parsed.clone())?);
+                println!("b: {}", Self::part_b(parsed)?);
             }
         }
         Ok(())

@@ -19,11 +19,11 @@ impl BasicSolution for Day {
         Ok(data)
     }
 
-    fn a(data: Self::Parsed) -> anyhow::Result<Self::Answer> {
+    fn part_a(data: Self::Parsed) -> anyhow::Result<Self::Answer> {
         solve(data, &[])
     }
 
-    fn b(data: Self::Parsed) -> anyhow::Result<Self::Answer> {
+    fn part_b(data: Self::Parsed) -> anyhow::Result<Self::Answer> {
         solve(
             data,
             &[
@@ -69,11 +69,11 @@ mod tests {
 
     #[test]
     fn a() -> anyhow::Result<()> {
-        Day::test_a()
+        Day::test_part_a()
     }
 
     #[test]
     fn b() -> anyhow::Result<()> {
-        Day::test_b()
+        Day::test_part_b()
     }
 }
