@@ -45,16 +45,8 @@ distances={distances:?}"
     }
 
     fn part_b(Records { times, distances }: Self::Parsed) -> anyhow::Result<Self::Answer> {
-        let time = times
-            .iter()
-            .map(ToString::to_string)
-            .collect::<String>()
-            .parse::<u64>()?;
-        let distance = distances
-            .iter()
-            .map(ToString::to_string)
-            .collect::<String>()
-            .parse::<u64>()?;
+        let time = join_numbers(times)?;
+        let distance = join_numbers(distances)?;
         Ok(possible_ways_to_win(time, distance))
     }
 }
@@ -78,11 +70,19 @@ fn possible_ways_to_win(time: u64, record_distance: u64) -> u64 {
     largest_int_hold_time_to_beet_record - smallest_int_hold_time_to_beet_record + 1
 }
 
+fn join_numbers(distances: Vec<u64>) -> Result<u64, std::num::ParseIntError> {
+    distances
+        .iter()
+        .map(ToString::to_string)
+        .collect::<String>()
+        .parse::<u64>()
+}
+
 fn records(data: &mut &'static str) -> winnow::PResult<Records> {
     (
         ("Time:", space1),
         numbers,
-        ("\n", "Distance:", space1),
+        ("\nDistance:", space1),
         numbers,
         opt("\n"),
     )
