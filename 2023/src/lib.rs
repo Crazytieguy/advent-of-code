@@ -91,20 +91,32 @@ pub trait Solution {
     }
 
     fn main() -> anyhow::Result<()> {
-        let parsed = Self::parse(Self::DATA)?;
+        let parsed = time("Parsed", || Self::parse(Self::DATA))?;
         let arg = std::env::args().nth(1);
         match arg.as_deref() {
             Some("a") => {
-                println!("a: {}", Self::part_a(parsed)?);
+                let a = time("Part a", || Self::part_a(parsed))?;
+                println!("a: {a}");
             }
             Some("b") => {
-                println!("b: {}", Self::part_b(parsed)?);
+                let b = time("Part b", || Self::part_b(parsed))?;
+                println!("b: {b}");
             }
             _ => {
-                println!("a: {}", Self::part_a(parsed.clone())?);
-                println!("b: {}", Self::part_b(parsed)?);
+                let cloned = parsed.clone();
+                let a = time("Part a", || Self::part_a(cloned))?;
+                let b = time("Part b", || Self::part_b(parsed))?;
+                println!("a: {a}");
+                println!("b: {b}");
             }
         }
         Ok(())
     }
+}
+
+fn time<T>(tag: &str, f: impl FnOnce() -> T) -> T {
+    let start = std::time::Instant::now();
+    let ans = f();
+    println!("{tag} in {:?}", start.elapsed());
+    ans
 }
