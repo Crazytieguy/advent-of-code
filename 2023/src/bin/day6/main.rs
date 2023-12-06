@@ -75,7 +75,7 @@ fn join_numbers(distances: Vec<u64>) -> Result<u64, std::num::ParseIntError> {
         .iter()
         .map(ToString::to_string)
         .collect::<String>()
-        .parse::<u64>()
+        .parse()
 }
 
 fn records(data: &mut &'static str) -> winnow::PResult<Records> {
