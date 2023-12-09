@@ -12,16 +12,8 @@ struct Bid {
     amount: u16,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
-enum HandType {
-    HighCard,
-    OnePair,
-    TwoPair,
-    ThreeOfAKind,
-    FullHouse,
-    FourOfAKind,
-    FiveOfAKind,
-}
+// The two top counts define the hand type
+type HandType = [u8; 2];
 
 impl BasicSolution for Day {
     const DATA: &'static str = include_str!("data.txt");
@@ -61,52 +53,18 @@ fn sum_sortable_bids(bid_amounts: impl Iterator<Item = (HandType, [u8; 5], u16)>
         .sum()
 }
 
-fn bid(data: &mut &'static str) -> winnow::PResult<Bid> {
-    ((card, card, card, card, card), ' ', dec_uint)
-        .map(|((a, b, c, d, e), _, amount)| Bid {
-            hand: [a, b, c, d, e],
-            amount,
-        })
-        .parse_next(data)
-}
-
-fn card(data: &mut &'static str) -> winnow::PResult<u8> {
-    any.verify_map(|c| match c {
-        '2'..='9' => Some(c as u8 - b'2'),
-        'T' => Some(8),
-        'J' => Some(9),
-        'Q' => Some(10),
-        'K' => Some(11),
-        'A' => Some(12),
-        _ => None,
-    })
-    .parse_next(data)
-}
-
 fn hand_type_part_a(hand: [u8; 5]) -> HandType {
     let mut counts = card_counts(hand);
     counts.sort_unstable_by_key(|&c| Reverse(c));
     let [first, second, ..] = counts;
-    hand_type_from_top_2(first, second)
+    [first, second]
 }
 
 fn hand_type_part_b(hand: [u8; 5]) -> HandType {
     let mut counts = card_counts(hand);
     counts[1..].sort_unstable_by_key(|&c| Reverse(c));
     let [jokers, first, second, ..] = counts;
-    hand_type_from_top_2(jokers + first, second)
-}
-
-fn hand_type_from_top_2(first: u8, second: u8) -> HandType {
-    match [first, second] {
-        [5, 0] => HandType::FiveOfAKind,
-        [4, 1] => HandType::FourOfAKind,
-        [3, 2] => HandType::FullHouse,
-        [3, _] => HandType::ThreeOfAKind,
-        [2, 2] => HandType::TwoPair,
-        [2, _] => HandType::OnePair,
-        _ => HandType::HighCard,
-    }
+    [jokers + first, second]
 }
 
 fn card_counts(hand: [u8; 5]) -> [u8; 13] {
@@ -124,6 +82,28 @@ fn jacks_to_jokers(hand: &mut [u8; 5]) {
             _ => {}
         }
     }
+}
+
+fn bid(data: &mut &'static str) -> winnow::PResult<Bid> {
+    ((card, card, card, card, card), ' ', dec_uint)
+        .map(|(hand, _, amount)| Bid {
+            hand: hand.into(),
+            amount,
+        })
+        .parse_next(data)
+}
+
+fn card(data: &mut &'static str) -> winnow::PResult<u8> {
+    any.verify_map(|c| match c {
+        '2'..='9' => Some(c as u8 - b'2'),
+        'T' => Some(8),
+        'J' => Some(9),
+        'Q' => Some(10),
+        'K' => Some(11),
+        'A' => Some(12),
+        _ => None,
+    })
+    .parse_next(data)
 }
 
 fn main() -> anyhow::Result<()> {
