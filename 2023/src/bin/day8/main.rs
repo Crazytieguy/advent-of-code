@@ -28,21 +28,21 @@ impl BasicSolution for Day {
     const SAMPLE_DATA: &'static str = include_str!("sample_a.txt");
     const SAMPLE_DATA_B: &'static str = include_str!("sample_b.txt");
 
-    type Parsed = Maps<'static>;
+    type Common = Maps<'static>;
     type Answer = usize;
 
     const SAMPLE_ANSWER_A: Self::TestAnswer = 2;
     const SAMPLE_ANSWER_B: Self::TestAnswer = 6;
 
-    fn parse(data: &'static str) -> anyhow::Result<Self::Parsed> {
+    fn common(data: &'static str) -> anyhow::Result<Self::Common> {
         maps.parse(data).map_err(anyhow::Error::msg)
     }
 
-    fn part_a(data: Self::Parsed) -> anyhow::Result<Self::Answer> {
+    fn part_a(data: Self::Common) -> anyhow::Result<Self::Answer> {
         Ok(data.count_steps("AAA", |node| node == "ZZZ"))
     }
 
-    fn part_b(data: Self::Parsed) -> anyhow::Result<Self::Answer> {
+    fn part_b(data: Self::Common) -> anyhow::Result<Self::Answer> {
         data.network
             .keys()
             .filter(|k| k.ends_with('A'))

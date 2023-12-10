@@ -4,7 +4,7 @@
 use std::fmt::{Debug, Display};
 
 pub trait BasicSolution {
-    type Parsed: Debug + Clone = &'static str;
+    type Common: Debug + Clone = &'static str;
     type Answer: Debug + Display + PartialEq<Self::TestAnswer>;
     type TestAnswer: Debug = Self::Answer;
     const DATA: &'static str;
@@ -13,14 +13,14 @@ pub trait BasicSolution {
     const SAMPLE_ANSWER_A: Self::TestAnswer;
     const SAMPLE_ANSWER_B: Self::TestAnswer;
 
-    fn parse(data: &'static str) -> anyhow::Result<Self::Parsed>;
-    fn part_a(data: Self::Parsed) -> anyhow::Result<Self::Answer>;
-    fn part_b(data: Self::Parsed) -> anyhow::Result<Self::Answer>;
+    fn common(data: &'static str) -> anyhow::Result<Self::Common>;
+    fn part_a(data: Self::Common) -> anyhow::Result<Self::Answer>;
+    fn part_b(data: Self::Common) -> anyhow::Result<Self::Answer>;
 }
 
 impl<T: BasicSolution> Solution for T {
-    type Parsed = <Self as BasicSolution>::Parsed;
-    type ParsedTest = Self::Parsed;
+    type Common = <Self as BasicSolution>::Common;
+    type CommonTest = Self::Common;
     type Answer = <Self as BasicSolution>::Answer;
     type TestAnswer = <Self as BasicSolution>::TestAnswer;
     const DATA: &'static str = <Self as BasicSolution>::DATA;
@@ -31,32 +31,32 @@ impl<T: BasicSolution> Solution for T {
     const SAMPLE_ANSWER_B: <Self as BasicSolution>::TestAnswer =
         <Self as BasicSolution>::SAMPLE_ANSWER_B;
 
-    fn parse(data: &'static str) -> anyhow::Result<Self::Parsed> {
-        <Self as BasicSolution>::parse(data)
+    fn common(data: &'static str) -> anyhow::Result<Self::Common> {
+        <Self as BasicSolution>::common(data)
     }
 
-    fn part_a(data: Self::Parsed) -> anyhow::Result<Self::Answer> {
+    fn part_a(data: Self::Common) -> anyhow::Result<Self::Answer> {
         <Self as BasicSolution>::part_a(data)
     }
 
-    fn part_b(data: Self::Parsed) -> anyhow::Result<Self::Answer> {
+    fn part_b(data: Self::Common) -> anyhow::Result<Self::Answer> {
         <Self as BasicSolution>::part_b(data)
     }
 
-    fn parse_test(data: &'static str) -> anyhow::Result<Self::ParsedTest> {
-        Self::parse(data)
+    fn common_test(data: &'static str) -> anyhow::Result<Self::CommonTest> {
+        Self::common(data)
     }
-    fn part_a_test(data: Self::ParsedTest) -> anyhow::Result<Self::Answer> {
+    fn part_a_test(data: Self::CommonTest) -> anyhow::Result<Self::Answer> {
         Self::part_a(data)
     }
-    fn part_b_test(data: Self::ParsedTest) -> anyhow::Result<Self::Answer> {
+    fn part_b_test(data: Self::CommonTest) -> anyhow::Result<Self::Answer> {
         Self::part_b(data)
     }
 }
 
 pub trait Solution {
-    type Parsed: Debug + Clone = &'static str;
-    type ParsedTest: Debug + Clone = Self::Parsed;
+    type Common: Debug + Clone = &'static str;
+    type CommonTest: Debug + Clone = Self::Common;
     type Answer: Debug + Display + PartialEq<Self::TestAnswer>;
     type TestAnswer: Debug = Self::Answer;
     const DATA: &'static str;
@@ -65,33 +65,33 @@ pub trait Solution {
     const SAMPLE_ANSWER_A: Self::TestAnswer;
     const SAMPLE_ANSWER_B: Self::TestAnswer;
 
-    fn parse(data: &'static str) -> anyhow::Result<Self::Parsed>;
-    fn part_a(data: Self::Parsed) -> anyhow::Result<Self::Answer>;
-    fn part_b(data: Self::Parsed) -> anyhow::Result<Self::Answer>;
-    fn parse_test(data: &'static str) -> anyhow::Result<Self::ParsedTest>;
-    fn part_a_test(data: Self::ParsedTest) -> anyhow::Result<Self::Answer>;
-    fn part_b_test(data: Self::ParsedTest) -> anyhow::Result<Self::Answer>;
+    fn common(data: &'static str) -> anyhow::Result<Self::Common>;
+    fn part_a(data: Self::Common) -> anyhow::Result<Self::Answer>;
+    fn part_b(data: Self::Common) -> anyhow::Result<Self::Answer>;
+    fn common_test(data: &'static str) -> anyhow::Result<Self::CommonTest>;
+    fn part_a_test(data: Self::CommonTest) -> anyhow::Result<Self::Answer>;
+    fn part_b_test(data: Self::CommonTest) -> anyhow::Result<Self::Answer>;
 
     fn test_part_a() -> anyhow::Result<()> {
         assert_eq!(
-            Self::parse_test(Self::SAMPLE_DATA).and_then(Self::part_a_test)?,
+            Self::common_test(Self::SAMPLE_DATA).and_then(Self::part_a_test)?,
             Self::SAMPLE_ANSWER_A
         );
-        println!("a: {}", Self::parse(Self::DATA).and_then(Self::part_a)?);
+        println!("a: {}", Self::common(Self::DATA).and_then(Self::part_a)?);
         Ok(())
     }
 
     fn test_part_b() -> anyhow::Result<()> {
         assert_eq!(
-            Self::parse_test(Self::SAMPLE_DATA_B).and_then(Self::part_b_test)?,
+            Self::common_test(Self::SAMPLE_DATA_B).and_then(Self::part_b_test)?,
             Self::SAMPLE_ANSWER_B
         );
-        println!("b: {}", Self::parse(Self::DATA).and_then(Self::part_b)?);
+        println!("b: {}", Self::common(Self::DATA).and_then(Self::part_b)?);
         Ok(())
     }
 
     fn main() -> anyhow::Result<()> {
-        let parsed = time("Parsed", || Self::parse(Self::DATA))?;
+        let parsed = time("Parsed", || Self::common(Self::DATA))?;
         let arg = std::env::args().nth(1);
         match arg.as_deref() {
             Some("a") => {

@@ -34,17 +34,17 @@ impl BasicSolution for Day {
     const DATA: &'static str = include_str!("data.txt");
     const SAMPLE_DATA: &'static str = include_str!("sample.txt");
 
-    type Parsed = Almanac;
+    type Common = Almanac;
     type Answer = u64;
 
     const SAMPLE_ANSWER_A: Self::TestAnswer = 35;
     const SAMPLE_ANSWER_B: Self::TestAnswer = 46;
 
-    fn parse(data: &'static str) -> anyhow::Result<Self::Parsed> {
+    fn common(data: &'static str) -> anyhow::Result<Self::Common> {
         almanac.parse(data).map_err(anyhow::Error::msg)
     }
 
-    fn part_a(data: Self::Parsed) -> anyhow::Result<Self::Answer> {
+    fn part_a(data: Self::Common) -> anyhow::Result<Self::Answer> {
         data.seeds
             .into_iter()
             .map(|seed| {
@@ -61,7 +61,7 @@ impl BasicSolution for Day {
             .ok_or_else(|| anyhow::Error::msg("no seeds"))
     }
 
-    fn part_b(data: Self::Parsed) -> anyhow::Result<Self::Answer> {
+    fn part_b(data: Self::Common) -> anyhow::Result<Self::Answer> {
         let seed_ranges = data.seeds.into_iter().tuples().map(|(a, b)| a..a + b);
         seed_ranges
             .flat_map(|seed_range| {

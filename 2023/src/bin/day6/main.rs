@@ -19,17 +19,17 @@ impl BasicSolution for Day {
     const DATA: &'static str = include_str!("data.txt");
     const SAMPLE_DATA: &'static str = include_str!("sample.txt");
 
-    type Parsed = Records;
+    type Common = Records;
     type Answer = u64;
 
     const SAMPLE_ANSWER_A: Self::TestAnswer = 288;
     const SAMPLE_ANSWER_B: Self::TestAnswer = 71503;
 
-    fn parse(data: &'static str) -> anyhow::Result<Self::Parsed> {
+    fn common(data: &'static str) -> anyhow::Result<Self::Common> {
         records.parse(data).map_err(anyhow::Error::msg)
     }
 
-    fn part_a(Records { times, distances }: Self::Parsed) -> anyhow::Result<Self::Answer> {
+    fn part_a(Records { times, distances }: Self::Common) -> anyhow::Result<Self::Answer> {
         if times.len() != distances.len() {
             bail!(
                 "times and distances have different lenghts.
@@ -44,7 +44,7 @@ distances={distances:?}"
             .product())
     }
 
-    fn part_b(Records { times, distances }: Self::Parsed) -> anyhow::Result<Self::Answer> {
+    fn part_b(Records { times, distances }: Self::Common) -> anyhow::Result<Self::Answer> {
         let time = join_numbers(times)?;
         let distance = join_numbers(distances)?;
         Ok(possible_ways_to_win(time, distance))

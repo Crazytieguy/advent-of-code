@@ -22,19 +22,19 @@ impl BasicSolution for Day {
     const DATA: &'static str = include_str!("data.txt");
     const SAMPLE_DATA: &'static str = include_str!("sample.txt");
 
-    type Parsed = Vec<Game>;
+    type Common = Vec<Game>;
     type Answer = u32;
 
     const SAMPLE_ANSWER_A: Self::TestAnswer = 8;
     const SAMPLE_ANSWER_B: Self::TestAnswer = 2286;
 
-    fn parse(data: &'static str) -> anyhow::Result<Self::Parsed> {
+    fn common(data: &'static str) -> anyhow::Result<Self::Common> {
         data.lines()
             .map(|line| game.parse(line).map_err(anyhow::Error::msg))
             .collect()
     }
 
-    fn part_a(data: Self::Parsed) -> anyhow::Result<Self::Answer> {
+    fn part_a(data: Self::Common) -> anyhow::Result<Self::Answer> {
         Ok(data
             .into_iter()
             .filter(|game| {
@@ -45,7 +45,7 @@ impl BasicSolution for Day {
             .sum())
     }
 
-    fn part_b(data: Self::Parsed) -> anyhow::Result<Self::Answer> {
+    fn part_b(data: Self::Common) -> anyhow::Result<Self::Answer> {
         Ok(data
             .into_iter()
             .map(|game| {

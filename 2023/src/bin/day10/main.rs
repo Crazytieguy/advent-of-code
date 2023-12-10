@@ -36,24 +36,24 @@ impl BasicSolution for Day {
     const SAMPLE_DATA: &'static str = include_str!("sample.txt");
     const SAMPLE_DATA_B: &'static str = include_str!("sample_b.txt");
 
-    type Parsed = Vec<Vec<PipeSegment>>;
+    type Common = Vec<Vec<PipeSegment>>;
     type Answer = usize;
 
     const SAMPLE_ANSWER_A: Self::TestAnswer = 8;
     const SAMPLE_ANSWER_B: Self::TestAnswer = 10;
 
-    fn parse(data: &'static str) -> anyhow::Result<Self::Parsed> {
+    fn common(data: &'static str) -> anyhow::Result<Self::Common> {
         data.lines()
             .map(|line| line_parser.parse(line).map_err(anyhow::Error::msg))
             .collect()
     }
 
-    fn part_a(data: Self::Parsed) -> anyhow::Result<Self::Answer> {
+    fn part_a(data: Self::Common) -> anyhow::Result<Self::Answer> {
         let loop_coords = find_loop(&data)?;
         Ok(loop_coords.len() / 2)
     }
 
-    fn part_b(data: Self::Parsed) -> anyhow::Result<Self::Answer> {
+    fn part_b(data: Self::Common) -> anyhow::Result<Self::Answer> {
         let loop_coords = find_loop(&data)?;
         count_inside_loop(&data, &loop_coords)
     }
@@ -134,29 +134,16 @@ impl TraversalState {
             (OutsideLoop, NorthSouth) => InsideLoop,
             (OutsideLoop, NorthEast) => InsideBottomPipe,
             (OutsideLoop, SouthEast) => InsideTopPipe,
-            (OutsideLoop, EastWest) => bail!("Cannot encounter EastWest outside loop"),
-            (OutsideLoop, NorthWest) => bail!("Cannot encounter NorthWest outside loop"),
-            (OutsideLoop, SouthWest) => bail!("Cannot encounter SouthWest outside loop"),
             (InsideLoop, NorthSouth) => OutsideLoop,
             (InsideLoop, NorthEast) => InsideTopPipe,
             (InsideLoop, SouthEast) => InsideBottomPipe,
-            (InsideLoop, EastWest) => bail!("Cannot encounter EastWest inside loop"),
-            (InsideLoop, NorthWest) => bail!("Cannot encounter NorthWest inside loop"),
-            (InsideLoop, SouthWest) => bail!("Cannot encounter SouthWest inside loop"),
             (InsideTopPipe, EastWest) => InsideTopPipe,
             (InsideTopPipe, NorthWest) => InsideLoop,
             (InsideTopPipe, SouthWest) => OutsideLoop,
-            (InsideTopPipe, NorthSouth) => bail!("Cannot encounter NorthSouth inside top pipe"),
-            (InsideTopPipe, NorthEast) => bail!("Cannot encounter NorthEast inside top pipe"),
-            (InsideTopPipe, SouthEast) => bail!("Cannot encounter SouthEast inside top pipe"),
             (InsideBottomPipe, EastWest) => InsideBottomPipe,
             (InsideBottomPipe, NorthWest) => OutsideLoop,
             (InsideBottomPipe, SouthWest) => InsideLoop,
-            (InsideBottomPipe, NorthSouth) => {
-                bail!("Cannot encounter NorthSouth inside bottom pipe")
-            }
-            (InsideBottomPipe, NorthEast) => bail!("Cannot encounter NorthEast inside bottom pipe"),
-            (InsideBottomPipe, SouthEast) => bail!("Cannot encounter SouthEast inside bottom pipe"),
+            (state, segment) => bail!("Cannot encounter {segment:?} when {state:?}"),
         })
     }
 }

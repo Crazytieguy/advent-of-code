@@ -9,21 +9,21 @@ impl BasicSolution for Day {
     const SAMPLE_DATA: &'static str = include_str!("sample_a.txt");
     const SAMPLE_DATA_B: &'static str = include_str!("sample_b.txt");
 
-    type Parsed = &'static str;
+    type Common = &'static str;
     type Answer = u32;
 
     const SAMPLE_ANSWER_A: Self::TestAnswer = 142;
     const SAMPLE_ANSWER_B: Self::TestAnswer = 281;
 
-    fn parse(data: &'static str) -> anyhow::Result<Self::Parsed> {
+    fn common(data: &'static str) -> anyhow::Result<Self::Common> {
         Ok(data)
     }
 
-    fn part_a(data: Self::Parsed) -> anyhow::Result<Self::Answer> {
+    fn part_a(data: Self::Common) -> anyhow::Result<Self::Answer> {
         solve(data, &[])
     }
 
-    fn part_b(data: Self::Parsed) -> anyhow::Result<Self::Answer> {
+    fn part_b(data: Self::Common) -> anyhow::Result<Self::Answer> {
         solve(
             data,
             &[

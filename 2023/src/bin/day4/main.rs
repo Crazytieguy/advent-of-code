@@ -14,27 +14,27 @@ impl BasicSolution for Day {
     const DATA: &'static str = include_str!("data.txt");
     const SAMPLE_DATA: &'static str = include_str!("sample.txt");
 
-    type Parsed = Vec<Card>;
+    type Common = Vec<Card>;
     type Answer = usize;
 
     const SAMPLE_ANSWER_A: Self::TestAnswer = 13;
     const SAMPLE_ANSWER_B: Self::TestAnswer = 30;
 
-    fn parse(data: &'static str) -> anyhow::Result<Self::Parsed> {
+    fn common(data: &'static str) -> anyhow::Result<Self::Common> {
         data.lines()
             .map(|line| card.parse(line).map_err(anyhow::Error::msg))
             .collect()
     }
 
     #[allow(clippy::cast_possible_truncation)]
-    fn part_a(data: Self::Parsed) -> anyhow::Result<Self::Answer> {
+    fn part_a(data: Self::Common) -> anyhow::Result<Self::Answer> {
         Ok(data
             .into_iter()
             .map(|card| 2usize.pow(card.matches as u32) / 2)
             .sum())
     }
 
-    fn part_b(data: Self::Parsed) -> anyhow::Result<Self::Answer> {
+    fn part_b(data: Self::Common) -> anyhow::Result<Self::Answer> {
         let mut card_copies = vec![1; data.len()];
         data.iter().enumerate().for_each(|(i, card)| {
             let copies_of_cur = card_copies[i];

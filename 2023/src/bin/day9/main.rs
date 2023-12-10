@@ -9,13 +9,13 @@ impl BasicSolution for Day {
     const DATA: &'static str = include_str!("data.txt");
     const SAMPLE_DATA: &'static str = include_str!("sample.txt");
 
-    type Parsed = Vec<(i32, i32)>;
+    type Common = Vec<(i32, i32)>;
     type Answer = i32;
 
     const SAMPLE_ANSWER_A: Self::TestAnswer = 114;
     const SAMPLE_ANSWER_B: Self::TestAnswer = 2;
 
-    fn parse(data: &'static str) -> anyhow::Result<Self::Parsed> {
+    fn common(data: &'static str) -> anyhow::Result<Self::Common> {
         data.lines()
             .map(|line| {
                 history
@@ -26,11 +26,11 @@ impl BasicSolution for Day {
             .collect()
     }
 
-    fn part_a(data: Self::Parsed) -> anyhow::Result<Self::Answer> {
+    fn part_a(data: Self::Common) -> anyhow::Result<Self::Answer> {
         Ok(data.into_iter().map(|(_, back)| back).sum())
     }
 
-    fn part_b(data: Self::Parsed) -> anyhow::Result<Self::Answer> {
+    fn part_b(data: Self::Common) -> anyhow::Result<Self::Answer> {
         Ok(data.into_iter().map(|(front, _)| front).sum())
     }
 }

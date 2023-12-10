@@ -7,23 +7,23 @@ impl BasicSolution for Day {
     const DATA: &'static str = include_str!("data.txt");
     const SAMPLE_DATA: &'static str = include_str!("sample.txt");
 
-    type Parsed = Vec<&'static str>;
+    type Common = Vec<&'static str>;
     type Answer = u32;
 
     const SAMPLE_ANSWER_A: Self::TestAnswer = 0;
     const SAMPLE_ANSWER_B: Self::TestAnswer = 0;
 
-    fn parse(data: &'static str) -> anyhow::Result<Self::Parsed> {
+    fn common(data: &'static str) -> anyhow::Result<Self::Common> {
         data.lines()
             .map(|line| line_parser.parse(line).map_err(anyhow::Error::msg))
             .collect()
     }
 
-    fn part_a(data: Self::Parsed) -> anyhow::Result<Self::Answer> {
+    fn part_a(data: Self::Common) -> anyhow::Result<Self::Answer> {
         todo!("{data:?}")
     }
 
-    fn part_b(_: Self::Parsed) -> anyhow::Result<Self::Answer> {
+    fn part_b(_: Self::Common) -> anyhow::Result<Self::Answer> {
         Ok(0)
     }
 }

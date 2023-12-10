@@ -30,13 +30,13 @@ impl BasicSolution for Day {
     const DATA: &'static str = include_str!("data.txt");
     const SAMPLE_DATA: &'static str = include_str!("sample.txt");
 
-    type Parsed = Schematic<'static>;
+    type Common = Schematic<'static>;
     type Answer = u32;
 
     const SAMPLE_ANSWER_A: Self::TestAnswer = 4361;
     const SAMPLE_ANSWER_B: Self::TestAnswer = 467_835;
 
-    fn parse(data: &'static str) -> anyhow::Result<Self::Parsed> {
+    fn common(data: &'static str) -> anyhow::Result<Self::Common> {
         let mut numbers = Vec::new();
         for (row, line) in data.lines().enumerate() {
             let mut iter_nums =
@@ -54,7 +54,7 @@ impl BasicSolution for Day {
         Ok(Schematic { raw, numbers })
     }
 
-    fn part_a(Schematic { numbers, raw }: Self::Parsed) -> anyhow::Result<Self::Answer> {
+    fn part_a(Schematic { numbers, raw }: Self::Common) -> anyhow::Result<Self::Answer> {
         Ok(numbers
             .into_iter()
             .filter(|number| {
@@ -66,7 +66,7 @@ impl BasicSolution for Day {
             .sum())
     }
 
-    fn part_b(Schematic { numbers, raw }: Self::Parsed) -> anyhow::Result<Self::Answer> {
+    fn part_b(Schematic { numbers, raw }: Self::Common) -> anyhow::Result<Self::Answer> {
         let mut potential_gears: HashMap<(usize, usize), Vec<u32>> = HashMap::new();
         for num in numbers {
             num.adjacent_coords()
