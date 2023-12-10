@@ -1,8 +1,7 @@
 use std::collections::HashSet;
 
 use advent_2023::{BasicSolution, Solution};
-use anyhow::{anyhow, bail};
-use itertools::Itertools;
+use anyhow::{anyhow, bail, Context};
 use winnow::{combinator::repeat, token::any, Parser};
 
 struct Day;
@@ -31,31 +30,39 @@ enum TraversalState {
 
 use TraversalState::*;
 
+#[derive(Debug, Clone)]
+struct FieldWithLoop {
+    field: Vec<Vec<PipeSegment>>,
+    loop_coords: HashSet<(usize, usize)>,
+}
+
 impl BasicSolution for Day {
     const DATA: &'static str = include_str!("data.txt");
     const SAMPLE_DATA: &'static str = include_str!("sample.txt");
     const SAMPLE_DATA_B: &'static str = include_str!("sample_b.txt");
 
-    type Common = Vec<Vec<PipeSegment>>;
+    type Common = FieldWithLoop;
     type Answer = usize;
 
     const SAMPLE_ANSWER_A: Self::TestAnswer = 8;
     const SAMPLE_ANSWER_B: Self::TestAnswer = 10;
 
     fn common(data: &'static str) -> anyhow::Result<Self::Common> {
-        data.lines()
-            .map(|line| line_parser.parse(line).map_err(anyhow::Error::msg))
-            .collect()
+        let mut field = data
+            .lines()
+            .map(|line| field_line.parse(line).map_err(anyhow::Error::msg))
+            .collect::<anyhow::Result<Vec<_>>>()?;
+        let start_coords = find_and_fix_start(&mut field)?;
+        let loop_coords = find_loop(&field, start_coords)?;
+        Ok(FieldWithLoop { field, loop_coords })
     }
 
-    fn part_a(data: Self::Common) -> anyhow::Result<Self::Answer> {
-        let loop_coords = find_loop(&data)?;
+    fn part_a(FieldWithLoop { loop_coords, .. }: Self::Common) -> anyhow::Result<Self::Answer> {
         Ok(loop_coords.len() / 2)
     }
 
-    fn part_b(data: Self::Common) -> anyhow::Result<Self::Answer> {
-        let loop_coords = find_loop(&data)?;
-        count_inside_loop(&data, &loop_coords)
+    fn part_b(FieldWithLoop { field, loop_coords }: Self::Common) -> anyhow::Result<Self::Answer> {
+        count_inside_loop(&field, &loop_coords)
     }
 }
 
@@ -66,61 +73,19 @@ fn count_inside_loop(
     let count_line_inside_loop = |(row, line): (usize, &Vec<PipeSegment>)| {
         line.iter()
             .enumerate()
-            .scan(OutsideLoop, |state, (col, &(mut segment))| {
-                if matches!(segment, Start) {
-                    segment = match start_to_pipe_segment((row, col), data) {
-                        Ok(segment) => segment,
-                        Err(e) => return Some(Err(e)),
-                    };
-                }
-                if loop_coords.contains(&(row, col)) {
-                    *state = match state.next(segment) {
-                        Ok(state) => state,
-                        Err(e) => {
-                            return Some(Err(
-                                e.context(format!("Failed state stransition at ({row}, {col})"))
-                            ))
-                        }
-                    };
-                    Some(Ok(0))
-                } else if matches!(*state, InsideLoop) {
-                    Some(Ok(1))
+            .try_fold((0, OutsideLoop), |(count, state), (col, &segment)| {
+                Ok(if loop_coords.contains(&(row, col)) {
+                    let next_state = state
+                        .next(segment)
+                        .with_context(|| format!("Failed state transition at ({row}, {col})"))?;
+                    (count, next_state)
                 } else {
-                    Some(Ok(0))
-                }
+                    (count + matches!(state, InsideLoop) as usize, state)
+                })
             })
-            .sum::<anyhow::Result<usize>>()
+            .map(|(count, _)| count)
     };
     data.iter().enumerate().map(count_line_inside_loop).sum()
-}
-
-fn start_to_pipe_segment(
-    start_coords: (usize, usize),
-    data: &[Vec<PipeSegment>],
-) -> anyhow::Result<PipeSegment> {
-    let (a, b) = (-1..=1)
-        .cartesian_product(-1..=1)
-        .filter(|&(drow, dcol)| {
-            let coords = check_add_signed_2d(start_coords, (drow, dcol));
-            coords
-                .and_then(|coords| get_2d(data, coords))
-                .is_some_and(|segment| {
-                    segment
-                        .adjacent_diffs()
-                        .map_or(false, |diffs| diffs.contains(&(-drow, -dcol)))
-                })
-        })
-        .collect_tuple()
-        .ok_or_else(|| anyhow!("Not exactly two pipe segments connect to start"))?;
-    Ok(match [a, b] {
-        [(-1, 0), (0, -1)] => NorthWest,
-        [(-1, 0), (0, 1)] => NorthEast,
-        [(-1, 0), (1, 0)] => NorthSouth,
-        [(0, -1), (0, 1)] => EastWest,
-        [(0, -1), (1, 0)] => SouthWest,
-        [(0, 1), (1, 0)] => SouthEast,
-        _ => bail!("Weird start connections {a:?} {b:?}"),
-    })
 }
 
 impl TraversalState {
@@ -129,8 +94,6 @@ impl TraversalState {
     /// Also - start is replaced by whatever pipe segment it represents
     fn next(self, segment: PipeSegment) -> anyhow::Result<Self> {
         Ok(match (self, segment) {
-            (_, Ground) => bail!("Ground should not be passed to ExplorationState::next"),
-            (_, Start) => bail!("Start should not be passed to ExplorationState::next"),
             (OutsideLoop, NorthSouth) => InsideLoop,
             (OutsideLoop, NorthEast) => InsideBottomPipe,
             (OutsideLoop, SouthEast) => InsideTopPipe,
@@ -143,67 +106,94 @@ impl TraversalState {
             (InsideBottomPipe, EastWest) => InsideBottomPipe,
             (InsideBottomPipe, NorthWest) => OutsideLoop,
             (InsideBottomPipe, SouthWest) => InsideLoop,
+            (_, Ground) => bail!("Ground should not be passed to ExplorationState::next"),
+            (_, Start) => bail!("Start should not be passed to ExplorationState::next"),
             (state, segment) => bail!("Cannot encounter {segment:?} when {state:?}"),
         })
     }
 }
 
-fn find_loop(data: &[Vec<PipeSegment>]) -> Result<HashSet<(usize, usize)>, anyhow::Error> {
-    let start_coords = data
+fn find_and_fix_start(data: &mut [Vec<PipeSegment>]) -> anyhow::Result<(usize, usize)> {
+    let (start_row, start_col) = data
         .iter()
         .enumerate()
-        .find_map(|(row, line)| {
+        .flat_map(|(row, line)| {
             line.iter()
                 .enumerate()
-                .find_map(|(col, &segment)| match segment {
-                    Start => Some((row, col)),
-                    _ => None,
-                })
+                .map(move |(col, segment)| ((row, col), segment))
         })
+        .find(|(_, &segment)| matches!(segment, Start))
+        .map(|(coords, _)| coords)
         .ok_or_else(|| anyhow!("No start found"))?;
-    let (mut a, mut b) = (-1..=1)
-        .cartesian_product(-1..=1)
-        .filter_map(|(drow, dcol)| {
-            let coords = check_add_signed_2d(start_coords, (drow, dcol))?;
-            if get_2d(data, coords).is_some_and(|segment| {
-                segment
-                    .adjacent_diffs()
-                    .map_or(false, |diffs| diffs.contains(&(-drow, -dcol)))
-            }) {
-                Some(coords)
-            } else {
-                None
-            }
-        })
-        .collect_tuple()
-        .ok_or_else(|| anyhow!("Not exactly two pipe segments connect to start"))?;
-    let mut seen = HashSet::from([start_coords, a, b]);
-    while a != b {
-        a = find_unseen_connected(data, a, &seen)?;
-        b = find_unseen_connected(data, b, &seen)?;
-        seen.insert(a);
-        seen.insert(b);
-    }
-    Ok(seen)
+
+    let start_segment = [
+        NorthWest, NorthEast, NorthSouth, EastWest, SouthWest, SouthEast,
+    ]
+    .into_iter()
+    .find(|&segment| {
+        segment
+            .adjacent_diffs()
+            .into_iter()
+            .flatten()
+            .all(|(drow, dcol)| {
+                check_add_signed_2d((start_row, start_col), (drow, dcol))
+                    .and_then(|coords| get_2d(data, coords))
+                    .and_then(|segment| segment.adjacent_diffs())
+                    .is_some_and(|diffs| diffs.contains(&(-drow, -dcol)))
+            })
+    })
+    .ok_or_else(|| anyhow!("Can't identify start segment at ({start_row}, {start_col})"))?;
+
+    data[start_row][start_col] = start_segment;
+    Ok((start_row, start_col))
 }
 
-fn find_unseen_connected(
+fn find_loop(
+    data: &[Vec<PipeSegment>],
+    start_coords: (usize, usize),
+) -> anyhow::Result<HashSet<(usize, usize)>> {
+    let err = |coords| anyhow!("No connected segments found at {coords:?}");
+    let mut loop_coords = HashSet::from([start_coords]);
+    let mut prev = start_coords;
+    let mut coords = connected_segments(data, start_coords)
+        .next() // select arbitrarily
+        .ok_or_else(|| err(start_coords))?;
+    while coords != start_coords {
+        loop_coords.insert(coords);
+        (prev, coords) = (
+            coords,
+            connected_segments(data, coords)
+                .find(|&next| next != prev)
+                .ok_or_else(|| err(coords))?,
+        );
+    }
+    Ok(loop_coords)
+}
+
+fn connected_segments(
     data: &[Vec<PipeSegment>],
     from: (usize, usize),
-    seen: &HashSet<(usize, usize)>,
-) -> Result<(usize, usize), anyhow::Error> {
+) -> impl Iterator<Item = (usize, usize)> {
     get_2d(data, from)
         .and_then(|segment| segment.adjacent_diffs())
-        .and_then(|diffs| {
-            diffs
-                .into_iter()
-                .filter_map(|diff| {
-                    check_add_signed_2d(from, diff).filter(|&coords| !seen.contains(&coords))
-                })
-                .exactly_one()
-                .ok()
+        .into_iter()
+        .flatten()
+        .filter_map(move |diff| check_add_signed_2d(from, diff))
+}
+
+impl PipeSegment {
+    fn adjacent_diffs(self) -> Option<[(isize, isize); 2]> {
+        Some(match self {
+            NorthWest => [(-1, 0), (0, -1)],
+            NorthEast => [(-1, 0), (0, 1)],
+            NorthSouth => [(-1, 0), (1, 0)],
+            EastWest => [(0, -1), (0, 1)],
+            SouthWest => [(0, -1), (1, 0)],
+            SouthEast => [(0, 1), (1, 0)],
+            Ground => return None,
+            Start => return None,
         })
-        .ok_or_else(|| anyhow!("No next pip segment found for {from:?}"))
+    }
 }
 
 fn check_add_signed_2d(
@@ -218,22 +208,7 @@ fn get_2d(data: &[Vec<PipeSegment>], (row, col): (usize, usize)) -> Option<PipeS
     data.get(row)?.get(col).copied()
 }
 
-impl PipeSegment {
-    fn adjacent_diffs(self) -> Option<[(isize, isize); 2]> {
-        match self {
-            NorthSouth => Some([(-1, 0), (1, 0)]),
-            EastWest => Some([(0, 1), (0, -1)]),
-            NorthEast => Some([(-1, 0), (0, 1)]),
-            NorthWest => Some([(-1, 0), (0, -1)]),
-            SouthWest => Some([(1, 0), (0, -1)]),
-            SouthEast => Some([(1, 0), (0, 1)]),
-            Ground => None,
-            Start => None,
-        }
-    }
-}
-
-fn line_parser(input: &mut &'static str) -> winnow::PResult<Vec<PipeSegment>> {
+fn field_line(input: &mut &'static str) -> winnow::PResult<Vec<PipeSegment>> {
     repeat(1.., pipe_segment).parse_next(input)
 }
 
