@@ -15,14 +15,15 @@ impl BasicSolution for Day {
     const SAMPLE_ANSWER_A: Self::TestAnswer = 0;
     const SAMPLE_ANSWER_B: Self::TestAnswer = 0;
 
-    fn shared(data: &'static str) -> anyhow::Result<Self::Shared> {
-        data.lines()
+    fn shared(input: &'static str) -> anyhow::Result<Self::Shared> {
+        input
+            .lines()
             .map(|line| line_parser.parse(line).map_err(anyhow::Error::msg))
             .collect()
     }
 
-    fn part_a(data: Cow<Self::Shared>) -> anyhow::Result<Self::Answer> {
-        todo!("{data:?}")
+    fn part_a(shared: Cow<Self::Shared>) -> anyhow::Result<Self::Answer> {
+        todo!("{shared:?}")
     }
 
     fn part_b(_: Self::Shared) -> anyhow::Result<Self::Answer> {
