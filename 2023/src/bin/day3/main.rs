@@ -1,5 +1,5 @@
 #![warn(clippy::pedantic)]
-use std::{collections::HashMap, ops::Range};
+use std::{borrow::Cow, collections::HashMap, ops::Range};
 
 use advent_2023::{BasicSolution, Solution};
 use itertools::Itertools;
@@ -27,8 +27,8 @@ struct Number {
 }
 
 impl BasicSolution for Day {
-    const DATA: &'static str = include_str!("data.txt");
-    const SAMPLE_DATA: &'static str = include_str!("sample.txt");
+    const INPUT: &'static str = include_str!("data.txt");
+    const SAMPLE_INPUT: &'static str = include_str!("sample.txt");
 
     type Common = Schematic<'static>;
     type Answer = u32;
@@ -36,9 +36,9 @@ impl BasicSolution for Day {
     const SAMPLE_ANSWER_A: Self::TestAnswer = 4361;
     const SAMPLE_ANSWER_B: Self::TestAnswer = 467_835;
 
-    fn common(data: &'static str) -> anyhow::Result<Self::Common> {
+    fn common(input: &'static str) -> anyhow::Result<Self::Common> {
         let mut numbers = Vec::new();
-        for (row, line) in data.lines().enumerate() {
+        for (row, line) in input.lines().enumerate() {
             let mut iter_nums =
                 iterator(Located::new(line), preceded(not_dec, dec_uint.with_span()));
             numbers.extend(iter_nums.map(|(value, columns)| Number {
@@ -50,16 +50,17 @@ impl BasicSolution for Day {
             let (rest, ()) = iter_nums.finish().map_err(anyhow::Error::msg)?;
             not_dec.parse(rest).map_err(anyhow::Error::msg)?;
         }
-        let raw = data.lines().map(str::as_bytes).collect_vec();
+        let raw = input.lines().map(str::as_bytes).collect_vec();
         Ok(Schematic { raw, numbers })
     }
 
-    fn part_a(Schematic { numbers, raw }: Self::Common) -> anyhow::Result<Self::Answer> {
-        Ok(numbers
-            .into_iter()
+    fn part_a(schematic: Cow<Self::Common>) -> anyhow::Result<Self::Answer> {
+        Ok(schematic
+            .numbers
+            .iter()
             .filter(|number| {
                 number.adjacent_coords().any(|coords| {
-                    get_2d(&raw, coords).is_some_and(|c| !c.is_ascii_digit() && c != b'.')
+                    get_2d(&schematic.raw, coords).is_some_and(|c| !c.is_ascii_digit() && c != b'.')
                 })
             })
             .map(|number| number.value)
@@ -83,8 +84,8 @@ impl BasicSolution for Day {
     }
 }
 
-fn not_dec(data: &mut Located<&'static str>) -> winnow::PResult<&'static str> {
-    take_till0(AsChar::is_dec_digit).parse_next(data)
+fn not_dec(input: &mut Located<&'static str>) -> winnow::PResult<&'static str> {
+    take_till0(AsChar::is_dec_digit).parse_next(input)
 }
 
 impl Number {
@@ -95,8 +96,8 @@ impl Number {
     }
 }
 
-fn get_2d(data: &[&[u8]], (row, col): (usize, usize)) -> Option<u8> {
-    data.get(row).and_then(|line| line.get(col)).copied()
+fn get_2d(grid: &[&[u8]], (row, col): (usize, usize)) -> Option<u8> {
+    grid.get(row).and_then(|line| line.get(col)).copied()
 }
 
 fn main() -> anyhow::Result<()> {

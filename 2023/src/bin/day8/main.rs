@@ -1,7 +1,9 @@
-use std::collections::HashMap;
+#![warn(clippy::pedantic)]
+use std::{borrow::Cow, collections::HashMap};
 
 use advent_2023::{BasicSolution, Solution};
 use anyhow::anyhow;
+use itertools::process_results;
 use num::Integer;
 use winnow::{
     ascii::alphanumeric1,
@@ -24,9 +26,9 @@ struct Maps<'a> {
 }
 
 impl BasicSolution for Day {
-    const DATA: &'static str = include_str!("data.txt");
-    const SAMPLE_DATA: &'static str = include_str!("sample_a.txt");
-    const SAMPLE_DATA_B: &'static str = include_str!("sample_b.txt");
+    const INPUT: &'static str = include_str!("data.txt");
+    const SAMPLE_INPUT: &'static str = include_str!("sample_a.txt");
+    const SAMPLE_INPUT_B: &'static str = include_str!("sample_b.txt");
 
     type Common = Maps<'static>;
     type Answer = usize;
@@ -34,30 +36,35 @@ impl BasicSolution for Day {
     const SAMPLE_ANSWER_A: Self::TestAnswer = 2;
     const SAMPLE_ANSWER_B: Self::TestAnswer = 6;
 
-    fn common(data: &'static str) -> anyhow::Result<Self::Common> {
-        maps.parse(data).map_err(anyhow::Error::msg)
+    fn common(input: &'static str) -> anyhow::Result<Self::Common> {
+        maps.parse(input).map_err(anyhow::Error::msg)
     }
 
-    fn part_a(data: Self::Common) -> anyhow::Result<Self::Answer> {
-        Ok(data.count_steps("AAA", |node| node == "ZZZ"))
+    fn part_a(maps: Cow<Self::Common>) -> anyhow::Result<Self::Answer> {
+        maps.count_steps("AAA", |node| node == "ZZZ")
     }
 
-    fn part_b(data: Self::Common) -> anyhow::Result<Self::Answer> {
-        data.network
-            .keys()
-            .filter(|k| k.ends_with('A'))
-            .map(|start| data.count_steps(start, |node| node.ends_with('Z')))
-            .reduce(|a, b| a.lcm(&b))
-            .ok_or_else(|| anyhow!("Less than two starting nodes"))
+    fn part_b(maps: Self::Common) -> anyhow::Result<Self::Answer> {
+        process_results(
+            maps.network
+                .keys()
+                .filter(|k| k.ends_with('A'))
+                .map(|start| maps.count_steps(start, |node| node.ends_with('Z'))),
+            |it| {
+                it.reduce(|a, b| a.lcm(&b))
+                    .ok_or_else(|| anyhow!("Less than two starting nodes"))
+            },
+        )?
     }
 }
 
 impl<'a> Maps<'a> {
-    fn count_steps(&self, start: &str, target: impl Fn(&str) -> bool) -> usize {
+    fn count_steps(&self, start: &str, target: impl Fn(&str) -> bool) -> anyhow::Result<usize> {
         let mut current = start;
         self.instructions
             .iter()
             .cycle()
+            .take(1_000_000)
             .position(|direction| {
                 let (left, right) = &self.network[current];
                 current = match direction {
@@ -66,8 +73,8 @@ impl<'a> Maps<'a> {
                 };
                 target(current)
             })
-            .expect("cycle should never end")
-            + 1
+            .map(|c| c + 1)
+            .ok_or_else(|| anyhow!("Cycle starting at {start} not found after 1_000_000 steps"))
     }
 }
 

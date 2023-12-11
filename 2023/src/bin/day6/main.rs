@@ -1,4 +1,7 @@
+#![warn(clippy::pedantic)]
 #![feature(float_next_up_down)]
+use std::borrow::Cow;
+
 use advent_2023::{BasicSolution, Solution};
 use anyhow::bail;
 use winnow::{
@@ -16,8 +19,8 @@ struct Records {
 }
 
 impl BasicSolution for Day {
-    const DATA: &'static str = include_str!("data.txt");
-    const SAMPLE_DATA: &'static str = include_str!("sample.txt");
+    const INPUT: &'static str = include_str!("data.txt");
+    const SAMPLE_INPUT: &'static str = include_str!("sample.txt");
 
     type Common = Records;
     type Answer = u64;
@@ -25,52 +28,56 @@ impl BasicSolution for Day {
     const SAMPLE_ANSWER_A: Self::TestAnswer = 288;
     const SAMPLE_ANSWER_B: Self::TestAnswer = 71503;
 
-    fn common(data: &'static str) -> anyhow::Result<Self::Common> {
-        records.parse(data).map_err(anyhow::Error::msg)
+    fn common(input: &'static str) -> anyhow::Result<Self::Common> {
+        records.parse(input).map_err(anyhow::Error::msg)
     }
 
-    fn part_a(Records { times, distances }: Self::Common) -> anyhow::Result<Self::Answer> {
-        if times.len() != distances.len() {
+    fn part_a(records: Cow<Self::Common>) -> anyhow::Result<Self::Answer> {
+        if records.times.len() != records.distances.len() {
             bail!(
                 "times and distances have different lenghts.
-times={times:?}
-distances={distances:?}"
+times={:?}
+distances={:?}",
+                records.times,
+                records.distances
             );
         }
-        Ok(times
-            .into_iter()
-            .zip(distances)
-            .map(|(time, distance)| possible_ways_to_win(time, distance))
-            .product())
+        records
+            .times
+            .iter()
+            .zip(&records.distances)
+            .map(|(&time, &distance)| possible_ways_to_win(time, distance))
+            .product::<Option<u64>>()
+            .ok_or_else(|| anyhow::anyhow!("A cast failed"))
     }
 
     fn part_b(Records { times, distances }: Self::Common) -> anyhow::Result<Self::Answer> {
-        let time = join_numbers(times)?;
-        let distance = join_numbers(distances)?;
-        Ok(possible_ways_to_win(time, distance))
+        let time = join_numbers(&times)?;
+        let distance = join_numbers(&distances)?;
+        possible_ways_to_win(time, distance).ok_or_else(|| anyhow::anyhow!("A cast failed"))
     }
 }
 
-fn possible_ways_to_win(time: u64, record_distance: u64) -> u64 {
+fn possible_ways_to_win(time: u64, record_distance: u64) -> Option<u64> {
     // distance = (time - hold_time) * hold_time
     // distance = time * hold_time - hold_time^2
     // hold_time^2 - time * hold_time + distance = 0
     // hold_time = (time +- sqrt(time^2 - 4 * distance)) / 2
 
-    let time = time as f64;
-    let record_distance = record_distance as f64;
+    let time: f64 = num::cast(time)?;
+    let record_distance: f64 = num::cast(record_distance)?;
     let root_term = time.powi(2) - 4. * record_distance;
     let smallest_hold_time_to_match_record = (time - root_term.sqrt()) / 2.;
     let largest_hold_time_to_match_record = (time + root_term.sqrt()) / 2.;
-    let smallest_int_hold_time_to_beet_record =
-        smallest_hold_time_to_match_record.next_up().ceil() as u64;
-    let largest_int_hold_time_to_beet_record =
-        largest_hold_time_to_match_record.next_down().floor() as u64;
+    let smallest_int_hold_time_to_beet_record: u64 =
+        num::cast(smallest_hold_time_to_match_record.next_up().ceil())?;
+    let largest_int_hold_time_to_beet_record: u64 =
+        num::cast(largest_hold_time_to_match_record.next_down().floor())?;
 
-    largest_int_hold_time_to_beet_record - smallest_int_hold_time_to_beet_record + 1
+    Some(largest_int_hold_time_to_beet_record - smallest_int_hold_time_to_beet_record + 1)
 }
 
-fn join_numbers(distances: Vec<u64>) -> Result<u64, std::num::ParseIntError> {
+fn join_numbers(distances: &[u64]) -> Result<u64, std::num::ParseIntError> {
     distances
         .iter()
         .map(ToString::to_string)
@@ -78,7 +85,7 @@ fn join_numbers(distances: Vec<u64>) -> Result<u64, std::num::ParseIntError> {
         .parse()
 }
 
-fn records(data: &mut &'static str) -> winnow::PResult<Records> {
+fn records(input: &mut &'static str) -> winnow::PResult<Records> {
     (
         ("Time:", space1),
         numbers,
@@ -87,11 +94,11 @@ fn records(data: &mut &'static str) -> winnow::PResult<Records> {
         opt("\n"),
     )
         .map(|(_, times, _, distances, _)| Records { times, distances })
-        .parse_next(data)
+        .parse_next(input)
 }
 
-fn numbers(data: &mut &'static str) -> winnow::PResult<Vec<u64>> {
-    separated(1.., dec_uint::<_, u64, _>, space1).parse_next(data)
+fn numbers(input: &mut &'static str) -> winnow::PResult<Vec<u64>> {
+    separated(1.., dec_uint::<_, u64, _>, space1).parse_next(input)
 }
 
 fn main() -> anyhow::Result<()> {

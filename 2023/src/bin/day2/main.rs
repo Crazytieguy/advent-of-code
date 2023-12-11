@@ -1,4 +1,6 @@
 #![warn(clippy::pedantic)]
+use std::borrow::Cow;
+
 use advent_2023::{BasicSolution, Solution};
 use winnow::{
     ascii::dec_uint,
@@ -19,8 +21,8 @@ const GREEN: usize = 1;
 const BLUE: usize = 2;
 
 impl BasicSolution for Day {
-    const DATA: &'static str = include_str!("data.txt");
-    const SAMPLE_DATA: &'static str = include_str!("sample.txt");
+    const INPUT: &'static str = include_str!("data.txt");
+    const SAMPLE_INPUT: &'static str = include_str!("sample.txt");
 
     type Common = Vec<Game>;
     type Answer = u32;
@@ -28,15 +30,16 @@ impl BasicSolution for Day {
     const SAMPLE_ANSWER_A: Self::TestAnswer = 8;
     const SAMPLE_ANSWER_B: Self::TestAnswer = 2286;
 
-    fn common(data: &'static str) -> anyhow::Result<Self::Common> {
-        data.lines()
+    fn common(input: &'static str) -> anyhow::Result<Self::Common> {
+        input
+            .lines()
             .map(|line| game.parse(line).map_err(anyhow::Error::msg))
             .collect()
     }
 
-    fn part_a(data: Self::Common) -> anyhow::Result<Self::Answer> {
-        Ok(data
-            .into_iter()
+    fn part_a(games: Cow<Self::Common>) -> anyhow::Result<Self::Answer> {
+        Ok(games
+            .iter()
             .filter(|game| {
                 let [red, green, blue] = game.revealed;
                 red <= 12 && green <= 13 && blue <= 14
@@ -45,8 +48,8 @@ impl BasicSolution for Day {
             .sum())
     }
 
-    fn part_b(data: Self::Common) -> anyhow::Result<Self::Answer> {
-        Ok(data
+    fn part_b(games: Self::Common) -> anyhow::Result<Self::Answer> {
+        Ok(games
             .into_iter()
             .map(|game| {
                 let [red, green, blue] = game.revealed;
@@ -56,13 +59,13 @@ impl BasicSolution for Day {
     }
 }
 
-fn game(data: &mut &str) -> winnow::PResult<Game> {
+fn game(input: &mut &str) -> winnow::PResult<Game> {
     ("Game ", dec_uint, ": ", revealed)
         .map(|(_, id, _, revealed)| Game { id, revealed })
-        .parse_next(data)
+        .parse_next(input)
 }
 
-fn revealed(data: &mut &str) -> winnow::PResult<[u8; 3]> {
+fn revealed(input: &mut &str) -> winnow::PResult<[u8; 3]> {
     fold_repeat(
         1..,
         preceded(opt(alt((", ", "; "))), color_count),
@@ -72,16 +75,16 @@ fn revealed(data: &mut &str) -> winnow::PResult<[u8; 3]> {
             acc
         },
     )
-    .parse_next(data)
+    .parse_next(input)
 }
 
-fn color_count(data: &mut &str) -> winnow::PResult<(u8, usize)> {
+fn color_count(input: &mut &str) -> winnow::PResult<(u8, usize)> {
     separated_pair(
         dec_uint,
         ' ',
         alt(("red".value(RED), "green".value(GREEN), "blue".value(BLUE))),
     )
-    .parse_next(data)
+    .parse_next(input)
 }
 
 fn main() -> anyhow::Result<()> {

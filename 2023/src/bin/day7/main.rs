@@ -1,4 +1,5 @@
-use std::cmp::Reverse;
+#![warn(clippy::pedantic)]
+use std::{borrow::Cow, cmp::Reverse};
 
 use advent_2023::{BasicSolution, Solution};
 use itertools::Itertools;
@@ -16,8 +17,8 @@ struct Bid {
 type HandType = [u8; 2];
 
 impl BasicSolution for Day {
-    const DATA: &'static str = include_str!("data.txt");
-    const SAMPLE_DATA: &'static str = include_str!("sample.txt");
+    const INPUT: &'static str = include_str!("data.txt");
+    const SAMPLE_INPUT: &'static str = include_str!("sample.txt");
 
     type Common = Vec<Bid>;
     type Answer = u32;
@@ -25,20 +26,21 @@ impl BasicSolution for Day {
     const SAMPLE_ANSWER_A: Self::TestAnswer = 6440;
     const SAMPLE_ANSWER_B: Self::TestAnswer = 5905;
 
-    fn common(data: &'static str) -> anyhow::Result<Self::Common> {
-        data.lines()
+    fn common(input: &'static str) -> anyhow::Result<Self::Common> {
+        input
+            .lines()
             .map(|line| bid.parse(line).map_err(anyhow::Error::msg))
             .collect()
     }
 
-    fn part_a(data: Self::Common) -> anyhow::Result<Self::Answer> {
-        Ok(sum_sortable_bids(data.into_iter().map(|bid| {
+    fn part_a(bids: Cow<Self::Common>) -> anyhow::Result<Self::Answer> {
+        Ok(sum_sortable_bids(bids.iter().map(|bid| {
             (hand_type_part_a(bid.hand), bid.hand, bid.amount)
         })))
     }
 
-    fn part_b(data: Self::Common) -> anyhow::Result<Self::Answer> {
-        Ok(sum_sortable_bids(data.into_iter().map(|mut bid| {
+    fn part_b(bids: Self::Common) -> anyhow::Result<Self::Answer> {
+        Ok(sum_sortable_bids(bids.into_iter().map(|mut bid| {
             jacks_to_jokers(&mut bid.hand);
             (hand_type_part_b(bid.hand), bid.hand, bid.amount)
         })))
@@ -49,7 +51,7 @@ fn sum_sortable_bids(bid_amounts: impl Iterator<Item = (HandType, [u8; 5], u16)>
     bid_amounts
         .sorted_unstable()
         .zip(1..)
-        .map(|((_, _, amount), i)| i * amount as u32)
+        .map(|((_, _, amount), i)| i * u32::from(amount))
         .sum()
 }
 
@@ -84,16 +86,16 @@ fn jacks_to_jokers(hand: &mut [u8; 5]) {
     }
 }
 
-fn bid(data: &mut &'static str) -> winnow::PResult<Bid> {
+fn bid(input: &mut &'static str) -> winnow::PResult<Bid> {
     ((card, card, card, card, card), ' ', dec_uint)
         .map(|(hand, _, amount)| Bid {
             hand: hand.into(),
             amount,
         })
-        .parse_next(data)
+        .parse_next(input)
 }
 
-fn card(data: &mut &'static str) -> winnow::PResult<u8> {
+fn card(input: &mut &'static str) -> winnow::PResult<u8> {
     any.verify_map(|c| match c {
         '2'..='9' => Some(c as u8 - b'2'),
         'T' => Some(8),
@@ -103,7 +105,7 @@ fn card(data: &mut &'static str) -> winnow::PResult<u8> {
         'A' => Some(12),
         _ => None,
     })
-    .parse_next(data)
+    .parse_next(input)
 }
 
 fn main() -> anyhow::Result<()> {

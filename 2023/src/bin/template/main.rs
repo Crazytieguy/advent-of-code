@@ -1,11 +1,13 @@
+use std::borrow::Cow;
+
 use advent_2023::{BasicSolution, Solution};
 use winnow::{combinator::rest, Parser};
 
 struct Day;
 
 impl BasicSolution for Day {
-    const DATA: &'static str = include_str!("data.txt");
-    const SAMPLE_DATA: &'static str = include_str!("sample.txt");
+    const INPUT: &'static str = include_str!("data.txt");
+    const SAMPLE_INPUT: &'static str = include_str!("sample.txt");
 
     type Common = Vec<&'static str>;
     type Answer = u32;
@@ -19,7 +21,7 @@ impl BasicSolution for Day {
             .collect()
     }
 
-    fn part_a(data: Self::Common) -> anyhow::Result<Self::Answer> {
+    fn part_a(data: Cow<Self::Common>) -> anyhow::Result<Self::Answer> {
         todo!("{data:?}")
     }
 
@@ -28,8 +30,8 @@ impl BasicSolution for Day {
     }
 }
 
-fn line_parser(data: &mut &'static str) -> winnow::PResult<&'static str> {
-    rest.parse_next(data)
+fn line_parser(input: &mut &'static str) -> winnow::PResult<&'static str> {
+    rest.parse_next(input)
 }
 
 fn main() -> anyhow::Result<()> {

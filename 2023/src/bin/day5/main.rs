@@ -1,5 +1,5 @@
 #![warn(clippy::pedantic)]
-use std::ops::Range;
+use std::{borrow::Cow, ops::Range};
 
 use advent_2023::{BasicSolution, Solution};
 use itertools::Itertools;
@@ -31,8 +31,8 @@ struct MappedRange {
 }
 
 impl BasicSolution for Day {
-    const DATA: &'static str = include_str!("data.txt");
-    const SAMPLE_DATA: &'static str = include_str!("sample.txt");
+    const INPUT: &'static str = include_str!("data.txt");
+    const SAMPLE_INPUT: &'static str = include_str!("sample.txt");
 
     type Common = Almanac;
     type Answer = u64;
@@ -40,15 +40,16 @@ impl BasicSolution for Day {
     const SAMPLE_ANSWER_A: Self::TestAnswer = 35;
     const SAMPLE_ANSWER_B: Self::TestAnswer = 46;
 
-    fn common(data: &'static str) -> anyhow::Result<Self::Common> {
-        almanac.parse(data).map_err(anyhow::Error::msg)
+    fn common(input: &'static str) -> anyhow::Result<Self::Common> {
+        almanac.parse(input).map_err(anyhow::Error::msg)
     }
 
-    fn part_a(data: Self::Common) -> anyhow::Result<Self::Answer> {
-        data.seeds
-            .into_iter()
-            .map(|seed| {
-                data.all_mappings.iter().fold(seed, |acc, mappings| {
+    fn part_a(almanac: Cow<Self::Common>) -> anyhow::Result<Self::Answer> {
+        almanac
+            .seeds
+            .iter()
+            .map(|&seed| {
+                almanac.all_mappings.iter().fold(seed, |acc, mappings| {
                     mappings
                         .iter()
                         .find_map(|mapping| {
@@ -61,11 +62,12 @@ impl BasicSolution for Day {
             .ok_or_else(|| anyhow::Error::msg("no seeds"))
     }
 
-    fn part_b(data: Self::Common) -> anyhow::Result<Self::Answer> {
-        let seed_ranges = data.seeds.into_iter().tuples().map(|(a, b)| a..a + b);
+    fn part_b(almanac: Self::Common) -> anyhow::Result<Self::Answer> {
+        let seed_ranges = almanac.seeds.into_iter().tuples().map(|(a, b)| a..a + b);
         seed_ranges
             .flat_map(|seed_range| {
-                data.all_mappings
+                almanac
+                    .all_mappings
                     .iter()
                     .fold(vec![seed_range], |acc, mappings| {
                         acc.into_iter()
@@ -120,24 +122,24 @@ impl Mapping {
     }
 }
 
-fn almanac(data: &mut &'static str) -> winnow::PResult<Almanac> {
+fn almanac(input: &mut &'static str) -> winnow::PResult<Almanac> {
     (seeds, "\n\n", separated(7..=7, mappings, "\n\n"), opt("\n"))
         .map(|(seeds, _, all_mappings, _)| Almanac {
             seeds,
             all_mappings,
         })
-        .parse_next(data)
+        .parse_next(input)
 }
 
-fn seeds(data: &mut &str) -> winnow::PResult<Vec<u64>> {
-    preceded("seeds: ", separated(1.., u64, ' ')).parse_next(data)
+fn seeds(input: &mut &str) -> winnow::PResult<Vec<u64>> {
+    preceded("seeds: ", separated(1.., u64, ' ')).parse_next(input)
 }
 
-fn mappings(data: &mut &str) -> winnow::PResult<Vec<Mapping>> {
-    preceded((not_line_ending, "\n"), separated(1.., mapping, "\n")).parse_next(data)
+fn mappings(input: &mut &str) -> winnow::PResult<Vec<Mapping>> {
+    preceded((not_line_ending, "\n"), separated(1.., mapping, "\n")).parse_next(input)
 }
 
-fn mapping(data: &mut &str) -> winnow::PResult<Mapping> {
+fn mapping(input: &mut &str) -> winnow::PResult<Mapping> {
     (u64, ' ', u64, ' ', u64)
         .map(|(destination_start, _, source_start, _, len)| {
             let source = source_start..source_start + len;
@@ -146,11 +148,11 @@ fn mapping(data: &mut &str) -> winnow::PResult<Mapping> {
                 destination_start,
             }
         })
-        .parse_next(data)
+        .parse_next(input)
 }
 
-fn u64(data: &mut &str) -> winnow::PResult<u64> {
-    dec_uint.parse_next(data)
+fn u64(input: &mut &str) -> winnow::PResult<u64> {
+    dec_uint.parse_next(input)
 }
 
 fn main() -> anyhow::Result<()> {

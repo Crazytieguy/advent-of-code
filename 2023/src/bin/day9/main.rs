@@ -1,3 +1,6 @@
+#![warn(clippy::pedantic)]
+use std::borrow::Cow;
+
 use advent_2023::{BasicSolution, Solution};
 use anyhow::anyhow;
 use itertools::{iterate, Itertools};
@@ -6,8 +9,8 @@ use winnow::{ascii::dec_int, combinator::separated, Parser};
 struct Day;
 
 impl BasicSolution for Day {
-    const DATA: &'static str = include_str!("data.txt");
-    const SAMPLE_DATA: &'static str = include_str!("sample.txt");
+    const INPUT: &'static str = include_str!("data.txt");
+    const SAMPLE_INPUT: &'static str = include_str!("sample.txt");
 
     type Common = Vec<(i32, i32)>;
     type Answer = i32;
@@ -15,8 +18,9 @@ impl BasicSolution for Day {
     const SAMPLE_ANSWER_A: Self::TestAnswer = 114;
     const SAMPLE_ANSWER_B: Self::TestAnswer = 2;
 
-    fn common(data: &'static str) -> anyhow::Result<Self::Common> {
-        data.lines()
+    fn common(input: &'static str) -> anyhow::Result<Self::Common> {
+        input
+            .lines()
             .map(|line| {
                 history
                     .parse(line)
@@ -26,12 +30,12 @@ impl BasicSolution for Day {
             .collect()
     }
 
-    fn part_a(data: Self::Common) -> anyhow::Result<Self::Answer> {
-        Ok(data.into_iter().map(|(_, back)| back).sum())
+    fn part_a(extrapolations: Cow<Self::Common>) -> anyhow::Result<Self::Answer> {
+        Ok(extrapolations.iter().map(|(_, back)| back).sum())
     }
 
-    fn part_b(data: Self::Common) -> anyhow::Result<Self::Answer> {
-        Ok(data.into_iter().map(|(front, _)| front).sum())
+    fn part_b(extrapolations: Self::Common) -> anyhow::Result<Self::Answer> {
+        Ok(extrapolations.iter().map(|(front, _)| front).sum())
     }
 }
 

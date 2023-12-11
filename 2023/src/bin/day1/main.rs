@@ -1,13 +1,15 @@
 #![warn(clippy::pedantic)]
+use std::borrow::Cow;
+
 use advent_2023::{BasicSolution, Solution};
 use anyhow::anyhow;
 
 struct Day;
 
 impl BasicSolution for Day {
-    const DATA: &'static str = include_str!("data.txt");
-    const SAMPLE_DATA: &'static str = include_str!("sample_a.txt");
-    const SAMPLE_DATA_B: &'static str = include_str!("sample_b.txt");
+    const INPUT: &'static str = include_str!("data.txt");
+    const SAMPLE_INPUT: &'static str = include_str!("sample_a.txt");
+    const SAMPLE_INPUT_B: &'static str = include_str!("sample_b.txt");
 
     type Common = &'static str;
     type Answer = u32;
@@ -15,17 +17,17 @@ impl BasicSolution for Day {
     const SAMPLE_ANSWER_A: Self::TestAnswer = 142;
     const SAMPLE_ANSWER_B: Self::TestAnswer = 281;
 
-    fn common(data: &'static str) -> anyhow::Result<Self::Common> {
-        Ok(data)
+    fn common(input: &'static str) -> anyhow::Result<Self::Common> {
+        Ok(input)
     }
 
-    fn part_a(data: Self::Common) -> anyhow::Result<Self::Answer> {
-        solve(data, &[])
+    fn part_a(document: Cow<Self::Common>) -> anyhow::Result<Self::Answer> {
+        solve(&document, &[])
     }
 
-    fn part_b(data: Self::Common) -> anyhow::Result<Self::Answer> {
+    fn part_b(document: Self::Common) -> anyhow::Result<Self::Answer> {
         solve(
-            data,
+            document,
             &[
                 ("one", 1),
                 ("two", 2),
@@ -41,7 +43,7 @@ impl BasicSolution for Day {
     }
 }
 
-fn solve(data: &str, spelled_out_vals: &[(&str, u32)]) -> anyhow::Result<u32> {
+fn solve(document: &str, spelled_out_vals: &[(&str, u32)]) -> anyhow::Result<u32> {
     let calibration_value = |line: &str| {
         let err = || anyhow!("Couldn't find a digit in line '{line}'");
 
@@ -56,7 +58,7 @@ fn solve(data: &str, spelled_out_vals: &[(&str, u32)]) -> anyhow::Result<u32> {
 
         Ok(first * 10 + last)
     };
-    itertools::process_results(data.lines().map(calibration_value), |it| it.sum())
+    itertools::process_results(document.lines().map(calibration_value), |it| it.sum())
 }
 
 fn main() -> anyhow::Result<()> {
