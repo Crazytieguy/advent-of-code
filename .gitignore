@@ -1,3 +1,5 @@
 /target
 session
 data.txt
+.python-version
+__pycache__
