@@ -30,21 +30,21 @@ impl BasicSolution for Day {
     const SAMPLE_INPUT: &'static str = include_str!("sample_a.txt");
     const SAMPLE_INPUT_B: &'static str = include_str!("sample_b.txt");
 
-    type Common = Maps<'static>;
+    type Shared = Maps<'static>;
     type Answer = usize;
 
     const SAMPLE_ANSWER_A: Self::TestAnswer = 2;
     const SAMPLE_ANSWER_B: Self::TestAnswer = 6;
 
-    fn common(input: &'static str) -> anyhow::Result<Self::Common> {
+    fn shared(input: &'static str) -> anyhow::Result<Self::Shared> {
         maps.parse(input).map_err(anyhow::Error::msg)
     }
 
-    fn part_a(maps: Cow<Self::Common>) -> anyhow::Result<Self::Answer> {
+    fn part_a(maps: Cow<Self::Shared>) -> anyhow::Result<Self::Answer> {
         maps.count_steps("AAA", |node| node == "ZZZ")
     }
 
-    fn part_b(maps: Self::Common) -> anyhow::Result<Self::Answer> {
+    fn part_b(maps: Self::Shared) -> anyhow::Result<Self::Answer> {
         process_results(
             maps.network
                 .keys()

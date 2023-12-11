@@ -24,20 +24,20 @@ impl BasicSolution for Day {
     const INPUT: &'static str = include_str!("data.txt");
     const SAMPLE_INPUT: &'static str = include_str!("sample.txt");
 
-    type Common = Vec<Game>;
+    type Shared = Vec<Game>;
     type Answer = u32;
 
     const SAMPLE_ANSWER_A: Self::TestAnswer = 8;
     const SAMPLE_ANSWER_B: Self::TestAnswer = 2286;
 
-    fn common(input: &'static str) -> anyhow::Result<Self::Common> {
+    fn shared(input: &'static str) -> anyhow::Result<Self::Shared> {
         input
             .lines()
             .map(|line| game.parse(line).map_err(anyhow::Error::msg))
             .collect()
     }
 
-    fn part_a(games: Cow<Self::Common>) -> anyhow::Result<Self::Answer> {
+    fn part_a(games: Cow<Self::Shared>) -> anyhow::Result<Self::Answer> {
         Ok(games
             .iter()
             .filter(|game| {
@@ -48,7 +48,7 @@ impl BasicSolution for Day {
             .sum())
     }
 
-    fn part_b(games: Self::Common) -> anyhow::Result<Self::Answer> {
+    fn part_b(games: Self::Shared) -> anyhow::Result<Self::Answer> {
         Ok(games
             .into_iter()
             .map(|game| {

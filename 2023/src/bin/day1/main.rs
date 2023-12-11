@@ -11,21 +11,21 @@ impl BasicSolution for Day {
     const SAMPLE_INPUT: &'static str = include_str!("sample_a.txt");
     const SAMPLE_INPUT_B: &'static str = include_str!("sample_b.txt");
 
-    type Common = &'static str;
+    type Shared = &'static str;
     type Answer = u32;
 
     const SAMPLE_ANSWER_A: Self::TestAnswer = 142;
     const SAMPLE_ANSWER_B: Self::TestAnswer = 281;
 
-    fn common(input: &'static str) -> anyhow::Result<Self::Common> {
+    fn shared(input: &'static str) -> anyhow::Result<Self::Shared> {
         Ok(input)
     }
 
-    fn part_a(document: Cow<Self::Common>) -> anyhow::Result<Self::Answer> {
+    fn part_a(document: Cow<Self::Shared>) -> anyhow::Result<Self::Answer> {
         solve(&document, &[])
     }
 
-    fn part_b(document: Self::Common) -> anyhow::Result<Self::Answer> {
+    fn part_b(document: Self::Shared) -> anyhow::Result<Self::Answer> {
         solve(
             document,
             &[

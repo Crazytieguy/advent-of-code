@@ -12,13 +12,13 @@ impl BasicSolution for Day {
     const INPUT: &'static str = include_str!("data.txt");
     const SAMPLE_INPUT: &'static str = include_str!("sample.txt");
 
-    type Common = Vec<(i32, i32)>;
+    type Shared = Vec<(i32, i32)>;
     type Answer = i32;
 
     const SAMPLE_ANSWER_A: Self::TestAnswer = 114;
     const SAMPLE_ANSWER_B: Self::TestAnswer = 2;
 
-    fn common(input: &'static str) -> anyhow::Result<Self::Common> {
+    fn shared(input: &'static str) -> anyhow::Result<Self::Shared> {
         input
             .lines()
             .map(|line| {
@@ -30,11 +30,11 @@ impl BasicSolution for Day {
             .collect()
     }
 
-    fn part_a(extrapolations: Cow<Self::Common>) -> anyhow::Result<Self::Answer> {
+    fn part_a(extrapolations: Cow<Self::Shared>) -> anyhow::Result<Self::Answer> {
         Ok(extrapolations.iter().map(|(_, back)| back).sum())
     }
 
-    fn part_b(extrapolations: Self::Common) -> anyhow::Result<Self::Answer> {
+    fn part_b(extrapolations: Self::Shared) -> anyhow::Result<Self::Answer> {
         Ok(extrapolations.iter().map(|(front, _)| front).sum())
     }
 }

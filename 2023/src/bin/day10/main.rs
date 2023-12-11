@@ -17,23 +17,23 @@ impl BasicSolution for Day {
     const SAMPLE_INPUT: &'static str = include_str!("sample.txt");
     const SAMPLE_INPUT_B: &'static str = include_str!("sample_b.txt");
 
-    type Common = Vec<(usize, usize)>;
+    type Shared = Vec<(usize, usize)>;
     type Answer = usize;
 
     const SAMPLE_ANSWER_A: Self::TestAnswer = 8;
     const SAMPLE_ANSWER_B: Self::TestAnswer = 10;
 
-    fn common(input: &'static str) -> anyhow::Result<Self::Common> {
+    fn shared(input: &'static str) -> anyhow::Result<Self::Shared> {
         let field = input.lines().map(str::as_bytes).collect_vec();
         let start_coords = find_start_coords(&field)?;
         find_loop(&field, start_coords)
     }
 
-    fn part_a(loop_coords: Cow<Self::Common>) -> anyhow::Result<Self::Answer> {
+    fn part_a(loop_coords: Cow<Self::Shared>) -> anyhow::Result<Self::Answer> {
         Ok(loop_coords.len() / 2)
     }
 
-    fn part_b(loop_coords: Self::Common) -> anyhow::Result<Self::Answer> {
+    fn part_b(loop_coords: Self::Shared) -> anyhow::Result<Self::Answer> {
         let area = shoelace_formula(&loop_coords)?;
         // Pick's theorem: A = i + b/2 - 1
         Ok(area + 1 - loop_coords.len() / 2)

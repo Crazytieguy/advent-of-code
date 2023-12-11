@@ -20,26 +20,26 @@ impl BasicSolution for Day {
     const INPUT: &'static str = include_str!("data.txt");
     const SAMPLE_INPUT: &'static str = include_str!("sample.txt");
 
-    type Common = Vec<Bid>;
+    type Shared = Vec<Bid>;
     type Answer = u32;
 
     const SAMPLE_ANSWER_A: Self::TestAnswer = 6440;
     const SAMPLE_ANSWER_B: Self::TestAnswer = 5905;
 
-    fn common(input: &'static str) -> anyhow::Result<Self::Common> {
+    fn shared(input: &'static str) -> anyhow::Result<Self::Shared> {
         input
             .lines()
             .map(|line| bid.parse(line).map_err(anyhow::Error::msg))
             .collect()
     }
 
-    fn part_a(bids: Cow<Self::Common>) -> anyhow::Result<Self::Answer> {
+    fn part_a(bids: Cow<Self::Shared>) -> anyhow::Result<Self::Answer> {
         Ok(sum_sortable_bids(bids.iter().map(|bid| {
             (hand_type_part_a(bid.hand), bid.hand, bid.amount)
         })))
     }
 
-    fn part_b(bids: Self::Common) -> anyhow::Result<Self::Answer> {
+    fn part_b(bids: Self::Shared) -> anyhow::Result<Self::Answer> {
         Ok(sum_sortable_bids(bids.into_iter().map(|mut bid| {
             jacks_to_jokers(&mut bid.hand);
             (hand_type_part_b(bid.hand), bid.hand, bid.amount)

@@ -22,17 +22,17 @@ impl BasicSolution for Day {
     const INPUT: &'static str = include_str!("data.txt");
     const SAMPLE_INPUT: &'static str = include_str!("sample.txt");
 
-    type Common = Records;
+    type Shared = Records;
     type Answer = u64;
 
     const SAMPLE_ANSWER_A: Self::TestAnswer = 288;
     const SAMPLE_ANSWER_B: Self::TestAnswer = 71503;
 
-    fn common(input: &'static str) -> anyhow::Result<Self::Common> {
+    fn shared(input: &'static str) -> anyhow::Result<Self::Shared> {
         records.parse(input).map_err(anyhow::Error::msg)
     }
 
-    fn part_a(records: Cow<Self::Common>) -> anyhow::Result<Self::Answer> {
+    fn part_a(records: Cow<Self::Shared>) -> anyhow::Result<Self::Answer> {
         if records.times.len() != records.distances.len() {
             bail!(
                 "times and distances have different lenghts.
@@ -51,7 +51,7 @@ distances={:?}",
             .ok_or_else(|| anyhow::anyhow!("A cast failed"))
     }
 
-    fn part_b(Records { times, distances }: Self::Common) -> anyhow::Result<Self::Answer> {
+    fn part_b(Records { times, distances }: Self::Shared) -> anyhow::Result<Self::Answer> {
         let time = join_numbers(&times)?;
         let distance = join_numbers(&distances)?;
         possible_ways_to_win(time, distance).ok_or_else(|| anyhow::anyhow!("A cast failed"))
