@@ -1,3 +1,8 @@
+import collections  # noqa: F401
+import itertools  # noqa: F401
+import math  # noqa: F401
+import re  # noqa: F401
+from dataclasses import dataclass  # noqa: F401
 from pathlib import Path
 
 SAMPLE_INPUT = """
