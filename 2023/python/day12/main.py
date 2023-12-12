@@ -1,11 +1,4 @@
-import collections  # noqa: F401
-import itertools  # noqa: F401
-import math  # noqa: F401
-import re  # noqa: F401
-from dataclasses import dataclass  # noqa: F401
 from pathlib import Path
-
-import toolz  # noqa: F401
 
 SAMPLE_INPUT = """???.### 1,1,3
 .??..??...?##. 1,1,3
@@ -18,88 +11,59 @@ SAMPLE_INPUT_B = SAMPLE_INPUT
 INPUT = Path("data.txt").read_text()
 
 
-def count_arrangements_inner(
-    cache: dict[tuple[tuple[str, ...], tuple[int, ...], bool], int],
-    groups: list[str],
-    numbers: list[int],
-    first_group_started=False,
-):
-    cache_key = (tuple(groups), tuple(numbers), first_group_started)
-    if cache_key in cache:
-        return cache[cache_key]
-    g = 0
-    for i, number in enumerate(numbers):
-        length_required = sum(numbers[i:]) + len(numbers[i:]) - 1
-        length_remaining = sum(len(group) for group in groups[g:])
-        if length_remaining < length_required:
-            cache[cache_key] = 0
-            return 0
-        group_started = first_group_started
-        first_group_started = False
-        while number > 0:
-            if g >= len(groups):
-                cache[cache_key] = 0
-                return 0
-            if groups[g] == "":
-                g += 1
-            if g >= len(groups):
-                cache[cache_key] = 0
-                return 0
-            match groups[g][0]:
-                case ".":
-                    if group_started:
-                        cache[cache_key] = 0
-                        return 0
-                    g += 1
-                case "#":
-                    number -= len(groups[g])
-                    group_started = True
-                    g += 1
-                case "?":
-                    if not group_started:
-                        ans = count_arrangements_inner(
-                            cache, groups[g:], numbers[i:], True
-                        ) + count_arrangements_inner(
-                            cache, [groups[g][1:]] + groups[g + 1 :], numbers[i:]
-                        )
-                        cache[cache_key] = ans
-                        return ans
-                    else:
-                        num_qs = len(groups[g])
-                        if number >= num_qs:
-                            number -= num_qs
-                            g += 1
-                        else:
-                            groups[g] = "?" * (num_qs - number)
-                            number = 0
+def part_a(input: str):
+    total = 0
+    for line in input.splitlines():
+        springs, group_sizes = line.split()
+        group_sizes = [int(n) for n in group_sizes.split(",")]
+        total += count_arrangements(springs, group_sizes)
+    return total
 
-        if number < 0:
-            cache[cache_key] = 0
-            return 0
-        if g < len(groups):
-            if "#" in groups[g]:
-                cache[cache_key] = 0
-                return 0
-            groups[g] = groups[g][1:]
 
-    if any("#" in group for group in groups[g:]):
-        cache[cache_key] = 0
+def part_b(input: str):
+    total = 0
+    for line in input.splitlines():
+        springs, group_sizes = line.split()
+        group_sizes = [int(n) for n in group_sizes.split(",")]
+        springs = "?".join(springs for _ in range(5))
+        group_sizes = group_sizes * 5
+        total += count_arrangements(springs, group_sizes)
+    return total
+
+
+def count_arrangements(
+    springs: str, group_sizes: list[int], cache: list[list[int | None]] | None = None
+) -> int:
+    if cache is None:
+        # e for end, to cover an edge case
+        springs += "e"
+        cache = [[None for _ in range(len(group_sizes))] for _ in range(len(springs))]
+
+    if not group_sizes:
+        if "#" in springs:
+            # too many ?s were replaced with #
+            return 0
+        # all remaining ?s are .
+        return 1
+
+    if len(springs) < sum(group_sizes) + len(group_sizes):
+        # not enough space for remaining numbers
         return 0
-    cache[cache_key] = 1
-    return 1
 
+    if (cached := cache[len(springs) - 1][len(group_sizes) - 1]) is not None:
+        return cached
 
-def count_arrangements(springs: str, numbers: list[int]):
-    groups = []
-    group = springs[0]
-    for c in springs[1:]:
-        if c == group[0]:
-            group += c
-        else:
-            groups.append(group)
-            group = c
-    groups.append(group)
-    return count_arrangements_inner({}, groups, numbers)
+    arangements = 0
+    if springs[0] in ".?":
+        arangements += count_arrangements(springs[1:], group_sizes, cache)
+
+    next_group_size = group_sizes[0]
+    if "." not in springs[:next_group_size] and springs[next_group_size] != "#":
+        skip = next_group_size + 1
+        arangements += count_arrangements(springs[skip:], group_sizes[1:], cache)
+
+    cache[len(springs) - 1][len(group_sizes) - 1] = arangements
+    return arangements
 
 
 def test_count_arrangements():
@@ -109,26 +73,6 @@ def test_count_arrangements():
     assert count_arrangements("????.#...#...", [4, 1, 1]) == 1
     assert count_arrangements("????.######..#####.", [1, 6, 5]) == 4
     assert count_arrangements("?###????????", [3, 2, 1]) == 10
-
-
-def part_a(input: str):
-    total = 0
-    for line in input.splitlines():
-        springs, numbers = line.split()
-        numbers = [int(n) for n in numbers.split(",")]
-        total += count_arrangements(springs, numbers)
-    return total
-
-
-def part_b(input: str):
-    total = 0
-    for line in input.splitlines():
-        springs, numbers = line.split()
-        springs = "?".join(springs for _ in range(5))
-        numbers = [int(n) for n in numbers.split(",")]
-        numbers = numbers * 5
-        total += count_arrangements(springs, numbers)
-    return total
 
 
 def test_part_a(capsys):
