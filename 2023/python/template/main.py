@@ -5,6 +5,8 @@ import re  # noqa: F401
 from dataclasses import dataclass  # noqa: F401
 from pathlib import Path
 
+import toolz  # noqa: F401
+
 SAMPLE_INPUT = """
 """
 SAMPLE_INPUT_B = SAMPLE_INPUT
