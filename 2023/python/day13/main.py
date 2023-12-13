@@ -20,21 +20,17 @@ SAMPLE_INPUT_B = SAMPLE_INPUT
 INPUT = Path("data.txt").read_text()
 
 
-def count_mismatches_around_each_index(note_row: str) -> list[int]:
-    return [
-        sum(
-            note_row[i + offset] != note_row[i - offset - 1]
-            for offset in range(min(len(note_row) - i, i))
-        )
-        for i in range(1, len(note_row))
-    ]
+def mismatches_at(note_row: str, i: int) -> int:
+    return sum(
+        note_row[i + offset] != note_row[i - offset - 1]
+        for offset in range(min(len(note_row) - i, i))
+    )
 
 
 def find_reflection_index(note: list[str], allowed_mismatches: int = 0) -> int | None:
-    reflection_mismatches = [count_mismatches_around_each_index(row) for row in note]
-    for i, mismatch_counts in enumerate(zip(*reflection_mismatches)):
-        if sum(mismatch_counts) == allowed_mismatches:
-            return i + 1
+    for i in range(1, len(note[0])):
+        if sum(mismatches_at(row, i) for row in note) == allowed_mismatches:
+            return i
     return None
 
 
