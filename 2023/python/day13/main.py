@@ -20,26 +20,25 @@ SAMPLE_INPUT_B = SAMPLE_INPUT
 INPUT = Path("data.txt").read_text()
 
 
-def mismatches_at(note_row: str, i: int) -> int:
-    return sum(
-        note_row[i + offset] != note_row[i - offset - 1]
-        for offset in range(min(len(note_row) - i, i))
-    )
+def str_mismatches(a: str, b: str) -> int:
+    return sum(ac != bc for ac, bc in zip(a, b))
 
 
 def find_reflection_index(note: list[str], allowed_mismatches: int = 0) -> int | None:
-    for i in range(1, len(note[0])):
-        if sum(mismatches_at(row, i) for row in note) == allowed_mismatches:
+    for i in range(1, len(note)):
+        mirrored_row_pairs = zip(note[i:], reversed(note[:i]))
+        mismatches = sum(str_mismatches(a, b) for a, b in mirrored_row_pairs)
+        if mismatches == allowed_mismatches:
             return i
     return None
 
 
 def score(note: list[str], allowed_mismatches: int = 0) -> int:
-    if mirror_column := find_reflection_index(note, allowed_mismatches):
-        return mirror_column
+    if mirror_row := find_reflection_index(note, allowed_mismatches):
+        return mirror_row * 100
     transposed = ["".join(col) for col in zip(*note)]
-    if mirror_row := find_reflection_index(transposed, allowed_mismatches):
-        return 100 * mirror_row
+    if mirror_column := find_reflection_index(transposed, allowed_mismatches):
+        return mirror_column
     raise ValueError("No reflection found:\n" + "\n".join(note))
 
 
