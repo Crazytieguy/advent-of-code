@@ -79,7 +79,7 @@ impl ConditionRecord {
         // to make the Damaged recursion case simpler
         self.spring_conditions.push(Operational);
         let mut cache =
-            vec![vec![None; self.spring_conditions.len()]; self.damaged_group_sizes.len()];
+            vec![vec![None; self.spring_conditions.len() + 1]; self.damaged_group_sizes.len() + 1];
         count_possible_arangements_inner(
             &self.spring_conditions,
             &self.damaged_group_sizes,
@@ -93,23 +93,28 @@ fn count_possible_arangements_inner(
     damaged_group_sizes: &[usize],
     cache: &mut [Vec<Option<u64>>],
 ) -> u64 {
+    if let Some(cached) = cache[damaged_group_sizes.len()][spring_conditions.len()] {
+        return cached;
+    }
+    let mut arangements = None;
     if damaged_group_sizes.is_empty() {
-        return if spring_conditions.contains(&Damaged) {
+        arangements = Some(if spring_conditions.contains(&Damaged) {
             // Too many previous unknowns were counted as damaged
             0
         } else {
             // All remaining unknowns are operational
             1
-        };
+        });
     }
     if spring_conditions.len()
         < damaged_group_sizes.iter().sum::<usize>() + damaged_group_sizes.len()
     {
         // Not enough space for remaining numbers
-        return 0;
+        arangements = Some(0);
     }
-    if let Some(cached) = cache[damaged_group_sizes.len() - 1][spring_conditions.len() - 1] {
-        return cached;
+    if let Some(arangements) = arangements {
+        cache[damaged_group_sizes.len()][spring_conditions.len()] = Some(arangements);
+        return arangements;
     }
     let mut arangements = 0;
     if spring_conditions[0] != Damaged {
@@ -128,7 +133,7 @@ fn count_possible_arangements_inner(
             cache,
         );
     }
-    cache[damaged_group_sizes.len() - 1][spring_conditions.len() - 1] = Some(arangements);
+    cache[damaged_group_sizes.len()][spring_conditions.len()] = Some(arangements);
     arangements
 }
 
