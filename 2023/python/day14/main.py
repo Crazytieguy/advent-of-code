@@ -1,11 +1,5 @@
-import collections  # noqa: F401
-import itertools  # noqa: F401
-import math  # noqa: F401
-import re  # noqa: F401
-from dataclasses import dataclass  # noqa: F401
 from pathlib import Path
-
-import toolz  # noqa: F401
+from typing import Iterable
 
 SAMPLE_INPUT = """\
 O....#....
@@ -23,77 +17,64 @@ SAMPLE_INPUT_B = SAMPLE_INPUT
 INPUT = Path("data.txt").read_text()
 
 
-def roll_start(row: str) -> str:
-    new_row = []
+def part_a(input: str):
+    grid = input.splitlines()
+    tilted_north = list(zip(*map(roll_start, zip(*grid))))
+    return count_north_beam_load(tilted_north)
+
+
+def part_b(input: str):
+    grid = input.splitlines()
+    billionth_grid = find_billionth_grid(grid)
+    return count_north_beam_load(billionth_grid)
+
+
+def find_billionth_grid(initial_grid: list[str]) -> list[str]:
+    grid_history = [initial_grid]
+    for num_cycles in range(1, 1000):
+        next_grid = spin_cycle(grid_history[-1])
+        for i, grid in enumerate(grid_history):
+            if grid == next_grid:
+                start = i
+                length = num_cycles - start
+                offset = (1_000_000_000 - start) % length
+                return grid_history[start + offset]
+        grid_history.append(next_grid)
+    raise RuntimeError("No match found")
+
+
+def spin_cycle(grid: list[str]) -> list[str]:
+    tilted_north = zip(*map(roll_start, zip(*grid)))
+    tilted_west = map(roll_start, tilted_north)
+    tilted_south = reversed(
+        list(zip(*(roll_start(reversed(row)) for row in zip(*tilted_west))))
+    )
+    tilted_east = ["".join(reversed(roll_start(reversed(row)))) for row in tilted_south]
+    return tilted_east
+
+
+def roll_start(row: Iterable[str]) -> str:
+    new_row = ""
     for i, c in enumerate(row):
         if c == "O":
-            new_row.append("O")
+            new_row += "O"
         if c == "#":
-            new_row.extend("." * (i - len(new_row)))
-            new_row.append("#")
-    new_row.extend("." * (len(row) - len(new_row)))
-    return "".join(new_row)
+            new_row += "." * (i - len(new_row))
+            new_row += "#"
+    new_row += "." * (i + 1 - len(new_row))  # type: ignore
+    return new_row
 
 
 def test_roll_start():
     assert roll_start(".O#..O.#.#") == "O.#O...#.#"
 
 
-def cycle(grid: list[str]) -> list[str]:
-    # grid starts north -> south x west -> east
-    # tilt north
-    grid = [roll_start("".join(row)) for row in zip(*grid)]
-    grid = ["".join(row) for row in zip(*grid)]
-    # tilt west
-    grid = [roll_start(row) for row in grid]
-    # tilt south
-    grid = [roll_start("".join(reversed(row))) for row in zip(*grid)]
-    grid = ["".join(row) for row in zip(*grid)][::-1]
-    # tilt east
-    grid = ["".join(reversed(roll_start("".join(reversed(row))))) for row in grid]
-    return grid
+def count_north_beam_load(grid: list[str]):
+    return sum(map(count_column_load, zip(*grid)))
 
 
-def part_a(input: str):
-    rows = input.splitlines()
-    columns = list(zip(*rows))
-    total = 0
-    for column in columns:
-        load = len(column)
-        for i, c in enumerate(column):
-            if c == "O":
-                total += load
-                load -= 1
-            if c == "#":
-                load = len(column) - i - 1
-    return total
-
-
-def find_last_grid(initial_grid: list[str]) -> list[str]:
-    grid_history = [initial_grid]
-    for cycles in range(1000):
-        new_grid = cycle(grid_history[-1])
-        for i, grid in enumerate(grid_history):
-            if grid == new_grid:
-                start = i
-                length = cycles + 1 - i
-                offset = (1_000_000_000 - start) % length
-                return grid_history[start + offset]
-        grid_history.append(new_grid)
-    raise RuntimeError("No match found")
-
-
-def part_b(input: str):
-    grid = input.splitlines()
-    last_grid = find_last_grid(grid)
-    columns = list(zip(*last_grid))
-    total = 0
-    for column in columns:
-        max_load = len(column)
-        for i, c in enumerate(column):
-            if c == "O":
-                total += max_load - i
-    return total
+def count_column_load(column: str):
+    return sum(i + 1 for i, c in enumerate(reversed(column)) if c == "O")
 
 
 def test_part_a(capsys):
