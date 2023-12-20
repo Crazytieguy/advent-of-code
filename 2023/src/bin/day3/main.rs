@@ -7,7 +7,7 @@ use winnow::{
     ascii::dec_uint,
     combinator::{iterator, preceded},
     stream::AsChar,
-    token::take_till0,
+    token::take_till,
     Located, Parser,
 };
 
@@ -85,7 +85,7 @@ impl BasicSolution for Day {
 }
 
 fn not_dec(input: &mut Located<&'static str>) -> winnow::PResult<&'static str> {
-    take_till0(AsChar::is_dec_digit).parse_next(input)
+    take_till(0.., AsChar::is_dec_digit).parse_next(input)
 }
 
 impl Number {
