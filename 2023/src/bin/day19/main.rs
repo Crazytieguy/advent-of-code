@@ -1,8 +1,4 @@
-use std::{
-    borrow::Cow,
-    collections::HashMap,
-    ops::{Index, IndexMut, RangeInclusive},
-};
+use std::{array, borrow::Cow, collections::HashMap, ops::RangeInclusive};
 
 use advent_2023::{BasicSolution, Solution};
 use anyhow::anyhow;
@@ -18,22 +14,6 @@ struct Day;
 struct WorkFlow<'a> {
     rules: Vec<Rule<'a>>,
     fallback: Destination<'a>,
-}
-
-#[derive(Debug, Clone)]
-struct PartRanges {
-    x: RangeInclusive<u16>,
-    m: RangeInclusive<u16>,
-    a: RangeInclusive<u16>,
-    s: RangeInclusive<u16>,
-}
-
-#[derive(Debug, Clone)]
-struct Part {
-    x: u16,
-    m: u16,
-    a: u16,
-    s: u16,
 }
 
 #[derive(Debug, Clone)]
@@ -62,13 +42,13 @@ enum Operator {
     LessThan,
 }
 
-#[allow(non_camel_case_types)]
-#[derive(Debug, Clone, Copy)]
-enum Category {
-    x,
-    m,
-    a,
-    s,
+type PartRanges = [RangeInclusive<u16>; 4];
+type Part = [u16; 4];
+type Category = usize;
+
+struct SplitPartRanges {
+    pass: PartRanges,
+    not_pass: PartRanges,
 }
 
 impl BasicSolution for Day {
@@ -104,12 +84,7 @@ impl BasicSolution for Day {
                 let mut workflow = "in";
                 loop {
                     match workflows[workflow].run(part) {
-                        Destination::Accept => {
-                            return part.x as usize
-                                + part.m as usize
-                                + part.a as usize
-                                + part.s as usize
-                        }
+                        Destination::Accept => return part.iter().copied().map(usize::from).sum(),
                         Destination::Reject => return 0,
                         Destination::Workflow(next) => workflow = next,
                     }
@@ -122,12 +97,7 @@ impl BasicSolution for Day {
         Ok(distinct_combinations(
             &workflows,
             Destination::Workflow("in"),
-            PartRanges {
-                x: 1..=4000,
-                m: 1..=4000,
-                a: 1..=4000,
-                s: 1..=4000,
-            },
+            array::from_fn(|_| 1..=4000),
         ))
     }
 }
@@ -137,26 +107,17 @@ fn distinct_combinations(
     destination: Destination<'static>,
     mut part_ranges: PartRanges,
 ) -> usize {
-    if part_ranges.x.is_empty()
-        || part_ranges.m.is_empty()
-        || part_ranges.a.is_empty()
-        || part_ranges.s.is_empty()
-    {
+    if part_ranges.iter().any(|r| r.is_empty()) {
         return 0;
     }
     let workflow = match destination {
-        Destination::Accept => {
-            return part_ranges.x.len()
-                * part_ranges.m.len()
-                * part_ranges.a.len()
-                * part_ranges.s.len()
-        }
+        Destination::Accept => return part_ranges.iter().map(|r| r.len()).product(),
         Destination::Reject => return 0,
         Destination::Workflow(w) => w,
     };
     let mut count = 0;
     for rule in &workflows[workflow].rules {
-        let SplitPartRanges { pass, not_pass } = part_ranges.split(rule.condition);
+        let SplitPartRanges { pass, not_pass } = split_part_ranges(&part_ranges, rule.condition);
         part_ranges = not_pass;
         count += distinct_combinations(workflows, rule.destination, pass);
     }
@@ -184,81 +145,25 @@ impl Condition {
     }
 }
 
-struct SplitPartRanges {
-    pass: PartRanges,
-    not_pass: PartRanges,
-}
-
-impl PartRanges {
-    fn split(&self, condition: Condition) -> SplitPartRanges {
-        let mut pass = self.clone();
-        let mut not_pass = self.clone();
-        match condition.operator {
-            Operator::GreaterThan => {
-                pass[condition.category] = (*pass[condition.category].start())
-                    .max(condition.value + 1)
-                    ..=*pass[condition.category].end();
-                not_pass[condition.category] = *not_pass[condition.category].start()
-                    ..=(*not_pass[condition.category].end()).min(condition.value);
-            }
-            Operator::LessThan => {
-                pass[condition.category] = *pass[condition.category].start()
-                    ..=(*pass[condition.category].end()).min(condition.value - 1);
-                not_pass[condition.category] = (*not_pass[condition.category].start())
-                    .max(condition.value)
-                    ..=*not_pass[condition.category].end();
-            }
+fn split_part_ranges(part_ranges: &PartRanges, condition: Condition) -> SplitPartRanges {
+    let mut pass = part_ranges.clone();
+    let mut not_pass = part_ranges.clone();
+    match condition.operator {
+        Operator::GreaterThan => {
+            pass[condition.category] = (*pass[condition.category].start()).max(condition.value + 1)
+                ..=*pass[condition.category].end();
+            not_pass[condition.category] = *not_pass[condition.category].start()
+                ..=(*not_pass[condition.category].end()).min(condition.value);
         }
-        SplitPartRanges { pass, not_pass }
-    }
-}
-
-impl IndexMut<Category> for PartRanges {
-    fn index_mut(&mut self, index: Category) -> &mut Self::Output {
-        match index {
-            Category::x => &mut self.x,
-            Category::m => &mut self.m,
-            Category::a => &mut self.a,
-            Category::s => &mut self.s,
+        Operator::LessThan => {
+            pass[condition.category] = *pass[condition.category].start()
+                ..=(*pass[condition.category].end()).min(condition.value - 1);
+            not_pass[condition.category] = (*not_pass[condition.category].start())
+                .max(condition.value)
+                ..=*not_pass[condition.category].end();
         }
     }
-}
-
-impl Index<Category> for PartRanges {
-    type Output = RangeInclusive<u16>;
-
-    fn index(&self, index: Category) -> &Self::Output {
-        match index {
-            Category::x => &self.x,
-            Category::m => &self.m,
-            Category::a => &self.a,
-            Category::s => &self.s,
-        }
-    }
-}
-
-impl IndexMut<Category> for Part {
-    fn index_mut(&mut self, index: Category) -> &mut Self::Output {
-        match index {
-            Category::x => &mut self.x,
-            Category::m => &mut self.m,
-            Category::a => &mut self.a,
-            Category::s => &mut self.s,
-        }
-    }
-}
-
-impl Index<Category> for Part {
-    type Output = u16;
-
-    fn index(&self, index: Category) -> &Self::Output {
-        match index {
-            Category::x => &self.x,
-            Category::m => &self.m,
-            Category::a => &self.a,
-            Category::s => &self.s,
-        }
-    }
+    SplitPartRanges { pass, not_pass }
 }
 
 fn workflow(input: &mut &'static str) -> winnow::PResult<WorkFlow<'static>> {
@@ -273,18 +178,19 @@ fn workflow(input: &mut &'static str) -> winnow::PResult<WorkFlow<'static>> {
 }
 
 fn part(input: &mut &'static str) -> winnow::PResult<Part> {
-    seq! { Part {
+    seq! { (
         _: "{x=",
-        x: dec_uint,
+        dec_uint,
         _: ",m=",
-        m: dec_uint,
+        dec_uint,
         _: ",a=",
-        a: dec_uint,
+        dec_uint,
         _: ",s=",
-        s: dec_uint,
+        dec_uint,
         _: '}',
-    }}
+    )}
     .parse_next(input)
+    .map(From::from)
 }
 
 fn rule(input: &mut &'static str) -> winnow::PResult<Rule<'static>> {
@@ -323,13 +229,7 @@ fn operator(input: &mut &'static str) -> winnow::PResult<Operator> {
 }
 
 fn category(input: &mut &'static str) -> winnow::PResult<Category> {
-    alt((
-        'x'.value(Category::x),
-        'm'.value(Category::m),
-        'a'.value(Category::a),
-        's'.value(Category::s),
-    ))
-    .parse_next(input)
+    alt(('x'.value(0), 'm'.value(1), 'a'.value(2), 's'.value(3))).parse_next(input)
 }
 
 fn main() -> anyhow::Result<()> {
