@@ -5,6 +5,7 @@ use std::{
 
 use advent_2023::Solution;
 use anyhow::{anyhow, bail};
+use itertools::Itertools;
 use num::Integer;
 use winnow::{
     ascii::alpha1,
@@ -38,7 +39,7 @@ struct Pulse {
     strength: PulseStrength,
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum PulseStrength {
     Low,
     High,
@@ -82,11 +83,7 @@ impl Solution for Day {
         let mut low_count = 0;
         let mut high_count = 0;
         for _ in 0..1000 {
-            let mut queue = VecDeque::from([Pulse {
-                source: "button",
-                destination: "broadcaster",
-                strength: PulseStrength::Low,
-            }]);
+            let mut queue = new_queue();
             while let Some(pulse) = queue.pop_front() {
                 match pulse.strength {
                     PulseStrength::Low => low_count += 1,
@@ -113,16 +110,14 @@ impl Solution for Day {
         };
         let mut to_track: HashMap<&str, Option<u64>> = memory.keys().map(|&k| (k, None)).collect();
         for presses in 1..100_000 {
-            let mut queue = VecDeque::from([Pulse {
-                source: "button",
-                destination: "broadcaster",
-                strength: PulseStrength::Low,
-            }]);
+            let mut queue = new_queue();
             while let Some(pulse) = queue.pop_front() {
                 if pulse.destination == conjunction_before_rx
                     && matches!(pulse.strength, PulseStrength::High)
                 {
-                    to_track.insert(pulse.source, Some(presses));
+                    *to_track.get_mut(pulse.source).ok_or_else(|| {
+                        anyhow!("Pulse to conjunction before rx that wasn't tracked: {pulse:?}")
+                    })? = Some(presses);
                     if let Some(lcm) = to_track
                         .values()
                         .try_fold(1, |acc, &cur| Some(acc.lcm(&cur?)))
@@ -149,6 +144,14 @@ impl Solution for Day {
     }
 }
 
+fn new_queue() -> VecDeque<Pulse> {
+    VecDeque::from([Pulse {
+        source: "button",
+        destination: "broadcaster",
+        strength: PulseStrength::Low,
+    }])
+}
+
 fn send_pulses(
     modules: &mut HashMap<&'static str, Module>,
     pulse: Pulse,
@@ -173,10 +176,7 @@ fn send_pulses(
                 anyhow!("no memory for {} in {}", pulse.source, pulse.destination)
             })? = strength;
             Some(
-                if memory
-                    .values()
-                    .all(|strength| matches!(strength, PulseStrength::High))
-                {
+                if memory.values().all_equal_value() == Ok(&PulseStrength::High) {
                     PulseStrength::Low
                 } else {
                     PulseStrength::High
