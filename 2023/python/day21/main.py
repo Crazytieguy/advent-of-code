@@ -34,6 +34,15 @@ def part_a(input: str, steps: int, start: tuple[int, int] | None = None):
     odd_reachable = set()
     frontier = even_reachable
 
+    def coords_invalid(row, col):
+        return (
+            row < 0
+            or row >= len(grid)
+            or col < 0
+            or col >= len(grid[0])
+            or grid[row][col] == "#"
+        )
+
     while steps > 0:
         steps -= 2
         to_add_even = []
@@ -42,21 +51,13 @@ def part_a(input: str, steps: int, start: tuple[int, int] | None = None):
             for dr, dc in [(0, 1), (0, -1), (1, 0), (-1, 0)]:
                 first_step_row = row + dr
                 first_step_col = col + dc
-                if first_step_row < 0 or first_step_row >= len(grid):
-                    continue
-                if first_step_col < 0 or first_step_col >= len(grid[0]):
-                    continue
-                if grid[first_step_row][first_step_col] == "#":
+                if coords_invalid(first_step_row, first_step_col):
                     continue
                 to_add_odd.append((first_step_row, first_step_col))
                 for dr2, dc2 in [(0, 1), (0, -1), (1, 0), (-1, 0)]:
                     second_step_row = first_step_row + dr2
                     second_step_col = first_step_col + dc2
-                    if second_step_row < 0 or second_step_row >= len(grid):
-                        continue
-                    if second_step_col < 0 or second_step_col >= len(grid[0]):
-                        continue
-                    if grid[second_step_row][second_step_col] == "#":
+                    if coords_invalid(second_step_row, second_step_col):
                         continue
                     to_add_even.append((second_step_row, second_step_col))
         frontier = set(to_add_even) - even_reachable
@@ -66,23 +67,23 @@ def part_a(input: str, steps: int, start: tuple[int, int] | None = None):
     return len(even_reachable) if steps == 0 else len(odd_reachable)
 
 
-def part_b(input: str, steps: int):
-    grid = input.splitlines()
-    n = steps // len(grid)
+def part_b(input: str):
+    steps = 26501365
+    n = steps // 131  # number of full grid repetitions in each direction
     count_full_odd = 1 + 2 * n + n**2
     count_full_even = n**2
     count_negative_odd_corners = n + 1
     count_positive_even_corners = n
-    full_odd = part_a(input, len(grid) * 2 + 1)
-    full_even = part_a(input, len(grid) * 2)
-    half_odd = part_a(input, steps % len(grid))
+    full_odd = part_a(input, 263)  # a large odd number
+    full_even = part_a(input, 262)  # a large even number
+    half_odd = part_a(input, 65)
     even_corners = [
-        part_a(input, steps % len(grid) - 1, start)
+        part_a(input, 64, start)
         for start in [
             (0, 0),
-            (0, len(grid) - 1),
-            (len(grid) - 1, 0),
-            (len(grid) - 1, len(grid) - 1),
+            (0, 130),
+            (130, 0),
+            (130, 130),
         ]
     ]
     return (
@@ -101,4 +102,4 @@ def test_part_a(capsys):
 
 def test_part_b(capsys):
     with capsys.disabled():
-        print(f"Part B: {part_b(INPUT, 26501365)}")
+        print(f"Part B: {part_b(INPUT)}")
