@@ -1,11 +1,8 @@
-use std::{
-    borrow::Cow,
-    cmp::Reverse,
-    collections::{BinaryHeap, HashSet},
-};
+use std::{borrow::Cow, cmp::Reverse, collections::BinaryHeap};
 
 use advent_2023::{BasicSolution, Solution};
 use anyhow::anyhow;
+use fxhash::FxHashSet;
 
 struct Day;
 
@@ -19,13 +16,8 @@ struct State {
 
 impl BasicSolution for Day {
     const INPUT: &'static str = include_str!("data.txt");
-    const SAMPLE_INPUT: &'static str = include_str!("sample.txt");
-    const SAMPLE_INPUT_B: &'static str = "111111111111
-999999999991
-999999999991
-999999999991
-999999999991
-";
+    const SAMPLE_INPUT: &'static str = include_str!("sample_a.txt");
+    const SAMPLE_INPUT_B: &'static str = include_str!("sample_b.txt");
 
     type Shared = Vec<&'static [u8]>;
     type Answer = u16;
@@ -81,7 +73,7 @@ fn djkstra(
     target: impl Fn(&State) -> bool,
 ) -> Result<u16, anyhow::Error> {
     let mut queue = BinaryHeap::from([(Reverse(0), initial_state)]);
-    let mut seen = HashSet::new();
+    let mut seen = FxHashSet::default();
     while let Some((Reverse(total_heat_loss), state)) = queue.pop() {
         if target(&state) {
             return Ok(total_heat_loss);
