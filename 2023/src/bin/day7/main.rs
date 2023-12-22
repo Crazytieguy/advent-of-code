@@ -3,7 +3,7 @@ use std::{borrow::Cow, cmp::Reverse};
 
 use advent_2023::{BasicSolution, Solution};
 use itertools::Itertools;
-use winnow::{ascii::dec_uint, token::any, Parser};
+use winnow::{ascii::dec_uint, seq, token::any, Parser};
 
 struct Day;
 
@@ -87,12 +87,12 @@ fn jacks_to_jokers(hand: &mut [u8; 5]) {
 }
 
 fn bid(input: &mut &'static str) -> winnow::PResult<Bid> {
-    ((card, card, card, card, card), ' ', dec_uint)
-        .map(|(hand, _, amount)| Bid {
-            hand: hand.into(),
-            amount,
-        })
-        .parse_next(input)
+    seq! {Bid {
+        hand: (card, card, card, card, card).map(From::from),
+        _: ' ',
+        amount: dec_uint,
+    }}
+    .parse_next(input)
 }
 
 fn card(input: &mut &'static str) -> winnow::PResult<u8> {

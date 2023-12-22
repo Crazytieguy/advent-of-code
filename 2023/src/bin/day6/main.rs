@@ -7,7 +7,7 @@ use anyhow::bail;
 use winnow::{
     ascii::{dec_uint, space1},
     combinator::{opt, separated},
-    Parser,
+    seq, Parser,
 };
 
 struct Day;
@@ -86,15 +86,14 @@ fn join_numbers(distances: &[u64]) -> Result<u64, std::num::ParseIntError> {
 }
 
 fn records(input: &mut &'static str) -> winnow::PResult<Records> {
-    (
-        ("Time:", space1),
-        numbers,
-        ("\nDistance:", space1),
-        numbers,
-        opt("\n"),
-    )
-        .map(|(_, times, _, distances, _)| Records { times, distances })
-        .parse_next(input)
+    seq! {Records{
+        _: ("Time:", space1),
+        times: numbers,
+        _: ("\nDistance:", space1),
+        distances: numbers,
+        _: opt("\n"),
+    }}
+    .parse_next(input)
 }
 
 fn numbers(input: &mut &'static str) -> winnow::PResult<Vec<u64>> {

@@ -6,7 +6,7 @@ use itertools::Itertools;
 use winnow::{
     ascii::{dec_uint, not_line_ending},
     combinator::{opt, preceded, separated},
-    Parser,
+    seq, Parser,
 };
 
 struct Day;
@@ -123,12 +123,13 @@ impl Mapping {
 }
 
 fn almanac(input: &mut &'static str) -> winnow::PResult<Almanac> {
-    (seeds, "\n\n", separated(7..=7, mappings, "\n\n"), opt("\n"))
-        .map(|(seeds, _, all_mappings, _)| Almanac {
-            seeds,
-            all_mappings,
-        })
-        .parse_next(input)
+    seq! {Almanac {
+        seeds: seeds,
+        _: "\n\n",
+        all_mappings: separated(7..=7, mappings, "\n\n"),
+        _: opt("\n"),
+    }}
+    .parse_next(input)
 }
 
 fn seeds(input: &mut &str) -> winnow::PResult<Vec<u64>> {
@@ -140,15 +141,12 @@ fn mappings(input: &mut &str) -> winnow::PResult<Vec<Mapping>> {
 }
 
 fn mapping(input: &mut &str) -> winnow::PResult<Mapping> {
-    (u64, ' ', u64, ' ', u64)
-        .map(|(destination_start, _, source_start, _, len)| {
-            let source = source_start..source_start + len;
-            Mapping {
-                source,
-                destination_start,
-            }
-        })
-        .parse_next(input)
+    seq! {Mapping {
+        destination_start: u64,
+        _: ' ',
+        source: (u64, ' ', u64).map(|(start, _, len)| start..start + len),
+    }}
+    .parse_next(input)
 }
 
 fn u64(input: &mut &str) -> winnow::PResult<u64> {

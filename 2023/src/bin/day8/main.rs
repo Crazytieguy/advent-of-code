@@ -7,8 +7,8 @@ use itertools::process_results;
 use num::Integer;
 use winnow::{
     ascii::alphanumeric1,
-    combinator::{alt, delimited, opt, repeat, separated, separated_pair},
-    Parser,
+    combinator::{alt, opt, repeat, separated},
+    seq, Parser,
 };
 
 struct Day;
@@ -79,12 +79,13 @@ impl<'a> Maps<'a> {
 }
 
 fn maps<'a>(input: &mut &'a str) -> winnow::PResult<Maps<'a>> {
-    (instructions, "\n\n", network, opt('\n'))
-        .map(|(instructions, _, network, _)| Maps {
-            network,
-            instructions,
-        })
-        .parse_next(input)
+    seq! {Maps {
+        instructions: instructions,
+        _: "\n\n",
+        network: network,
+        _: opt('\n'),
+    }}
+    .parse_next(input)
 }
 
 fn network<'a>(input: &mut &'a str) -> winnow::PResult<HashMap<&'a str, (&'a str, &'a str)>> {
@@ -92,11 +93,11 @@ fn network<'a>(input: &mut &'a str) -> winnow::PResult<HashMap<&'a str, (&'a str
 }
 
 fn node_targets<'a>(input: &mut &'a str) -> winnow::PResult<(&'a str, (&'a str, &'a str))> {
-    separated_pair(
+    seq! {(
         alphanumeric1,
-        " = ",
-        delimited('(', separated_pair(alphanumeric1, ", ", alphanumeric1), ')'),
-    )
+        _: " = ",
+        seq!{(_: '(', alphanumeric1, _: ", ", alphanumeric1, _: ')')},
+    )}
     .parse_next(input)
 }
 

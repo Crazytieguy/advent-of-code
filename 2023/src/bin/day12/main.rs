@@ -3,8 +3,8 @@ use std::borrow::Cow;
 use advent_2023::{BasicSolution, Solution};
 use winnow::{
     ascii::dec_uint,
-    combinator::{alt, repeat, separated, separated_pair},
-    Parser,
+    combinator::{alt, repeat, separated},
+    seq, Parser,
 };
 
 struct Day;
@@ -138,8 +138,8 @@ fn count_possible_arangements_inner(
 }
 
 fn condition_record(input: &mut &'static str) -> winnow::PResult<ConditionRecord> {
-    separated_pair(
-        repeat(
+    seq! {ConditionRecord {
+        spring_conditions: repeat(
             1..,
             alt((
                 '.'.value(Operational),
@@ -147,13 +147,9 @@ fn condition_record(input: &mut &'static str) -> winnow::PResult<ConditionRecord
                 '?'.value(Unknown),
             )),
         ),
-        ' ',
-        separated(1.., dec_uint::<_, u16, _>.map(usize::from), ','),
-    )
-    .map(|(spring_conditions, damaged_group_sizes)| ConditionRecord {
-        spring_conditions,
-        damaged_group_sizes,
-    })
+        _: ' ',
+        damaged_group_sizes: separated(1.., dec_uint::<_, u16, _>.map(usize::from), ','),
+    }}
     .parse_next(input)
 }
 

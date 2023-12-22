@@ -4,8 +4,8 @@ use std::borrow::Cow;
 use advent_2023::{BasicSolution, Solution};
 use winnow::{
     ascii::dec_uint,
-    combinator::{alt, fold_repeat, opt, preceded, separated_pair},
-    Parser,
+    combinator::{alt, fold_repeat, opt, preceded},
+    seq, Parser,
 };
 
 struct Day;
@@ -60,9 +60,13 @@ impl BasicSolution for Day {
 }
 
 fn game(input: &mut &str) -> winnow::PResult<Game> {
-    ("Game ", dec_uint, ": ", revealed)
-        .map(|(_, id, _, revealed)| Game { id, revealed })
-        .parse_next(input)
+    seq! {Game{
+        _: "Game ",
+        id: dec_uint,
+        _: ": ",
+        revealed: revealed,
+    }}
+    .parse_next(input)
 }
 
 fn revealed(input: &mut &str) -> winnow::PResult<[u8; 3]> {
@@ -79,11 +83,11 @@ fn revealed(input: &mut &str) -> winnow::PResult<[u8; 3]> {
 }
 
 fn color_count(input: &mut &str) -> winnow::PResult<(u8, usize)> {
-    separated_pair(
+    seq! {(
         dec_uint,
-        ' ',
+        _: ' ',
         alt(("red".value(RED), "green".value(GREEN), "blue".value(BLUE))),
-    )
+    )}
     .parse_next(input)
 }
 
