@@ -2,7 +2,7 @@ use std::borrow::Cow;
 
 use advent_2023::{BasicSolution, Solution};
 use arrayvec::ArrayVec;
-use fxhash::FxHashMap;
+use fxhash::{FxHashMap, FxHashSet};
 use itertools::Itertools;
 
 struct Day;
@@ -41,9 +41,9 @@ fn solve<const PART_A: bool>(grid: &[&[u8]]) -> Result<u16, anyhow::Error> {
     let (final_graph, start_node, target) = finalize_graph(graph, target_coords);
     let mut best = 0;
     let mut seen = vec![false; final_graph.len()];
-    let total_bound = compute_total_bound::<PART_A>(&final_graph);
+    let total_bound = compute_total_bound(&final_graph);
     let traveled = 0;
-    branch_and_bound::<PART_A>(
+    branch_and_bound(
         &final_graph,
         target,
         &mut best,
@@ -55,7 +55,7 @@ fn solve<const PART_A: bool>(grid: &[&[u8]]) -> Result<u16, anyhow::Error> {
     Ok(best)
 }
 
-fn branch_and_bound<const PART_A: bool>(
+fn branch_and_bound(
     graph: &FinalGraph,
     target: u8,
     best: &mut u16,
@@ -64,16 +64,6 @@ fn branch_and_bound<const PART_A: bool>(
     traveled: u16,
     node: u8,
 ) {
-    if seen[node as usize] {
-        return;
-    }
-    if node == target {
-        *best = (*best).max(traveled);
-        return;
-    }
-    if bound <= *best {
-        return;
-    }
     seen[node as usize] = true;
     // After we chose a path, we can no longer benefit
     // from the length of the edges we didn't choose.
@@ -84,30 +74,35 @@ fn branch_and_bound<const PART_A: bool>(
             .map(|(_, length)| length)
             .sum::<u16>();
     for &(next_node, length) in &graph[node as usize] {
-        branch_and_bound::<PART_A>(
-            graph,
-            target,
-            best,
-            seen,
-            base_bound + length,
-            traveled + length,
-            next_node,
-        );
+        if seen[next_node as usize] {
+            continue;
+        }
+        let traveled = traveled + length;
+        if next_node == target {
+            *best = (*best).max(traveled);
+            continue;
+        }
+        let bound = base_bound + length;
+        if bound <= *best {
+            continue;
+        }
+        branch_and_bound(graph, target, best, seen, bound, traveled, next_node);
     }
     seen[node as usize] = false;
 }
 
-fn compute_total_bound<const PART_A: bool>(graph: &FinalGraph) -> u16 {
-    graph
-        .iter()
-        .enumerate()
-        .flat_map(|(a, edges)| {
-            edges
-                .iter()
-                .filter(move |&&(b, _)| (PART_A || a < b as usize))
-                .map(|(_, length)| length)
-        })
-        .sum()
+fn compute_total_bound(graph: &FinalGraph) -> u16 {
+    let mut counted = FxHashSet::default();
+    let mut total_bound = 0;
+    for (a, edges) in graph.iter().enumerate() {
+        let a = a as u8;
+        for (b, length) in edges {
+            if counted.insert((a.min(*b), a.max(*b))) {
+                total_bound += length;
+            }
+        }
+    }
+    total_bound
 }
 
 fn finalize_graph(graph: BuildGraph, target: Coords) -> (FinalGraph, u8, u8) {
