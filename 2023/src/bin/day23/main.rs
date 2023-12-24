@@ -2,14 +2,14 @@ use std::borrow::Cow;
 
 use advent_2023::{BasicSolution, Solution};
 use arrayvec::ArrayVec;
-use fxhash::{FxHashMap, FxHashSet};
+use fxhash::FxHashMap;
 use itertools::Itertools;
 
 struct Day;
 
 type Coords = (u8, u8);
 type BuildGraph = FxHashMap<Coords, FxHashMap<Coords, u16>>;
-type FinalGraph = FxHashMap<Coords, ArrayVec<(Coords, u16), 4>>;
+type FinalGraph = Vec<ArrayVec<(u8, u16), 4>>;
 
 impl BasicSolution for Day {
     const INPUT: &'static str = include_str!("data.txt");
@@ -37,36 +37,34 @@ impl BasicSolution for Day {
 fn solve<const PART_A: bool>(grid: &[&[u8]]) -> Result<u16, anyhow::Error> {
     let mut graph = BuildGraph::default();
     build_graph::<PART_A>(grid, &mut graph, (0, 1), (1, 1));
-    let final_graph = graph
-        .into_iter()
-        .map(|(a, edges)| (a, edges.into_iter().collect()))
-        .collect();
-    let target = (grid.len() as u8 - 1, grid[0].len() as u8 - 2);
+    let target_coords = (grid.len() as u8 - 1, grid[0].len() as u8 - 2);
+    let (final_graph, start_node, target) = finalize_graph(graph, target_coords);
     let mut best = 0;
-    let mut seen = FxHashSet::default();
+    let mut seen = vec![false; final_graph.len()];
     let total_bound = compute_total_bound::<PART_A>(&final_graph);
+    let traveled = 0;
     branch_and_bound::<PART_A>(
         &final_graph,
         target,
         &mut best,
         &mut seen,
         total_bound,
-        0,
-        (0, 1),
+        traveled,
+        start_node,
     );
     Ok(best)
 }
 
 fn branch_and_bound<const PART_A: bool>(
     graph: &FinalGraph,
-    target: Coords,
+    target: u8,
     best: &mut u16,
-    seen: &mut FxHashSet<Coords>,
+    seen: &mut [bool],
     bound: u16,
     traveled: u16,
-    node: Coords,
+    node: u8,
 ) {
-    if seen.contains(&node) {
+    if seen[node as usize] {
         return;
     }
     if node == target {
@@ -76,16 +74,16 @@ fn branch_and_bound<const PART_A: bool>(
     if bound <= *best {
         return;
     }
-    seen.insert(node);
+    seen[node as usize] = true;
     // After we chose a path, we can no longer benefit
     // from the length of the edges we didn't choose.
     let base_bound = bound
-        - graph[&node]
+        - graph[node as usize]
             .iter()
-            .filter(|(to, _)| !seen.contains(to))
+            .filter(|&&(to, _)| !seen[to as usize])
             .map(|(_, length)| length)
             .sum::<u16>();
-    for &(next_node, length) in &graph[&node] {
+    for &(next_node, length) in &graph[node as usize] {
         branch_and_bound::<PART_A>(
             graph,
             target,
@@ -96,19 +94,39 @@ fn branch_and_bound<const PART_A: bool>(
             next_node,
         );
     }
-    seen.remove(&node);
+    seen[node as usize] = false;
 }
 
 fn compute_total_bound<const PART_A: bool>(graph: &FinalGraph) -> u16 {
     graph
         .iter()
+        .enumerate()
         .flat_map(|(a, edges)| {
             edges
                 .iter()
-                .filter(move |(b, _)| (PART_A || a < b))
+                .filter(move |&&(b, _)| (PART_A || a < b as usize))
                 .map(|(_, length)| length)
         })
         .sum()
+}
+
+fn finalize_graph(graph: BuildGraph, target: Coords) -> (FinalGraph, u8, u8) {
+    let mut coords_to_node = graph
+        .keys()
+        .enumerate()
+        .map(|(node, &coords)| (coords, node as u8))
+        .collect::<FxHashMap<Coords, u8>>();
+    let start_node = coords_to_node[&(0, 1)];
+    let target_node = *coords_to_node.entry(target).or_insert(graph.len() as u8);
+    let mut final_graph = vec![ArrayVec::new(); coords_to_node.len()];
+    for (a_coords, edges) in graph {
+        let a_node = coords_to_node[&a_coords];
+        for (b_coords, length) in edges {
+            let b_node = coords_to_node[&b_coords];
+            final_graph[a_node as usize].push((b_node, length));
+        }
+    }
+    (final_graph, start_node, target_node)
 }
 
 fn build_graph<const PART_A: bool>(
