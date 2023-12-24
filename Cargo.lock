@@ -30,6 +30,7 @@ name = "advent-2023"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "arrayvec",
  "fxhash",
  "itertools 0.12.0",
  "num",

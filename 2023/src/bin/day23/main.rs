@@ -1,13 +1,15 @@
 use std::borrow::Cow;
 
 use advent_2023::{BasicSolution, Solution};
+use arrayvec::ArrayVec;
 use fxhash::{FxHashMap, FxHashSet};
 use itertools::Itertools;
 
 struct Day;
 
 type Coords = (u8, u8);
-type Graph = FxHashMap<Coords, FxHashMap<Coords, u16>>;
+type BuildGraph = FxHashMap<Coords, FxHashMap<Coords, u16>>;
+type FinalGraph = FxHashMap<Coords, ArrayVec<(Coords, u16), 4>>;
 
 impl BasicSolution for Day {
     const INPUT: &'static str = include_str!("data.txt");
@@ -33,19 +35,34 @@ impl BasicSolution for Day {
 }
 
 fn solve<const PART_A: bool>(grid: &[&[u8]]) -> Result<u16, anyhow::Error> {
-    let mut graph = Graph::default();
+    let mut graph = BuildGraph::default();
     build_graph::<PART_A>(grid, &mut graph, (0, 1), (1, 1));
+    let final_graph = graph
+        .into_iter()
+        .map(|(a, edges)| (a, edges.into_iter().collect()))
+        .collect();
     let target = (grid.len() as u8 - 1, grid[0].len() as u8 - 2);
     let mut best = 0;
-    branch_and_bound::<PART_A>(&graph, target, &mut best, FxHashSet::default(), 0, (0, 1));
+    let mut seen = FxHashSet::default();
+    let total_bound = compute_total_bound::<PART_A>(&final_graph);
+    branch_and_bound::<PART_A>(
+        &final_graph,
+        target,
+        &mut best,
+        &mut seen,
+        total_bound,
+        0,
+        (0, 1),
+    );
     Ok(best)
 }
 
 fn branch_and_bound<const PART_A: bool>(
-    graph: &Graph,
+    graph: &FinalGraph,
     target: Coords,
     best: &mut u16,
-    mut seen: FxHashSet<Coords>,
+    seen: &mut FxHashSet<Coords>,
+    bound: u16,
     traveled: u16,
     node: Coords,
 ) {
@@ -56,31 +73,39 @@ fn branch_and_bound<const PART_A: bool>(
         *best = (*best).max(traveled);
         return;
     }
-    let bound = compute_bound::<PART_A>(graph, &seen);
-    if traveled + bound <= *best {
+    if bound <= *best {
         return;
     }
     seen.insert(node);
-    for (next_node, length) in &graph[&node] {
+    // After we chose a path, we can no longer benefit
+    // from the length of the edges we didn't choose.
+    let base_bound = bound
+        - graph[&node]
+            .iter()
+            .filter(|(to, _)| !seen.contains(to))
+            .map(|(_, length)| length)
+            .sum::<u16>();
+    for &(next_node, length) in &graph[&node] {
         branch_and_bound::<PART_A>(
             graph,
             target,
             best,
-            seen.clone(),
+            seen,
+            base_bound + length,
             traveled + length,
-            *next_node,
+            next_node,
         );
     }
+    seen.remove(&node);
 }
 
-fn compute_bound<const PART_A: bool>(graph: &Graph, seen: &FxHashSet<Coords>) -> u16 {
+fn compute_total_bound<const PART_A: bool>(graph: &FinalGraph) -> u16 {
     graph
         .iter()
-        .filter(|(a, _)| !seen.contains(a))
         .flat_map(|(a, edges)| {
             edges
                 .iter()
-                .filter(move |(b, _)| (PART_A || a < b) && !seen.contains(b))
+                .filter(move |(b, _)| (PART_A || a < b))
                 .map(|(_, length)| length)
         })
         .sum()
@@ -88,7 +113,7 @@ fn compute_bound<const PART_A: bool>(graph: &Graph, seen: &FxHashSet<Coords>) ->
 
 fn build_graph<const PART_A: bool>(
     grid: &[&[u8]],
-    graph: &mut Graph,
+    graph: &mut BuildGraph,
     last_node: Coords,
     mut coords: Coords,
 ) {
@@ -142,7 +167,7 @@ fn build_graph<const PART_A: bool>(
     }
 }
 
-fn insert_edge(graph: &mut Graph, a: Coords, b: Coords, length: u16) {
+fn insert_edge(graph: &mut BuildGraph, a: Coords, b: Coords, length: u16) {
     graph
         .entry(a)
         .or_default()
