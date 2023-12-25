@@ -1,13 +1,7 @@
 import collections  # noqa: F401
 import copy
-import itertools  # noqa: F401
-import math  # noqa: F401
 import random
-import re  # noqa: F401
-from dataclasses import dataclass  # noqa: F401
 from pathlib import Path
-
-import toolz  # noqa: F401
 
 SAMPLE_INPUT = """jqt: rhn xhk nvd
 rsh: frs pzl lsr
@@ -31,15 +25,15 @@ def connected_components(graph: dict[str, set[str]]) -> set[int]:
     components = set()
     for node in graph:
         if node not in seen:
-            component = set()
+            component_size = 0
             stack = [node]
             while stack:
                 node = stack.pop()
-                if node not in component:
-                    component.add(node)
+                if node not in seen:
+                    component_size += 1
                     seen.add(node)
                     stack.extend(graph[node])
-            components.add(len(component))
+            components.add(component_size)
     return components
 
 
@@ -52,6 +46,10 @@ def part_a(input: str):
             graph[destination].add(source)
     graph = dict(graph)
     while True:
+        #  Remove a random edge for each node,
+        #  After enough tried we'll probably hit the 3 right edges.
+        #  The rest of the graph is connected enough
+        #  that we don't need to worry about the missing edges.
         seen = set()
         test_graph = copy.deepcopy(graph)
         for node, adjacent in graph.items():
