@@ -1,13 +1,9 @@
-import collections  # noqa: F401
 import itertools  # noqa: F401
-import math  # noqa: F401
-import re  # noqa: F401
 from dataclasses import dataclass  # noqa: F401
 from pathlib import Path
 
 import pytest
 import sympy
-import toolz  # noqa: F401
 
 SAMPLE_INPUT = """19, 13, 30 @ -2,  1, -2
 18, 19, 22 @ -1, -1, -2
@@ -53,15 +49,15 @@ def find_stone_position(hailstones: list[HailStone]) -> tuple[int, int, int]:
     t1, t2, t3 = sympy.symbols("t1 t2 t3", real=True)
     (solution,) = sympy.solve(
         [
-            sympy.Eq(x + t1 * vx, x1 + t1 * v1x),
-            sympy.Eq(y + t1 * vy, y1 + t1 * v1y),
-            sympy.Eq(z + t1 * vz, z1 + t1 * v1z),
-            sympy.Eq(x + t2 * vx, x2 + t2 * v2x),
-            sympy.Eq(y + t2 * vy, y2 + t2 * v2y),
-            sympy.Eq(z + t2 * vz, z2 + t2 * v2z),
-            sympy.Eq(x + t3 * vx, x3 + t3 * v3x),
-            sympy.Eq(y + t3 * vy, y3 + t3 * v3y),
-            sympy.Eq(z + t3 * vz, z3 + t3 * v3z),
+            x + t1 * vx - x1 + t1 * v1x,
+            y + t1 * vy - y1 + t1 * v1y,
+            z + t1 * vz - z1 + t1 * v1z,
+            x + t2 * vx - x2 + t2 * v2x,
+            y + t2 * vy - y2 + t2 * v2y,
+            z + t2 * vz - z2 + t2 * v2z,
+            x + t3 * vx - x3 + t3 * v3x,
+            y + t3 * vy - y3 + t3 * v3y,
+            z + t3 * vz - z3 + t3 * v3z,
         ],
     )
     return solution[x], solution[y], solution[z]
@@ -79,8 +75,8 @@ def test_intersection_xy():
 
 def parse_hailstone(line: str) -> HailStone:
     positions, velocities = line.split(" @ ")
-    positions = tuple((int(p.strip()) for p in positions.split(",")))
-    velocities = tuple((int(v.strip()) for v in velocities.split(",")))
+    positions = tuple(map(int, positions.split(",")))
+    velocities = tuple(map(int, velocities.split(",")))
     return HailStone(positions, velocities)  # type: ignore
 
 
