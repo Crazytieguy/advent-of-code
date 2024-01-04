@@ -47,7 +47,7 @@ def part_a(input: str):
     graph = dict(graph)
     while True:
         #  Remove a random edge for each node,
-        #  After enough tried we'll probably hit the 3 right edges.
+        #  After enough tries we'll probably hit the correct 3 edges.
         #  The rest of the graph is connected enough
         #  that we don't need to worry about the missing edges.
         seen = set()
