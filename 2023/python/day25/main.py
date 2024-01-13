@@ -24,16 +24,18 @@ def connected_components(graph: dict[str, set[str]]) -> set[int]:
     seen = set()
     components = set()
     for node in graph:
-        if node not in seen:
-            component_size = 0
-            stack = [node]
-            while stack:
-                node = stack.pop()
-                if node not in seen:
-                    component_size += 1
-                    seen.add(node)
-                    stack.extend(graph[node])
-            components.add(component_size)
+        if node in seen:
+            continue
+        component_size = 0
+        stack = [node]
+        while stack:
+            node = stack.pop()
+            if node in seen:
+                continue
+            component_size += 1
+            seen.add(node)
+            stack.extend(graph[node])
+        components.add(component_size)
     return components
 
 
