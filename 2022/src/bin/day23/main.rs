@@ -42,11 +42,11 @@ impl BasicSolution for Day {
 struct BitGrid([u8x32; 160]);
 
 fn shift_west(&row: &u8x32) -> u8x32 {
-    (row >> u8x32::splat(1)) | (row.rotate_lanes_left::<1>() << u8x32::splat(7))
+    (row >> u8x32::splat(1)) | (row.rotate_elements_left::<1>() << u8x32::splat(7))
 }
 
 fn shift_east(&row: &u8x32) -> u8x32 {
-    (row << u8x32::splat(1)) | (row.rotate_lanes_right::<1>() >> u8x32::splat(7))
+    (row << u8x32::splat(1)) | (row.rotate_elements_right::<1>() >> u8x32::splat(7))
 }
 
 fn propose(
