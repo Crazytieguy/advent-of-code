@@ -2,7 +2,7 @@
 
 This is one of my favorite settings for honing my programming skills. In addition to enjoying the challenge and never looking up the answer, each year I had a specific focus:
 * In 2021 I focused on learning Rust.
-* In 2022 I focused on optimizing my solutions until they are faster than any other solution I know of (see [reddit](https://www.reddit.com/r/adventofcode/).
+* In 2022 I focused on optimizing my solutions until they are faster than any other solution I know of (see [reddit](https://www.reddit.com/r/adventofcode/)).
 * In 2023 I focused on solving the problems quickly and having very good error handling.
 
 Some solutions I'm especially proud of:
