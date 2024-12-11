@@ -20,7 +20,7 @@ impl BasicSolution for Day {
     const SAMPLE_ANSWER_A: Self::TestAnswer = 10605;
     const SAMPLE_ANSWER_B: Self::TestAnswer = 2713310158;
 
-    fn parse(data: &'static str) -> IResult<Self::Parsed> {
+    fn parse(data: &'static str) -> IResult<'static, Self::Parsed> {
         separated_list1(line_ending, monkey)(data)
     }
 

@@ -11,7 +11,7 @@ impl BasicSolution for Day {
     const SAMPLE_ANSWER_A: Self::TestAnswer = 31;
     const SAMPLE_ANSWER_B: Self::TestAnswer = 29;
 
-    fn parse(data: &'static str) -> IResult<Self::Parsed> {
+    fn parse(data: &'static str) -> IResult<'static, Self::Parsed> {
         let mut height_map = data
             .lines()
             .map(|row| row.as_bytes().to_vec())

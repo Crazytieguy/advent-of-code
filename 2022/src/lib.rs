@@ -19,7 +19,7 @@ pub trait BasicSolution: SolutionData {
     const SAMPLE_ANSWER_A: Self::TestAnswer;
     const SAMPLE_ANSWER_B: Self::TestAnswer;
 
-    fn parse(data: &'static str) -> IResult<Self::Parsed>;
+    fn parse(data: &'static str) -> IResult<'static, Self::Parsed>;
     fn a(data: Self::Parsed) -> Self::Answer;
     fn b(data: Self::Parsed) -> Self::Answer;
 }
@@ -34,7 +34,7 @@ impl<T: BasicSolution> Solution for T {
     const SAMPLE_ANSWER_B: <Self as BasicSolution>::TestAnswer =
         <Self as BasicSolution>::SAMPLE_ANSWER_B;
 
-    fn parse(data: &'static str) -> IResult<Self::Parsed> {
+    fn parse(data: &'static str) -> IResult<'static, Self::Parsed> {
         <Self as BasicSolution>::parse(data)
     }
 
@@ -46,7 +46,7 @@ impl<T: BasicSolution> Solution for T {
         <Self as BasicSolution>::b(data)
     }
 
-    fn parse_test(data: &'static str) -> IResult<Self::ParsedTest> {
+    fn parse_test(data: &'static str) -> IResult<'static, Self::ParsedTest> {
         Self::parse(data)
     }
     fn a_test(data: Self::ParsedTest) -> Self::Answer {
@@ -65,18 +65,20 @@ pub trait Solution: SolutionData {
     const SAMPLE_ANSWER_A: Self::TestAnswer;
     const SAMPLE_ANSWER_B: Self::TestAnswer;
 
-    fn parse(data: &'static str) -> IResult<Self::Parsed>;
+    fn parse(data: &'static str) -> IResult<'static, Self::Parsed>;
     fn a(data: Self::Parsed) -> Self::Answer;
     fn b(data: Self::Parsed) -> Self::Answer;
-    fn parse_test(data: &'static str) -> IResult<Self::ParsedTest>;
+    fn parse_test(data: &'static str) -> IResult<'static, Self::ParsedTest>;
     fn a_test(data: Self::ParsedTest) -> Self::Answer;
     fn b_test(data: Self::ParsedTest) -> Self::Answer;
 
-    fn final_parse(data: &'static str) -> Result<Self::Parsed, nom::error::Error<&str>> {
+    fn final_parse(data: &'static str) -> Result<Self::Parsed, nom::error::Error<&'static str>> {
         final_parser(Self::parse.terminated(line_ending.opt()))(data)
     }
 
-    fn final_parse_test(data: &'static str) -> Result<Self::ParsedTest, nom::error::Error<&str>> {
+    fn final_parse_test(
+        data: &'static str,
+    ) -> Result<Self::ParsedTest, nom::error::Error<&'static str>> {
         final_parser(Self::parse_test.terminated(line_ending.opt()))(data)
     }
 

@@ -17,7 +17,7 @@ impl BasicSolution for Day {
     const SAMPLE_ANSWER_A: Self::TestAnswer = 33;
     const SAMPLE_ANSWER_B: Self::TestAnswer = 56 * 62;
 
-    fn parse(data: &'static str) -> IResult<Self::Parsed> {
+    fn parse(data: &'static str) -> IResult<'static, Self::Parsed> {
         separated_list1(line_ending, blueprint)(data)
     }
 

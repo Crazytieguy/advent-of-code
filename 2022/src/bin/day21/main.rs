@@ -19,7 +19,7 @@ impl BasicSolution for Day {
     const SAMPLE_ANSWER_A: Self::TestAnswer = 152;
     const SAMPLE_ANSWER_B: Self::TestAnswer = 301;
 
-    fn parse(data: &'static str) -> IResult<Self::Parsed> {
+    fn parse(data: &'static str) -> IResult<'static, Self::Parsed> {
         separated_list1(line_ending, monkey)
             .map(|monkeys| monkeys.into_iter().collect())
             .parse(data)

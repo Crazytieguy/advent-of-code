@@ -9,7 +9,7 @@ impl BasicSolution for Day {
     const SAMPLE_ANSWER_A: Self::TestAnswer = 7;
     const SAMPLE_ANSWER_B: Self::TestAnswer = 19;
 
-    fn parse(data: &'static str) -> IResult<Self::Parsed> {
+    fn parse(data: &'static str) -> IResult<'static, Self::Parsed> {
         Ok(("", data))
     }
 

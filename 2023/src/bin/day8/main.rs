@@ -58,7 +58,7 @@ impl BasicSolution for Day {
     }
 }
 
-impl<'a> Maps<'a> {
+impl Maps<'_> {
     fn count_steps(&self, start: &str, target: impl Fn(&str) -> bool) -> anyhow::Result<usize> {
         let mut current = start;
         self.instructions

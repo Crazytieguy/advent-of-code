@@ -18,7 +18,7 @@ impl Solution for Day {
     const SAMPLE_ANSWER_A: Self::TestAnswer = 64;
     const SAMPLE_ANSWER_B: Self::TestAnswer = 58;
 
-    fn parse(data: &'static str) -> IResult<Self::Parsed> {
+    fn parse(data: &'static str) -> IResult<'static, Self::Parsed> {
         parse(data)
     }
 
@@ -30,7 +30,7 @@ impl Solution for Day {
         part_b(data)
     }
 
-    fn parse_test(data: &'static str) -> IResult<Self::ParsedTest> {
+    fn parse_test(data: &'static str) -> IResult<'static, Self::ParsedTest> {
         parse(data)
     }
 

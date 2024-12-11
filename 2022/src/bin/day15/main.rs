@@ -22,7 +22,7 @@ impl Solution for Day {
         separated_list1(line_ending, pair)(data)
     }
 
-    fn parse_test(data: &'static str) -> IResult<Self::ParsedTest> {
+    fn parse_test(data: &'static str) -> IResult<'static, Self::ParsedTest> {
         Self::parse(data)
     }
 

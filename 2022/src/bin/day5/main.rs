@@ -24,7 +24,7 @@ impl BasicSolution for Day {
     const SAMPLE_ANSWER_A: Self::TestAnswer = "CMZ";
     const SAMPLE_ANSWER_B: Self::TestAnswer = "MCD";
 
-    fn parse(data: &'static str) -> IResult<Self::Parsed> {
+    fn parse(data: &'static str) -> IResult<'static, Self::Parsed> {
         separated_pair(stacks, line_ending, instructions)(data)
     }
 

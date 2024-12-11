@@ -1,4 +1,3 @@
-#![feature(exclusive_range_pattern)]
 use advent_2022::*;
 use itertools::iterate;
 use nom::{
@@ -17,7 +16,7 @@ impl Solution for Day {
     const SAMPLE_ANSWER_A: Self::TestAnswer = 6032;
     const SAMPLE_ANSWER_B: Self::TestAnswer = 5031;
 
-    fn parse(data: &'static str) -> IResult<Self::Parsed> {
+    fn parse(data: &'static str) -> IResult<'static, Self::Parsed> {
         let mut lines = data.lines();
         let grid = lines
             .by_ref()
@@ -32,7 +31,7 @@ impl Solution for Day {
             .map(|(rest, moves)| (rest, (grid, moves)))
     }
 
-    fn parse_test(data: &'static str) -> IResult<Self::ParsedTest> {
+    fn parse_test(data: &'static str) -> IResult<'static, Self::ParsedTest> {
         Self::parse(data)
     }
 

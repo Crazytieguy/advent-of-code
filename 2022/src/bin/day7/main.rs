@@ -21,7 +21,7 @@ impl BasicSolution for Day {
     const SAMPLE_ANSWER_A: Self::TestAnswer = 95437;
     const SAMPLE_ANSWER_B: Self::TestAnswer = 24933642;
 
-    fn parse(data: &'static str) -> IResult<Self::Parsed> {
+    fn parse(data: &'static str) -> IResult<'static, Self::Parsed> {
         let mut current_dir = vec![];
         fold_many1(
             parse_command,

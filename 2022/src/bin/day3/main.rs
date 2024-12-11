@@ -12,7 +12,7 @@ impl BasicSolution for Day {
     const SAMPLE_ANSWER_A: Self::TestAnswer = 157;
     const SAMPLE_ANSWER_B: Self::TestAnswer = 70;
 
-    fn parse(data: &'static str) -> IResult<Self::Parsed> {
+    fn parse(data: &'static str) -> IResult<'static, Self::Parsed> {
         Ok(("", data.lines()))
     }
 

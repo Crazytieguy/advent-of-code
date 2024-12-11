@@ -43,7 +43,7 @@ impl Solution for Day {
         Ok(("", (blizzards, width)))
     }
 
-    fn parse_test(data: &'static str) -> IResult<Self::ParsedTest> {
+    fn parse_test(data: &'static str) -> IResult<'static, Self::ParsedTest> {
         Self::parse(data)
     }
 
