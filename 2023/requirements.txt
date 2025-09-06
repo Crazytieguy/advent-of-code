@@ -1,4 +1,0 @@
-sympy
-toolz
-pytest
-pytest-watch

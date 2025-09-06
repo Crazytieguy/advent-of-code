@@ -4,7 +4,8 @@ version = "0.1.0"
 description = "Advent of Code solutions"
 requires-python = ">=3.13"
 dependencies = [
-    "toolz>=1.0.0"
+    "sympy>=1.14.0",
+    "toolz>=1.0.0",
 ]
 
 [tool.uv]
