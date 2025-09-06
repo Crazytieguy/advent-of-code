@@ -80,7 +80,7 @@ impl PartialOrd for Value {
     }
 }
 
-fn value(data: &str) -> IResult<Value> {
+fn value(data: &str) -> IResult<'_, Value> {
     alt((
         u8.map(Integer),
         delimited(char('['), separated_list0(char(','), value), char(']')).map(List),

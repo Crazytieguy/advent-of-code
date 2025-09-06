@@ -15,7 +15,7 @@ impl BasicSolution for Day {
     const SAMPLE_ANSWER_A: Self::TestAnswer = 15;
     const SAMPLE_ANSWER_B: Self::TestAnswer = 12;
 
-    fn parse(data: &str) -> IResult<Self::Parsed> {
+    fn parse(data: &str) -> IResult<'_, Self::Parsed> {
         separated_list1(
             line_ending,
             separated_pair(

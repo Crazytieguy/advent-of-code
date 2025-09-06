@@ -19,7 +19,7 @@ impl BasicSolution for Day {
     const SAMPLE_ANSWER_A: Self::TestAnswer = 1651;
     const SAMPLE_ANSWER_B: Self::TestAnswer = 1707;
 
-    fn parse(data: &str) -> IResult<Self::Parsed> {
+    fn parse(data: &str) -> IResult<'_, Self::Parsed> {
         let (input, rows) = separated_list1(line_ending, parse_row)(data)?;
         let shortest_path_lengths_uncompressed = floyd_warshall(&rows);
 
@@ -127,7 +127,7 @@ type FlowRates = Vec<u8>;
 type FlowRateIndices = Vec<usize>;
 type ShortestPathLengths = Vec<Vec<u8>>;
 
-fn parse_row(data: &str) -> IResult<(&str, u8, Vec<&str>)> {
+fn parse_row(data: &str) -> IResult<'_, (&str, u8, Vec<&str>)> {
     tuple((
         tag("Valve ").precedes(take(2usize)),
         tag(" has flow rate=").precedes(u8),

@@ -38,7 +38,7 @@ enum Direction {
 }
 use Direction::*;
 
-fn movement(input: &str) -> IResult<(Direction, u8)> {
+fn movement(input: &str) -> IResult<'_, (Direction, u8)> {
     separated_pair(
         alt((
             char('R').value(Right),

@@ -90,7 +90,7 @@ fn compute_command<'a>(
     }
 }
 
-fn parse_cd(data: &str) -> IResult<Command> {
+fn parse_cd(data: &str) -> IResult<'_, Command<'_>> {
     tag("cd ")
         .precedes(alt((
             tag("/").value(Root),
@@ -102,19 +102,19 @@ fn parse_cd(data: &str) -> IResult<Command> {
         .parse(data)
 }
 
-fn parse_ls_output_line(data: &str) -> IResult<u32> {
+fn parse_ls_output_line(data: &str) -> IResult<'_, u32> {
     u32.or(tag("dir").value(0))
         .terminated(not_line_ending.and(line_ending.opt()))
         .parse(data)
 }
 
-fn parse_ls(data: &str) -> IResult<Command> {
+fn parse_ls(data: &str) -> IResult<'_, Command<'_>> {
     tag("ls\n")
         .precedes(fold_many0(parse_ls_output_line, || 0, |acc, cur| acc + cur))
         .map(LS)
         .parse(data)
 }
 
-fn parse_command(data: &str) -> IResult<Command> {
+fn parse_command(data: &str) -> IResult<'_, Command<'_>> {
     tag("$ ").precedes(alt((parse_cd, parse_ls))).parse(data)
 }

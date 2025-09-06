@@ -12,7 +12,7 @@ impl BasicSolution for Day {
     const SAMPLE_ANSWER_A: Self::TestAnswer = 3068;
     const SAMPLE_ANSWER_B: Self::TestAnswer = 1_514_285_714_288;
 
-    fn parse(data: &str) -> IResult<Self::Parsed> {
+    fn parse(data: &str) -> IResult<'_, Self::Parsed> {
         many1(alt((
             char('>').value(Direction::Right),
             char('<').value(Direction::Left),

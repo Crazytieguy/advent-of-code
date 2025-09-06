@@ -46,7 +46,7 @@ impl Solution for Day {
 type Tuple = (u8, u8, u8);
 type Arr3D<const N: usize> = [[[bool; N]; N]; N];
 
-fn parse<const N: usize>(data: &str) -> IResult<(Vec<Tuple>, Arr3D<N>)> {
+fn parse<const N: usize>(data: &str) -> IResult<'_, (Vec<Tuple>, Arr3D<N>)> {
     separated_list1(line_ending, parse_cube)
         .map(|coords| {
             let mut matrix = [[[false; N]; N]; N];
@@ -86,7 +86,7 @@ fn part_b<const N: usize>((_coords, matrix): (Vec<Tuple>, Arr3D<N>)) -> usize {
     encountered
 }
 
-fn parse_cube(data: &str) -> IResult<(u8, u8, u8)> {
+fn parse_cube(data: &str) -> IResult<'_, (u8, u8, u8)> {
     tuple((u8, char(','), u8, char(','), u8))
         .map(|(a, _, b, _, c)| (a + 1, b + 1, c + 1))
         .parse(data)

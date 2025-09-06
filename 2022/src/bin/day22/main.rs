@@ -75,7 +75,7 @@ enum Move {
 }
 use Move::*;
 
-fn parse_move(input: &str) -> IResult<Move> {
+fn parse_move(input: &str) -> IResult<'_, Move> {
     alt((
         char('R').value(Turn(Clockwise)),
         char('L').value(Turn(CounterClockwise)),

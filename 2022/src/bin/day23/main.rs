@@ -14,7 +14,7 @@ impl BasicSolution for Day {
     const SAMPLE_ANSWER_A: Self::TestAnswer = 110;
     const SAMPLE_ANSWER_B: Self::TestAnswer = 20;
 
-    fn parse(data: &str) -> IResult<Self::Parsed> {
+    fn parse(data: &str) -> IResult<'_, Self::Parsed> {
         let mut grid = BitGrid::new();
         data.lines().enumerate().for_each(|(row, line)| {
             line.chars()

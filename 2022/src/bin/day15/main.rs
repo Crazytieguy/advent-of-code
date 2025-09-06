@@ -18,7 +18,7 @@ impl Solution for Day {
     const SAMPLE_ANSWER_A: Self::TestAnswer = 26;
     const SAMPLE_ANSWER_B: Self::TestAnswer = 56_000_011;
 
-    fn parse(data: &str) -> IResult<Self::Parsed> {
+    fn parse(data: &str) -> IResult<'_, Self::Parsed> {
         separated_list1(line_ending, pair)(data)
     }
 
@@ -61,7 +61,7 @@ struct Line {
     end: Point,
 }
 
-fn pair(input: &str) -> IResult<Pair> {
+fn pair(input: &str) -> IResult<'_, Pair> {
     let (input, x) = tag("Sensor at x=").precedes(i32).parse(input)?;
     let (input, y) = tag(", y=").precedes(i32).parse(input)?;
     let sensor = Point { x, y };

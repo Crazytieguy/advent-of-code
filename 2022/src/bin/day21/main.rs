@@ -58,7 +58,7 @@ enum Operator {
 }
 use Operator::*;
 
-fn operator(input: &str) -> IResult<Operator> {
+fn operator(input: &str) -> IResult<'_, Operator> {
     alt((
         tag(" + ").value(Add),
         tag(" - ").value(Subtract),
@@ -74,14 +74,14 @@ enum Expression<'a> {
 }
 use Expression::*;
 
-fn expression(input: &str) -> IResult<Expression> {
+fn expression(input: &str) -> IResult<'_, Expression<'_>> {
     alt((
         i64.map(Number),
         tuple((alpha1, operator, alpha1)).map(Operation),
     ))(input)
 }
 
-fn monkey(input: &str) -> IResult<(&str, Expression)> {
+fn monkey(input: &str) -> IResult<'_, (&str, Expression<'_>)> {
     separated_pair(alpha1, tag(": "), expression)(input)
 }
 

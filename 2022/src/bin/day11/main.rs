@@ -51,21 +51,21 @@ struct Monkey {
     if_false: usize,
 }
 
-fn monkey_number(data: &str) -> IResult<usize> {
+fn monkey_number(data: &str) -> IResult<'_, usize> {
     tag("Monkey ")
         .precedes(u8.map(|n| n as usize))
         .terminated(char(':').and(line_ending))
         .parse(data)
 }
 
-fn starting_items(data: &str) -> IResult<Vec<u64>> {
+fn starting_items(data: &str) -> IResult<'_, Vec<u64>> {
     tag("  Starting items: ")
         .precedes(separated_list0(tag(", "), u64))
         .terminated(line_ending)
         .parse(data)
 }
 
-fn operation(data: &str) -> IResult<Op> {
+fn operation(data: &str) -> IResult<'_, Op> {
     tag("  Operation: new = old ")
         .precedes(alt((
             tag("+ ").precedes(u64).map(Op::Add),
@@ -76,28 +76,28 @@ fn operation(data: &str) -> IResult<Op> {
         .parse(data)
 }
 
-fn test(data: &str) -> IResult<u64> {
+fn test(data: &str) -> IResult<'_, u64> {
     tag("  Test: divisible by ")
         .precedes(u64)
         .terminated(line_ending)
         .parse(data)
 }
 
-fn if_true(data: &str) -> IResult<usize> {
+fn if_true(data: &str) -> IResult<'_, usize> {
     tag("    If true: throw to monkey ")
         .precedes(u8.map(|n| n as usize))
         .terminated(line_ending)
         .parse(data)
 }
 
-fn if_false(data: &str) -> IResult<usize> {
+fn if_false(data: &str) -> IResult<'_, usize> {
     tag("    If false: throw to monkey ")
         .precedes(u8.map(|n| n as usize))
         .terminated(line_ending)
         .parse(data)
 }
 
-fn monkey(data: &str) -> IResult<Monkey> {
+fn monkey(data: &str) -> IResult<'_, Monkey> {
     tuple((
         monkey_number,
         starting_items,
@@ -131,7 +131,7 @@ fn stuff_slinging_simian_shenanigans(
                 Op::Square => item * item,
             };
             let new = manage_worry_level(new);
-            let throw_to = if new % monkeys[turn].test == 0 {
+            let throw_to = if new.is_multiple_of(monkeys[turn].test) {
                 monkeys[turn].if_true
             } else {
                 monkeys[turn].if_false

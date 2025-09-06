@@ -14,7 +14,7 @@ impl BasicSolution for Day {
     const SAMPLE_ANSWER_A: Self::TestAnswer = 24;
     const SAMPLE_ANSWER_B: Self::TestAnswer = 93;
 
-    fn parse(data: &str) -> IResult<Self::Parsed> {
+    fn parse(data: &str) -> IResult<'_, Self::Parsed> {
         let mut rocks = BitGrid::new();
         let mut max_y = 0;
         for line in data.lines() {
@@ -51,7 +51,7 @@ fn solve<const SOLID_FLOOR: bool>(mut taken_coords: BitGrid, max_y: usize) -> us
     taken_coords.len() - num_rocks
 }
 
-fn parse_coords(data: &str) -> IResult<(usize, usize)> {
+fn parse_coords(data: &str) -> IResult<'_, (usize, usize)> {
     separated_pair(u16.map(usize::from), char(','), u8.map(usize::from))(data)
 }
 

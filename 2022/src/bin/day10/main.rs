@@ -64,7 +64,7 @@ enum Operation {
 
 use Operation::*;
 
-fn parse_operation(input: &str) -> IResult<Operation> {
+fn parse_operation(input: &str) -> IResult<'_, Operation> {
     alt((tag("noop").value(Noop), tag("addx ").precedes(i32).map(Add)))(input)
 }
 

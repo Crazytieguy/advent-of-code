@@ -1,5 +1,4 @@
 #![warn(clippy::pedantic)]
-#![feature(float_next_up_down)]
 use std::borrow::Cow;
 
 use advent_2023::{BasicSolution, Solution};
@@ -68,7 +67,7 @@ fn possible_ways_to_win(time: u64, record_distance: u64) -> Option<u64> {
     let record_distance: f64 = num::cast(record_distance)?;
     let root_term = time.powi(2) - 4. * record_distance;
     let smallest_hold_time_to_match_record = (time - root_term.sqrt()) / 2.;
-    let largest_hold_time_to_match_record = (time + root_term.sqrt()) / 2.;
+    let largest_hold_time_to_match_record = f64::midpoint(time, root_term.sqrt());
     let smallest_int_hold_time_to_beet_record: u64 =
         num::cast(smallest_hold_time_to_match_record.next_up().ceil())?;
     let largest_int_hold_time_to_beet_record: u64 =

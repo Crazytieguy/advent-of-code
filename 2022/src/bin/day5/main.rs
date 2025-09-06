@@ -1,4 +1,3 @@
-#![feature(get_many_mut)]
 use std::collections::VecDeque;
 
 use advent_2022::*;
@@ -50,7 +49,7 @@ fn solve<const REVERSE_ORDER: bool>(mut stacks: Stacks, instructions: &[Instruct
     for &Instruction { amount, from, to } in instructions {
         let (amount, from, to) = (amount as usize, from as usize, to as usize);
         let [from, to] = stacks
-            .get_many_mut([from, to])
+            .get_disjoint_mut([from, to])
             .expect("stacks should exist");
         let at = from.len() - amount;
         if REVERSE_ORDER {
@@ -62,7 +61,7 @@ fn solve<const REVERSE_ORDER: bool>(mut stacks: Stacks, instructions: &[Instruct
     get_top_crates(stacks)
 }
 
-fn crate_(input: &str) -> IResult<Option<char>> {
+fn crate_(input: &str) -> IResult<'_, Option<char>> {
     let crate_ = delimited(
         char('['),
         anychar.verify(char::is_ascii_uppercase),
@@ -73,7 +72,7 @@ fn crate_(input: &str) -> IResult<Option<char>> {
     alt((crate_, not_crate))(input)
 }
 
-fn stacks(input: &str) -> IResult<Stacks> {
+fn stacks(input: &str) -> IResult<'_, Stacks> {
     let mut stacks = vec![];
     let crate_row = parse_separated_terminated(
         crate_,
@@ -95,14 +94,14 @@ fn stacks(input: &str) -> IResult<Stacks> {
     Ok((input, stacks))
 }
 
-fn instruction(input: &str) -> IResult<Instruction> {
+fn instruction(input: &str) -> IResult<'_, Instruction> {
     let (input, (_, amount, _, from, _, to)) =
         tuple((tag("move "), u8, tag(" from "), u8, tag(" to "), u8))(input)?;
     let (from, to) = (from - 1, to - 1);
     Ok((input, Instruction { amount, from, to }))
 }
 
-fn instructions(input: &str) -> IResult<Vec<Instruction>> {
+fn instructions(input: &str) -> IResult<'_, Vec<Instruction>> {
     separated_list1(line_ending, instruction)(input)
 }
 

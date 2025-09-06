@@ -61,7 +61,7 @@ struct Blueprint {
     geode_robot_cost: Resources,
 }
 
-fn blueprint(input: &str) -> IResult<Blueprint> {
+fn blueprint(input: &str) -> IResult<'_, Blueprint> {
     let (input, id) = delimited(tag("Blueprint "), u8, tag(": "))(input)?;
     let (input, ore_robot_cost) = delimited(tag("Each ore robot costs "), u8, tag(" ore. "))
         .map(|ore| ONE_ORE * ore)

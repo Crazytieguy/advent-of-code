@@ -15,7 +15,7 @@ impl BasicSolution for Day {
     const SAMPLE_ANSWER_A: Self::TestAnswer = "2=-1=0";
     const SAMPLE_ANSWER_B: Self::TestAnswer = "";
 
-    fn parse(data: &str) -> IResult<Self::Parsed> {
+    fn parse(data: &str) -> IResult<'_, Self::Parsed> {
         fold_many1(snafu.terminated(line_ending), || 0, |acc, cur| acc + cur)(data)
     }
 
@@ -28,7 +28,7 @@ impl BasicSolution for Day {
     }
 }
 
-fn snafu_digit(input: &str) -> IResult<i64> {
+fn snafu_digit(input: &str) -> IResult<'_, i64> {
     alt((
         char('2').value(2),
         char('1').value(1),
@@ -38,7 +38,7 @@ fn snafu_digit(input: &str) -> IResult<i64> {
     ))(input)
 }
 
-fn snafu(input: &str) -> IResult<i64> {
+fn snafu(input: &str) -> IResult<'_, i64> {
     fold_many1(snafu_digit, || 0, |acc, cur| acc * 5 + cur)(input)
 }
 

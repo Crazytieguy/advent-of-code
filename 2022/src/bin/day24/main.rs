@@ -11,7 +11,7 @@ impl Solution for Day {
     const SAMPLE_ANSWER_A: Self::TestAnswer = 18;
     const SAMPLE_ANSWER_B: Self::TestAnswer = 54;
 
-    fn parse(data: &str) -> IResult<Self::Parsed> {
+    fn parse(data: &str) -> IResult<'_, Self::Parsed> {
         let width = data.find('\n').expect("no newline") - 2;
         let (up, (down, (left, right))) = data
             .lines()
