@@ -19,16 +19,16 @@ def part_b(input: str):
 SAMPLE_INPUT = """
 """
 SAMPLE_INPUT_B = SAMPLE_INPUT
-INPUT = Path("data.txt").read_text()
+INPUT = (Path(__file__).parent / "data.txt").read_text()
 
 
 def test_part_a(capsys):
     assert part_a(SAMPLE_INPUT) == 0
     with capsys.disabled():
-        print(f"Part A: {part_a(INPUT)}")
+        print(f"\nPart A: {part_a(INPUT)}", end=" ")
 
 
 def test_part_b(capsys):
     assert part_b(SAMPLE_INPUT_B) == 0
     with capsys.disabled():
-        print(f"Part B: {part_b(INPUT)}")
+        print(f"\nPart B: {part_b(INPUT)}", end=" ")

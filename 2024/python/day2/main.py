@@ -1,4 +1,5 @@
-from itertools import pairwise
+from itertools import pairwise, starmap
+from operator import sub
 from pathlib import Path
 from typing import Iterable
 
@@ -22,7 +23,7 @@ def is_safe_report_dampened(levels: list[int]) -> bool:
 
 
 def is_safe_report(levels: Iterable[int]):
-    first_diff, diffs = peek(b - a for a, b in pairwise(levels))
+    first_diff, diffs = peek(starmap(sub, pairwise(levels)))
 
     def is_safe_diff(diff: int):
         return 1 <= abs(diff) <= 3 and diff * first_diff > 0
@@ -42,16 +43,16 @@ SAMPLE_INPUT = """7 6 4 2 1
 1 3 6 7 9
 """
 SAMPLE_INPUT_B = SAMPLE_INPUT
-INPUT = Path("data.txt").read_text()
+INPUT = (Path(__file__).parent / "data.txt").read_text()
 
 
 def test_part_a(capsys):
     assert part_a(SAMPLE_INPUT) == 2
     with capsys.disabled():
-        print(f"Part A: {part_a(INPUT)}")
+        print(f"\nPart A: {part_a(INPUT)}", end=" ")
 
 
 def test_part_b(capsys):
     assert part_b(SAMPLE_INPUT_B) == 4
     with capsys.disabled():
-        print(f"Part B: {part_b(INPUT)}")
+        print(f"\nPart B: {part_b(INPUT)}", end=" ")
