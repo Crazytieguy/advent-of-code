@@ -7,11 +7,6 @@ from pathlib import Path
 
 import toolz  # noqa: F401
 
-SAMPLE_INPUT = """
-"""
-SAMPLE_INPUT_B = SAMPLE_INPUT
-INPUT = Path("data.txt").read_text()
-
 
 def part_a(input: str):
     return 0
@@ -19,6 +14,12 @@ def part_a(input: str):
 
 def part_b(input: str):
     return 0
+
+
+SAMPLE_INPUT = """
+"""
+SAMPLE_INPUT_B = SAMPLE_INPUT
+INPUT = Path("data.txt").read_text()
 
 
 def test_part_a(capsys):
