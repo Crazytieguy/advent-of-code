@@ -166,7 +166,7 @@ fn split_part_ranges(part_ranges: &PartRanges, condition: Condition) -> SplitPar
     SplitPartRanges { pass, not_pass }
 }
 
-fn workflow(input: &mut &'static str) -> winnow::PResult<WorkFlow<'static>> {
+fn workflow(input: &mut &'static str) -> winnow::Result<WorkFlow<'static>> {
     seq! { WorkFlow {
         _: '{',
         rules: separated(1.., rule, ','),
@@ -177,7 +177,7 @@ fn workflow(input: &mut &'static str) -> winnow::PResult<WorkFlow<'static>> {
     .parse_next(input)
 }
 
-fn part(input: &mut &'static str) -> winnow::PResult<Part> {
+fn part(input: &mut &'static str) -> winnow::Result<Part> {
     seq! { (
         _: "{x=",
         dec_uint,
@@ -193,7 +193,7 @@ fn part(input: &mut &'static str) -> winnow::PResult<Part> {
     .map(From::from)
 }
 
-fn rule(input: &mut &'static str) -> winnow::PResult<Rule<'static>> {
+fn rule(input: &mut &'static str) -> winnow::Result<Rule<'static>> {
     seq! {Rule {
         condition: condition,
         _: ':',
@@ -202,7 +202,7 @@ fn rule(input: &mut &'static str) -> winnow::PResult<Rule<'static>> {
     .parse_next(input)
 }
 
-fn destination(input: &mut &'static str) -> winnow::PResult<Destination<'static>> {
+fn destination(input: &mut &'static str) -> winnow::Result<Destination<'static>> {
     alt((
         'A'.value(Destination::Accept),
         'R'.value(Destination::Reject),
@@ -211,7 +211,7 @@ fn destination(input: &mut &'static str) -> winnow::PResult<Destination<'static>
     .parse_next(input)
 }
 
-fn condition(input: &mut &'static str) -> winnow::PResult<Condition> {
+fn condition(input: &mut &'static str) -> winnow::Result<Condition> {
     seq! {Condition {
         category: category,
         operator: operator,
@@ -220,7 +220,7 @@ fn condition(input: &mut &'static str) -> winnow::PResult<Condition> {
     .parse_next(input)
 }
 
-fn operator(input: &mut &'static str) -> winnow::PResult<Operator> {
+fn operator(input: &mut &'static str) -> winnow::Result<Operator> {
     alt((
         '>'.value(Operator::GreaterThan),
         '<'.value(Operator::LessThan),
@@ -228,7 +228,7 @@ fn operator(input: &mut &'static str) -> winnow::PResult<Operator> {
     .parse_next(input)
 }
 
-fn category(input: &mut &'static str) -> winnow::PResult<Category> {
+fn category(input: &mut &'static str) -> winnow::Result<Category> {
     alt(('x'.value(0), 'm'.value(1), 'a'.value(2), 's'.value(3))).parse_next(input)
 }
 

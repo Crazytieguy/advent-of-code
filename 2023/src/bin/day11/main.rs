@@ -77,7 +77,7 @@ fn count_galaxies(pixels: impl Iterator<Item = Pixel>) -> usize {
     pixels.filter(|&p| p == Pixel::Galaxy).count()
 }
 
-fn pixel(input: &mut &'static str) -> winnow::PResult<Pixel> {
+fn pixel(input: &mut &'static str) -> winnow::Result<Pixel> {
     alt(('#'.value(Pixel::Galaxy), '.'.value(Pixel::Space))).parse_next(input)
 }
 

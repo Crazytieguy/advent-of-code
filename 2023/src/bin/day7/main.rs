@@ -86,7 +86,7 @@ fn jacks_to_jokers(hand: &mut [u8; 5]) {
     }
 }
 
-fn bid(input: &mut &'static str) -> winnow::PResult<Bid> {
+fn bid(input: &mut &'static str) -> winnow::Result<Bid> {
     seq! {Bid {
         hand: (card, card, card, card, card).map(From::from),
         _: ' ',
@@ -95,7 +95,7 @@ fn bid(input: &mut &'static str) -> winnow::PResult<Bid> {
     .parse_next(input)
 }
 
-fn card(input: &mut &'static str) -> winnow::PResult<u8> {
+fn card(input: &mut &'static str) -> winnow::Result<u8> {
     any.verify_map(|c| match c {
         '2'..='9' => Some(c as u8 - b'2'),
         'T' => Some(8),

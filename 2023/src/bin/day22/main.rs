@@ -144,7 +144,7 @@ impl Brick {
     }
 }
 
-fn brick(input: &mut &'static str) -> winnow::PResult<Brick> {
+fn brick(input: &mut &'static str) -> winnow::Result<Brick> {
     seq! {Brick {
         from: coords,
         _: '~',
@@ -153,7 +153,7 @@ fn brick(input: &mut &'static str) -> winnow::PResult<Brick> {
     .parse_next(input)
 }
 
-fn coords(input: &mut &'static str) -> winnow::PResult<(u8, u8, u16)> {
+fn coords(input: &mut &'static str) -> winnow::Result<(u8, u8, u16)> {
     seq! { (dec_uint, _: ',', dec_uint, _: ',', dec_uint) }.parse_next(input)
 }
 

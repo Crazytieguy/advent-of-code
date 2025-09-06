@@ -58,7 +58,7 @@ fn extrapolate(history: Vec<i32>) -> anyhow::Result<(i32, i32)> {
         .ok_or_else(|| anyhow!("Extrapolation failed. Diff sequence: {diff_sequence:?}"))
 }
 
-fn history(data: &mut &'static str) -> winnow::PResult<Vec<i32>> {
+fn history(data: &mut &'static str) -> winnow::Result<Vec<i32>> {
     separated(1.., dec_int::<_, i32, _>, ' ').parse_next(data)
 }
 

@@ -137,7 +137,7 @@ fn count_possible_arangements_inner(
     arangements
 }
 
-fn condition_record(input: &mut &'static str) -> winnow::PResult<ConditionRecord> {
+fn condition_record(input: &mut &'static str) -> winnow::Result<ConditionRecord> {
     seq! {ConditionRecord {
         spring_conditions: repeat(
             1..,

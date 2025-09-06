@@ -9,7 +9,7 @@ use itertools::Itertools;
 use num::Integer;
 use winnow::{
     ascii::alpha1,
-    combinator::{alt, separated, success},
+    combinator::{alt, empty, separated},
     seq, Parser,
 };
 
@@ -200,14 +200,14 @@ fn send_pulses(
     Ok(())
 }
 
-fn node(input: &mut &'static str) -> winnow::PResult<(Module, &'static str, Vec<&'static str>)> {
+fn node(input: &mut &'static str) -> winnow::Result<(Module, &'static str, Vec<&'static str>)> {
     seq! {(
         alt((
             '%'.value(Module::FlipFlop { on: false }),
             '&'.value(Module::Conjunction {
                 memory: HashMap::new(),
             }),
-            success(Module::Broadcaster)
+            empty.value(Module::Broadcaster)
         )),
         alpha1,
         _: " -> ",

@@ -8,7 +8,7 @@ use winnow::{
     combinator::{iterator, preceded},
     stream::AsChar,
     token::take_till,
-    Located, Parser,
+    LocatingSlice, Parser,
 };
 
 struct Day;
@@ -39,8 +39,10 @@ impl BasicSolution for Day {
     fn shared(input: &'static str) -> anyhow::Result<Self::Shared> {
         let mut numbers = Vec::new();
         for (row, line) in input.lines().enumerate() {
-            let mut iter_nums =
-                iterator(Located::new(line), preceded(not_dec, dec_uint.with_span()));
+            let mut iter_nums = iterator(
+                LocatingSlice::new(line),
+                preceded(not_dec, dec_uint.with_span()),
+            );
             numbers.extend(iter_nums.map(|(value, columns)| Number {
                 row,
                 columns,
@@ -84,7 +86,7 @@ impl BasicSolution for Day {
     }
 }
 
-fn not_dec(input: &mut Located<&'static str>) -> winnow::PResult<&'static str> {
+fn not_dec(input: &mut LocatingSlice<&'static str>) -> winnow::Result<&'static str> {
     take_till(0.., AsChar::is_dec_digit).parse_next(input)
 }
 

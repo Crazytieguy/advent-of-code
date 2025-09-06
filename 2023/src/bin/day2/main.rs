@@ -4,7 +4,7 @@ use std::borrow::Cow;
 use advent_2023::{BasicSolution, Solution};
 use winnow::{
     ascii::dec_uint,
-    combinator::{alt, fold_repeat, opt, preceded},
+    combinator::{alt, opt, preceded, repeat},
     seq, Parser,
 };
 
@@ -59,7 +59,7 @@ impl BasicSolution for Day {
     }
 }
 
-fn game(input: &mut &str) -> winnow::PResult<Game> {
+fn game(input: &mut &str) -> winnow::Result<Game> {
     seq! {Game{
         _: "Game ",
         id: dec_uint,
@@ -69,20 +69,19 @@ fn game(input: &mut &str) -> winnow::PResult<Game> {
     .parse_next(input)
 }
 
-fn revealed(input: &mut &str) -> winnow::PResult<[u8; 3]> {
-    fold_repeat(
-        1..,
-        preceded(opt(alt((", ", "; "))), color_count),
-        || [0; 3],
-        |mut acc, (n, color)| {
-            acc[color] = acc[color].max(n);
-            acc
-        },
-    )
-    .parse_next(input)
+fn revealed(input: &mut &str) -> winnow::Result<[u8; 3]> {
+    repeat(1.., preceded(opt(alt((", ", "; "))), color_count))
+        .fold(
+            || [0; 3],
+            |mut acc, (n, color)| {
+                acc[color] = acc[color].max(n);
+                acc
+            },
+        )
+        .parse_next(input)
 }
 
-fn color_count(input: &mut &str) -> winnow::PResult<(u8, usize)> {
+fn color_count(input: &mut &str) -> winnow::Result<(u8, usize)> {
     seq! {(
         dec_uint,
         _: ' ',

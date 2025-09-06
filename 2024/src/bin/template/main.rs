@@ -1,7 +1,7 @@
 use std::borrow::Cow;
 
-use advent_2023::{BasicSolution, Solution};
-use winnow::{token::rest, Parser};
+use advent_2024::{BasicSolution, Solution};
+use winnow::{Parser, token::rest};
 
 struct Day;
 

@@ -4,8 +4,8 @@ use std::{borrow::Cow, ops::Range};
 use advent_2023::{BasicSolution, Solution};
 use itertools::Itertools;
 use winnow::{
-    ascii::{dec_uint, not_line_ending},
-    combinator::{opt, preceded, separated},
+    ascii::{dec_uint, line_ending},
+    combinator::{not, opt, preceded, separated},
     seq, Parser,
 };
 
@@ -122,7 +122,7 @@ impl Mapping {
     }
 }
 
-fn almanac(input: &mut &'static str) -> winnow::PResult<Almanac> {
+fn almanac(input: &mut &'static str) -> winnow::Result<Almanac> {
     seq! {Almanac {
         seeds: seeds,
         _: "\n\n",
@@ -132,15 +132,15 @@ fn almanac(input: &mut &'static str) -> winnow::PResult<Almanac> {
     .parse_next(input)
 }
 
-fn seeds(input: &mut &str) -> winnow::PResult<Vec<u64>> {
+fn seeds(input: &mut &str) -> winnow::Result<Vec<u64>> {
     preceded("seeds: ", separated(1.., u64, ' ')).parse_next(input)
 }
 
-fn mappings(input: &mut &str) -> winnow::PResult<Vec<Mapping>> {
-    preceded((not_line_ending, "\n"), separated(1.., mapping, "\n")).parse_next(input)
+fn mappings(input: &mut &str) -> winnow::Result<Vec<Mapping>> {
+    preceded((not(line_ending), "\n"), separated(1.., mapping, "\n")).parse_next(input)
 }
 
-fn mapping(input: &mut &str) -> winnow::PResult<Mapping> {
+fn mapping(input: &mut &str) -> winnow::Result<Mapping> {
     seq! {Mapping {
         destination_start: u64,
         _: ' ',
@@ -149,7 +149,7 @@ fn mapping(input: &mut &str) -> winnow::PResult<Mapping> {
     .parse_next(input)
 }
 
-fn u64(input: &mut &str) -> winnow::PResult<u64> {
+fn u64(input: &mut &str) -> winnow::Result<u64> {
     dec_uint.parse_next(input)
 }
 

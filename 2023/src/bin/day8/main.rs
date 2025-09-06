@@ -78,7 +78,7 @@ impl Maps<'_> {
     }
 }
 
-fn maps<'a>(input: &mut &'a str) -> winnow::PResult<Maps<'a>> {
+fn maps<'a>(input: &mut &'a str) -> winnow::Result<Maps<'a>> {
     seq! {Maps {
         instructions: instructions,
         _: "\n\n",
@@ -88,11 +88,11 @@ fn maps<'a>(input: &mut &'a str) -> winnow::PResult<Maps<'a>> {
     .parse_next(input)
 }
 
-fn network<'a>(input: &mut &'a str) -> winnow::PResult<HashMap<&'a str, (&'a str, &'a str)>> {
+fn network<'a>(input: &mut &'a str) -> winnow::Result<HashMap<&'a str, (&'a str, &'a str)>> {
     separated(1.., node_targets, '\n').parse_next(input)
 }
 
-fn node_targets<'a>(input: &mut &'a str) -> winnow::PResult<(&'a str, (&'a str, &'a str))> {
+fn node_targets<'a>(input: &mut &'a str) -> winnow::Result<(&'a str, (&'a str, &'a str))> {
     seq! {(
         alphanumeric1,
         _: " = ",
@@ -101,11 +101,11 @@ fn node_targets<'a>(input: &mut &'a str) -> winnow::PResult<(&'a str, (&'a str, 
     .parse_next(input)
 }
 
-fn instructions(input: &mut &str) -> winnow::PResult<Vec<Direction>> {
+fn instructions(input: &mut &str) -> winnow::Result<Vec<Direction>> {
     repeat(1.., direction).parse_next(input)
 }
 
-fn direction(input: &mut &str) -> winnow::PResult<Direction> {
+fn direction(input: &mut &str) -> winnow::Result<Direction> {
     alt(('L'.value(Direction::Left), 'R'.value(Direction::Right))).parse_next(input)
 }
 

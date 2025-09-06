@@ -3,7 +3,10 @@ use std::borrow::Cow;
 
 use advent_2023::{BasicSolution, Solution};
 use itertools::Itertools;
-use winnow::{combinator::rest, token::take_until0, Parser};
+use winnow::{
+    token::{rest, take_until},
+    Parser,
+};
 
 struct Day;
 
@@ -50,9 +53,9 @@ impl BasicSolution for Day {
     }
 }
 
-fn card(input: &mut &str) -> winnow::PResult<Card> {
+fn card(input: &mut &str) -> winnow::Result<Card> {
     let (_, _, winning_numbers, _, numbers_i_own) =
-        (take_until0(":"), ':', take_until0("|"), '|', rest).parse_next(input)?;
+        (take_until(0.., ":"), ':', take_until(0.., "|"), '|', rest).parse_next(input)?;
     let matches = winning_numbers
         .split_ascii_whitespace()
         .filter(|n| numbers_i_own.split_ascii_whitespace().contains(n))

@@ -84,7 +84,7 @@ fn join_numbers(distances: &[u64]) -> Result<u64, std::num::ParseIntError> {
         .parse()
 }
 
-fn records(input: &mut &'static str) -> winnow::PResult<Records> {
+fn records(input: &mut &'static str) -> winnow::Result<Records> {
     seq! {Records{
         _: ("Time:", space1),
         times: numbers,
@@ -95,7 +95,7 @@ fn records(input: &mut &'static str) -> winnow::PResult<Records> {
     .parse_next(input)
 }
 
-fn numbers(input: &mut &'static str) -> winnow::PResult<Vec<u64>> {
+fn numbers(input: &mut &'static str) -> winnow::Result<Vec<u64>> {
     separated(1.., dec_uint::<_, u64, _>, space1).parse_next(input)
 }
 

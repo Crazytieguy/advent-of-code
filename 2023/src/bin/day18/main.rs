@@ -103,7 +103,7 @@ fn shoelace_formula(coords: &[(i64, i64)]) -> u64 {
         / 2
 }
 
-fn edge(input: &mut &'static str) -> winnow::PResult<Edge> {
+fn edge(input: &mut &'static str) -> winnow::Result<Edge> {
     seq! {Edge {
         direction: alt(('R'.value(Direction::Right), 'L'.value(Direction::Left), 'U'.value(Direction::Up), 'D'.value(Direction::Down))),
         _: ' ',

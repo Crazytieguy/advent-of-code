@@ -76,7 +76,7 @@ enum Operation {
     Insert(u8),
 }
 
-fn operation(input: &mut &'static str) -> winnow::PResult<Operation> {
+fn operation(input: &mut &'static str) -> winnow::Result<Operation> {
     alt((
         '-'.value(Operation::Remove),
         preceded('=', dec_uint).map(Operation::Insert),
