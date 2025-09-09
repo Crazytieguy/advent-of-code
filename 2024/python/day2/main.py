@@ -1,5 +1,4 @@
-from itertools import pairwise, starmap
-from operator import sub
+from itertools import pairwise
 from pathlib import Path
 from typing import Iterable
 
@@ -23,7 +22,7 @@ def is_safe_report_dampened(levels: list[int]) -> bool:
 
 
 def is_safe_report(levels: Iterable[int]):
-    first_diff, diffs = peek(starmap(sub, pairwise(levels)))
+    first_diff, diffs = peek(b - a for a, b in pairwise(levels))
 
     def is_safe_diff(diff: int):
         return 1 <= abs(diff) <= 3 and diff * first_diff > 0
